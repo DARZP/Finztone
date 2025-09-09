@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reportes - FINZTONE</title>
+    <link rel="stylesheet" href="reportes.style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <header class="main-header">
+        <a href="dashboard.html" class="back-button">← Volver</a>
+        <h1 class="logo">FINZTONE</h1>
+    </header>
+
+    <main class="container">
+        <div class="card filter-card">
+            <h2>Generar Reporte</h2>
+            <div class="date-filters">
+                <div class="input-group">
+                    <label for="start-date">Fecha de Inicio</label>
+                    <input type="date" id="start-date">
+                </div>
+                <div class="input-group">
+                    <label for="end-date">Fecha de Fin</label>
+                    <input type="date" id="end-date">
+                </div>
+                <button id="generate-report-btn" class="btn-primary">Generar</button>
+            </div>
+        </div>
+
+        <div class="kpi-grid">
+            <div class="card kpi-card">
+                <h3>Total Ingresos</h3>
+                <p id="total-income">$0.00</p>
+            </div>
+            <div class="card kpi-card">
+                <h3>Total Gastos</h3>
+                <p id="total-expenses">$0.00</p>
+            </div>
+            <div class="card kpi-card">
+                <h3>Nómina Pagada</h3>
+                <p id="total-payroll">$0.00</p>
+            </div>
+            <div class="card kpi-card balance">
+                <h3>Balance General</h3>
+                <p id="balance">$0.00</p>
+            </div>
+        </div>
+
+        <div class="card chart-card">
+            <h2>Gastos por Categoría</h2>
+            <canvas id="expenses-chart"></canvas>
+        </div>
+    </main>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    
+    <script src="reportes.app.js"></script>
+</body>
+</html>

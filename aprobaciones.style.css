@@ -1,0 +1,87 @@
+:root {
+    --primary-color: #00A99D;
+    --background-color: #f4f7f6;
+    --box-background-color: #ffffff;
+    --text-color: #333333;
+    --approve-color: #2e7d32;
+    --reject-color: #c62828;
+}
+
+body {
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+    background-color: var(--background-color);
+}
+
+.main-header {
+    background-color: var(--box-background-color);
+    height: 70px;
+    padding: 0 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.back-button { text-decoration: none; color: var(--primary-color); font-weight: 500; }
+.logo { font-size: 1.8em; font-weight: 600; color: var(--primary-color); margin: 0; }
+
+.container {
+    padding: 40px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.list-card {
+    background-color: var(--box-background-color);
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+}
+
+.pending-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 20px;
+    padding: 20px;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+.item-details .description {
+    font-size: 1.2em;
+    font-weight: 600;
+}
+.item-details .amount {
+    font-size: 1.2em;
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-left: 10px;
+}
+.item-details .meta {
+    font-size: 0.9em;
+    color: #777;
+    margin-top: 5px;
+}
+
+.item-actions {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+}
+
+.btn {
+    padding: 8px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 500;
+    color: white;
+    transition: opacity 0.3s ease;
+}
+.btn:hover { opacity: 0.8; }
+.btn-approve { background-color: var(--approve-color); }
+.btn-reject { background-color: var(--reject-color); }

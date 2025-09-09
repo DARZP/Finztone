@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - FINZTONE</title>
+    <link rel="stylesheet" href="dashboard.style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header class="main-header">
+        <h1 class="logo">FINZTONE</h1>
+        <div class="user-info">
+            <span id="user-email">cargando...</span>
+            <button id="logout-button">Cerrar Sesión</button>
+        </div>
+    </header>
+
+    <main class="dashboard-container">
+        <h2>Herramientas Principales</h2>
+        <div class="tools-grid">
+
+            <a href="aprobaciones.html" class="tool-card">
+                <div class="tool-icon">📋</div>
+                <span>Aprobaciones</span>
+            </a>
+            <a href="ingresos.html" class="tool-card">
+                <div class="tool-icon" id="icon-ingresos">💰</div>
+                <span>Ingresos</span>
+            </a>
+
+            <a href="gastos.html" class="tool-card">
+                <div class="tool-icon" id="icon-gastos">💸</div>
+                <span>Gastos</span>
+            </a>
+
+            <a href="#" class="tool-card">
+                <div class="tool-icon" id="icon-nomina">👥</div>
+                <span>Nómina</span>
+            </a>
+
+            <a href="#" class="tool-card">
+                <div class="tool-icon" id="icon-reportes">📊</div>
+                <span>Reportes</span>
+            </a>
+
+            <a href="#" class="tool-card">
+                <div class="tool-icon" id="icon-perfil">👤</div>
+                <span>Mi Perfil</span>
+            </a>
+
+            <a href="#" class="tool-card">
+                <div class="tool-icon" id="icon-config">⚙️</div>
+                <span>Configuración</span>
+            </a>
+
+        </div>
+    </main>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    
+    <script src="dashboard.app.js"></script>
+</body>
+</html>

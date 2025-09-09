@@ -1,0 +1,150 @@
+/* Estilos Generales */
+:root {
+    --primary-color: #00A99D; /* Un tono de aqua/teal */
+    --primary-hover-color: #007A72;
+    --background-color: #f4f7f6;
+    --box-background-color: #ffffff;
+    --text-color: #333333;
+    --input-border-color: #dddddd;
+    --input-focus-color: #00A99D;
+}
+
+body {
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+    background-color: var(--background-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    color: var(--text-color);
+}
+
+/* Contenedor Principal */
+.login-container {
+    padding: 20px;
+}
+
+.login-box {
+    background-color: var(--box-background-color);
+    padding: 40px 30px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+}
+
+.logo {
+    font-size: 2.5em;
+    font-weight: 600;
+    color: var(--primary-color);
+    margin: 0 0 10px 0;
+}
+
+.subtitle {
+    margin-bottom: 30px;
+    color: #777;
+}
+
+/* Pestañas de Selección */
+.tabs {
+    display: flex;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--input-border-color);
+}
+
+.tab-link {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 1em;
+    font-family: 'Poppins', sans-serif;
+    color: #999;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.tab-link:hover {
+    color: var(--primary-color);
+}
+
+.tab-link.active {
+    color: var(--primary-color);
+    border-bottom: 3px solid var(--primary-color);
+    font-weight: 500;
+}
+
+.tab-content {
+    display: none;
+}
+
+/* Formularios y Campos */
+.input-group {
+    text-align: left;
+    margin-bottom: 20px;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    font-size: 0.9em;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--input-border-color);
+    border-radius: 8px;
+    box-sizing: border-box;
+    font-size: 1em;
+    transition: border-color 0.3s ease;
+}
+
+.input-group input:focus {
+    outline: none;
+    border-color: var(--input-focus-color);
+}
+
+/* Botones y Enlaces */
+.btn-primary {
+    width: 100%;
+    padding: 14px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-hover-color);
+}
+
+.forgot-password, .signup-link {
+    display: block;
+    margin-top: 15px;
+    text-decoration: none;
+    color: #555;
+    font-size: 0.9em;
+    transition: color 0.3s ease;
+}
+
+.forgot-password:hover, .signup-link:hover {
+    color: var(--primary-color);
+}
+
+.info-text {
+    margin-top: 20px;
+    font-size: 0.85em;
+    color: #888;
+    background-color: #f8f8f8;
+    padding: 10px;
+    border-radius: 6px;
+}

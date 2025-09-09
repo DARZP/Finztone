@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aprobaciones Pendientes - FINZTONE</title>
+    <link rel="stylesheet" href="aprobaciones.style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="main-header">
+        <a href="dashboard.html" class="back-button">← Volver</a>
+        <h1 class="logo">FINZTONE</h1>
+    </header>
+
+    <main class="container">
+        <div class="list-card">
+            <h2>Solicitudes de Gastos Pendientes</h2>
+            <div id="pending-list">
+                </div>
+        </div>
+    </main>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="aprobaciones.app.js"></script>
+</body>
+</html>
