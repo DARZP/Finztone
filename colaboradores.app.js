@@ -40,7 +40,8 @@ addUserForm.addEventListener('submit', (e) => {
     .catch((error) => console.error('Error al agregar colaborador: ', error));
 });
 
-// Función para mostrar la lista de colaboradores
+// En el archivo colaboradores.app.js
+
 function mostrarUsuarios(usuarios) {
     userListContainer.innerHTML = '';
     if (usuarios.length === 0) {
@@ -49,8 +50,10 @@ function mostrarUsuarios(usuarios) {
     }
 
     usuarios.forEach(usuario => {
+        // Cambiamos el 'div' por una etiqueta 'a' (enlace)
         const userElement = document.createElement('a');
-        userElement.href = `perfil_empleado.html?id=${usuario.id}`;
+        // Creamos una URL dinámica con el ID del usuario
+        userElement.href = `perfil_empleado.html?id=${usuario.id}`; 
         userElement.classList.add('user-item');
         
         userElement.innerHTML = `
@@ -63,6 +66,7 @@ function mostrarUsuarios(usuarios) {
         userListContainer.appendChild(userElement);
     });
 }
+
 
 // Carga inicial de datos y protección de la ruta
 auth.onAuthStateChanged((user) => {
