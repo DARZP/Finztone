@@ -15,9 +15,20 @@
 
     <main class="container">
         <div class="list-card">
-            <h2>Solicitudes de Gastos Pendientes</h2>
-            <div id="pending-list">
-                </div>
+            <div class="tabs">
+                <button class="tab-link active" onclick="openTab(event, 'Gastos')">Gastos Pendientes</button>
+                <button class="tab-link" onclick="openTab(event, 'Ingresos')">Ingresos Pendientes</button>
+            </div>
+
+            <div id="Gastos" class="tab-content" style="display: block;">
+                <h2>Solicitudes de Gastos Pendientes</h2>
+                <div id="pending-gastos-list"></div>
+            </div>
+
+            <div id="Ingresos" class="tab-content">
+                <h2>Solicitudes de Ingresos Pendientes</h2>
+                <div id="pending-ingresos-list"></div>
+            </div>
         </div>
     </main>
     
