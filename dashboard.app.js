@@ -1,6 +1,4 @@
-// ---- CONFIGURACIÓN INICIAL DE FIREBASE ----
-// OJO: Necesitamos la configuración aquí también para que esta página se comunique con Firebase.
-// ¡Es la misma que usaste en app.js!
+
 const firebaseConfig = {
   apiKey: "AIzaSyA4zRiQnr2PiG1zQc_k-Of9CmGQQSkVQ84", // Tu API Key está bien
   authDomain: "finztone-app.firebaseapp.com",
