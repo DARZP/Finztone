@@ -1,1 +1,44 @@
- 
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfil de Empleado - FINZTONE</title>
+    <link rel="stylesheet" href="perfil_empleado.style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="main-header">
+        <a href="colaboradores.html" class="back-button">← Volver a Colaboradores</a>
+        <h1 class="logo">FINZTONE</h1>
+    </header>
+
+    <main class="container">
+        <div class="card profile-card">
+            <div class="card-header">
+                 <h2>Información del Colaborador</h2>
+                 <a href="#" id="edit-profile-btn" class="btn btn-primary">Editar Perfil</a>
+            </div>
+            <div class="profile-details">
+                <p><strong>Nombre:</strong> <span id="profile-name">Cargando...</span></p>
+                <p><strong>Correo:</strong> <span id="profile-email">Cargando...</span></p>
+                <p><strong>Cargo:</strong> <span id="profile-position">Cargando...</span></p>
+                <p><strong>Sueldo Bruto Mensual:</strong> <span id="profile-salary">Cargando...</span></p>
+                <p><strong>Teléfono:</strong> <span id="profile-phone">No registrado</span></p>
+                <p><strong>CLABE:</strong> <span id="profile-clabe">No registrada</span></p>
+                <p><strong>RFC:</strong> <span id="profile-rfc">No registrado</span></p>
+            </div>
+        </div>
+
+        <div class="card activity-card">
+            <h2>Actividad Reciente</h2>
+            <div id="activity-feed"></div>
+        </div>
+    </main>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="perfil_empleado.app.js"></script>
+</body>
+</html> 
