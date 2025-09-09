@@ -1,1 +1,57 @@
- 
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis Ingresos - FINZTONE</title>
+    <link rel="stylesheet" href="empleado_ingresos.style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="main-header">
+        <a href="empleado_dashboard.html" class="back-button">← Volver</a>
+        <h1 class="logo">FINZTONE</h1>
+    </header>
+    <main class="container">
+        <div class="form-card">
+            <h2>Registrar un Nuevo Ingreso</h2>
+            <form id="add-income-form">
+                <div class="input-group">
+                    <label for="income-description">Concepto del Ingreso</label>
+                    <input type="text" id="income-description" placeholder="Ej: Cobro factura #123" required>
+                </div>
+                <div class="input-group">
+                    <label for="income-amount">Monto ($)</label>
+                    <input type="number" id="income-amount" placeholder="Ej: 10000.00" step="0.01" required>
+                </div>
+                <div class="input-group">
+                    <label for="income-category">Categoría</label>
+                    <select id="income-category" required>
+                        <option value="" disabled selected>Selecciona una categoría</option>
+                        <option value="Cobro de Factura">Cobro de Factura</option>
+                        <option value="Venta de Producto">Venta de Producto</option>
+                        <option value="Servicios Profesionales">Servicios Profesionales</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="income-date">Fecha</label>
+                    <input type="date" id="income-date" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="save-draft-btn" class="btn btn-secondary">Guardar Borrador</button>
+                    <button type="button" id="send-for-approval-btn" class="btn btn-primary">Enviar para Aprobación</button>
+                </div>
+            </form>
+        </div>
+        <div class="list-card">
+            <h2>Mi Historial de Ingresos</h2>
+            <div id="income-list"></div>
+        </div>
+    </main>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="empleado_ingresos.app.js"></script>
+</body>
+</html>
