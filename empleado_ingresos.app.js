@@ -7,7 +7,6 @@ const firebaseConfig = {
     appId: "1:95145879307:web:e10017a75edf32f1fde40e",
     measurementId: "G-T8KMJXNSTP"
 };
-
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
@@ -17,17 +16,69 @@ const addIncomeForm = document.getElementById('add-income-form');
 const incomeListContainer = document.getElementById('income-list');
 const saveDraftBtn = document.getElementById('save-draft-btn');
 const sendForApprovalBtn = document.getElementById('send-for-approval-btn');
+const cancelEditBtn = document.getElementById('cancel-edit-btn');
 const isInvoiceCheckbox = document.getElementById('is-invoice');
 const invoiceDetailsContainer = document.getElementById('invoice-details');
 
+// ---- VARIABLES DE ESTADO ----
+let modoEdicion = false;
+let idIngresoEditando = null;
+
 // ---- LÓGICA DE LA PÁGINA ----
 
-// Añade este listener para el checkbox
 isInvoiceCheckbox.addEventListener('change', () => {
     invoiceDetailsContainer.style.display = isInvoiceCheckbox.checked ? 'block' : 'none';
 });
 
-// Reemplaza tu función guardarIngreso con esta
+function generarFolio(userId) {
+    const date = new Date();
+    const userInitials = userId.substring(0, 4).toUpperCase();
+    const timestamp = date.getTime();
+    return `INC-${userInitials}-${timestamp}`; // "INC" for Income
+}
+
+function cargarIngresoEnFormulario(ingreso) {
+    addIncomeForm['income-description'].value = ingreso.descripcion;
+    addIncomeForm['income-amount'].value = ingreso.monto;
+    addIncomeForm['income-category'].value = ingreso.categoria;
+    addIncomeForm['income-date'].value = ingreso.fecha;
+    addIncomeForm['income-company'].value = ingreso.empresa || '';
+    addIncomeForm['payment-method'].value = ingreso.metodoPago || 'Efectivo';
+    addIncomeForm['income-comments'].value = ingreso.comentarios || '';
+
+    if (ingreso.datosFactura) {
+        isInvoiceCheckbox.checked = true;
+        invoiceDetailsContainer.style.display = 'block';
+        document.getElementById('invoice-rfc').value = ingreso.datosFactura.rfc || '';
+        document.getElementById('invoice-folio').value = ingreso.datosFactura.folioFiscal || '';
+    } else {
+        isInvoiceCheckbox.checked = false;
+        invoiceDetailsContainer.style.display = 'none';
+    }
+
+    saveDraftBtn.textContent = 'Actualizar Borrador';
+    sendForApprovalBtn.textContent = 'Enviar para Aprobación';
+    sendForApprovalBtn.style.display = 'inline-block'; // Mostramos ambos en modo edición
+    cancelEditBtn.style.display = 'inline-block';
+
+    window.scrollTo(0, 0);
+}
+
+function salirModoEdicion() {
+    addIncomeForm.reset();
+    isInvoiceCheckbox.checked = false;
+    invoiceDetailsContainer.style.display = 'none';
+
+    saveDraftBtn.textContent = 'Guardar Borrador';
+    sendForApprovalBtn.textContent = 'Enviar para Aprobación';
+    cancelEditBtn.style.display = 'none';
+    
+    modoEdicion = false;
+    idIngresoEditando = null;
+}
+
+cancelEditBtn.addEventListener('click', salirModoEdicion);
+
 async function guardarIngreso(status) {
     const user = auth.currentUser;
     if (!user) return alert('No se ha podido identificar al usuario.');
@@ -47,16 +98,10 @@ async function guardarIngreso(status) {
         monto: parseFloat(amount),
         categoria: addIncomeForm['income-category'].value,
         fecha: date,
-        // Nuevos campos
         empresa: addIncomeForm['income-company'].value,
         metodoPago: addIncomeForm['payment-method'].value,
         comentarios: addIncomeForm['income-comments'].value,
-        // Datos de sistema
-        creadoPor: user.uid,
-        emailCreador: user.email,
         nombreCreador: userName,
-        fechaDeCreacion: new Date(),
-        status: status
     };
 
     if (isInvoiceCheckbox.checked) {
@@ -66,17 +111,32 @@ async function guardarIngreso(status) {
         };
     }
 
-    db.collection('ingresos').add(incomeData)
-    .then(() => {
-        const message = status === 'borrador' ? '¡Borrador de ingreso guardado!' : '¡Ingreso enviado para aprobación!';
-        alert(message);
-        addIncomeForm.reset();
-        isInvoiceCheckbox.checked = false; // Aseguramos que se reinicie
-        invoiceDetailsContainer.style.display = 'none';
-    })
-    .catch((error) => console.error('Error al guardar el ingreso: ', error));
+    if (modoEdicion) {
+        db.collection('ingresos').doc(idIngresoEditando).update({
+            ...incomeData,
+            status: status
+        })
+        .then(() => {
+            alert(status === 'borrador' ? '¡Borrador actualizado!' : '¡Ingreso enviado para aprobación!');
+            salirModoEdicion();
+        })
+        .catch(error => console.error("Error al actualizar:", error));
+    } else {
+        db.collection('ingresos').add({
+            ...incomeData,
+            folio: generarFolio(user.uid), // <-- Folio se genera aquí
+            creadoPor: user.uid,
+            emailCreador: user.email,
+            fechaDeCreacion: new Date(),
+            status: status
+        })
+        .then(() => {
+            alert(status === 'borrador' ? '¡Borrador guardado!' : '¡Ingreso enviado!');
+            salirModoEdicion();
+        })
+        .catch(error => console.error("Error al guardar:", error));
+    }
 }
-
 
 saveDraftBtn.addEventListener('click', () => guardarIngreso('borrador'));
 sendForApprovalBtn.addEventListener('click', () => guardarIngreso('pendiente'));
@@ -90,9 +150,13 @@ function mostrarIngresos(ingresos) {
 
     ingresos.forEach(ingreso => {
         const ingresoElement = document.createElement('div');
-        ingresoElement.classList.add('expense-item'); // Reusamos la clase de estilo
+        ingresoElement.classList.add('expense-item'); // Reusamos clases de CSS
         const fecha = new Date(ingreso.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
         
+        const botonEditarHTML = ingreso.status === 'borrador' 
+            ? `<button class="btn-edit" data-id="${ingreso.id}">Editar</button>` 
+            : '';
+
         ingresoElement.innerHTML = `
             <div class="expense-info">
                 <span class="expense-description">${ingreso.descripcion}</span>
@@ -100,8 +164,21 @@ function mostrarIngresos(ingresos) {
             </div>
             <div class="status status-${ingreso.status}">${ingreso.status}</div>
             <span class="expense-amount">$${ingreso.monto.toFixed(2)}</span>
+            ${botonEditarHTML}
         `;
         incomeListContainer.appendChild(ingresoElement);
+    });
+
+    document.querySelectorAll('.btn-edit').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const ingresoId = e.currentTarget.dataset.id;
+            modoEdicion = true;
+            idIngresoEditando = ingresoId;
+            const ingresoAEditar = ingresos.find(i => i.id === ingresoId);
+            if (ingresoAEditar) {
+                cargarIngresoEnFormulario(ingresoAEditar);
+            }
+        });
     });
 }
 
@@ -120,4 +197,4 @@ auth.onAuthStateChanged((user) => {
     } else {
         window.location.href = 'index.html';
     }
-}); 
+});
