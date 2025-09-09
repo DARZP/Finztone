@@ -10,111 +10,86 @@ const firebaseConfig = {
   measurementId: "G-T8KMJXNSTP"
 };
 
-// Inicializamos Firebase y sus servicios
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
-const db = firebase.firestore(); // ¡Ahora usamos Firestore!
+const db = firebase.firestore();
 
-// ---- LÓGICA DE LA PÁGINA DE GASTOS ----
-
+// ---- LÓGICA DE LA PÁGINA DE GASTOS (ADMIN) ----
 const addExpenseForm = document.getElementById('add-expense-form');
-
-// 2. Lógica para guardar un nuevo gasto en la base de datos
-addExpenseForm.addEventListener('submit', (e) => {
-    e.preventDefault(); // Evitamos que la página se recargue
-
-    // Obtenemos los valores del formulario
-    const description = addExpenseForm['expense-description'].value;
-    const amount = parseFloat(addExpenseForm['expense-amount'].value);
-    const category = addExpenseForm['expense-category'].value;
-    const date = addExpenseForm['expense-date'].value;
-    const userId = auth.currentUser.uid; // Obtenemos el ID del usuario actual
-
-    // Usamos 'db.collection()' para apuntar a nuestra colección de gastos
-    db.collection('gastos').add({
-        descripcion: description,
-        monto: amount,
-        categoria: category,
-        fecha: date,
-        creadoPor: userId, // Guardamos quién creó el registro
-        fechaDeCreacion: new Date() // Guardamos la fecha exacta del registro
-    })
-    .then((docRef) => {
-        console.log('Gasto registrado con ID: ', docRef.id);
-        alert('¡Gasto registrado exitosamente!');
-        addExpenseForm.reset(); // Limpiamos el formulario
-    })
-    .catch((error) => {
-        console.error('Error al agregar el gasto: ', error);
-        alert('Ocurrió un error al registrar el gasto.');
-    });
-});
-
-// ---- LÓGICA PARA LEER Y MOSTRAR LOS GASTOS ----
-
 const expenseListContainer = document.getElementById('expense-list');
 
-// Función que se encarga de mostrar los gastos en la página
-function mostrarGastos(gastos) {
-    // Primero, limpiamos la lista por si había algo antes
-    expenseListContainer.innerHTML = '';
+// Función para generar un folio
+function generarFolio(userId) {
+    const date = new Date();
+    const userInitials = userId.substring(0, 4).toUpperCase();
+    const timestamp = date.getTime();
+    return `${userInitials}-${timestamp}`;
+}
 
+// Lógica para guardar un nuevo gasto (directamente como 'aprobado')
+addExpenseForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const user = auth.currentUser;
+    if (!user) return;
+
+    db.collection('gastos').add({
+        descripcion: addExpenseForm['expense-description'].value,
+        monto: parseFloat(addExpenseForm['expense-amount'].value),
+        categoria: addExpenseForm['expense-category'].value,
+        fecha: addExpenseForm['expense-date'].value,
+        empresa: addExpenseForm['expense-company'].value,
+        metodoPago: addExpenseForm['payment-method'].value,
+        folio: generarFolio(user.uid),
+        creadoPor: user.uid,
+        emailCreador: user.email,
+        nombreCreador: "Administrador", // O podrías buscar el nombre del admin
+        fechaDeCreacion: new Date(),
+        status: 'aprobado' // <-- Se guarda directamente como aprobado
+    })
+    .then(() => {
+        alert('¡Gasto registrado exitosamente!');
+        addExpenseForm.reset();
+    })
+    .catch((error) => console.error('Error al agregar el gasto: ', error));
+});
+
+// Función para mostrar la lista de TODOS los gastos aprobados
+function mostrarGastosAprobados(gastos) {
+    expenseListContainer.innerHTML = '';
     if (gastos.length === 0) {
-        expenseListContainer.innerHTML = '<p>Aún no hay gastos registrados.</p>';
+        expenseListContainer.innerHTML = '<p>No hay gastos aprobados en el historial.</p>';
         return;
     }
 
-    // Por cada gasto en la lista, creamos un elemento HTML
     gastos.forEach(gasto => {
-        // Creamos un nuevo div para este item
         const gastoElement = document.createElement('div');
         gastoElement.classList.add('expense-item');
-
-        // Formateamos la fecha para que sea más legible
-        const fecha = new Date(gasto.fecha).toLocaleDateString('es-ES', {
-            day: '2-digit',
-            month: 'long',
-            year: 'numeric'
-        });
-
-        // Llenamos el div con la información del gasto
+        const fecha = new Date(gasto.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+        
         gastoElement.innerHTML = `
             <div class="expense-info">
                 <span class="expense-description">${gasto.descripcion}</span>
-                <span class="expense-details">${gasto.categoria} - ${fecha}</span>
+                <span class="expense-details">Registrado por: ${gasto.nombreCreador} | ${gasto.categoria} - ${fecha}</span>
             </div>
             <span class="expense-amount">$${gasto.monto.toFixed(2)}</span>
         `;
-
-        // Añadimos el nuevo elemento a nuestro contenedor en la página
         expenseListContainer.appendChild(gastoElement);
     });
 }
 
-// ---- MODIFICACIÓN A LA VERIFICACIÓN DE AUTH ----
-
-// Ahora, modificaremos la función onAuthStateChanged para que,
-// una vez que sabemos que el usuario está logueado, pidamos sus gastos.
-
+// Verificamos auth y cargamos TODOS los gastos con status 'aprobado'
 auth.onAuthStateChanged((user) => {
     if (user) {
-        console.log('Usuario autenticado:', user.uid);
-        
-        // ¡NUEVO! Escuchamos los cambios en la colección de gastos en tiempo real
         db.collection('gastos')
-          .where('creadoPor', '==', user.uid) // Solo traemos los gastos de este usuario
-          .orderBy('fechaDeCreacion', 'desc') // Los ordenamos del más nuevo al más viejo
+          .where('status', '==', 'aprobado') // <-- ¡LA CONSULTA CLAVE!
+          .orderBy('fechaDeCreacion', 'desc')
           .onSnapshot(querySnapshot => {
                 const gastos = [];
                 querySnapshot.forEach(doc => {
                     gastos.push({ id: doc.id, ...doc.data() });
                 });
-                console.log('Gastos encontrados:', gastos);
-                mostrarGastos(gastos); // Llamamos a la función para dibujarlos en pantalla
-            }, error => {
-                console.error("Error al obtener gastos: ", error);
-            });
-
+                mostrarGastosAprobados(gastos);
+            }, error => console.error("Error al obtener gastos: ", error));
     } else {
         window.location.href = 'index.html';
     }
