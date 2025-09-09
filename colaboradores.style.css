@@ -116,3 +116,14 @@ h2 {
     font-weight: 600;
     color: var(--primary-color);
 }
+
+a.user-item {
+    text-decoration: none;
+    color: inherit;
+    display: block; /* O grid, dependiendo de tu layout */
+    transition: background-color 0.2s ease;
+}
+
+a.user-item:hover {
+    background-color: #f9f9f9;
+}
