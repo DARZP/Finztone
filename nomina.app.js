@@ -15,27 +15,9 @@ const db = firebase.firestore();
 
 // ---- LÓGICA DE LA PÁGINA DE NÓMINA ----
 
-const addUserForm = document.getElementById('add-user-form');
 const userListContainer = document.getElementById('user-list');
 const periodSelector = document.getElementById('period-selector');
 
-// Lógica para agregar un nuevo usuario (se queda igual)
-addUserForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const name = addUserForm['user-name'].value;
-    const email = addUserForm['user-email'].value;
-    const position = addUserForm['user-position'].value;
-    const salary = parseFloat(addUserForm['user-salary'].value);
-
-    db.collection('usuarios').add({
-        nombre: name, email: email, cargo: position, sueldoBruto: salary, fechaDeIngreso: new Date()
-    })
-    .then(() => {
-        alert('¡Empleado agregado a la base de datos!\n\nIMPORTANTE: Ahora ve a Firebase Authentication y crea una cuenta para este usuario.');
-        addUserForm.reset();
-    })
-    .catch((error) => console.error('Error al agregar empleado: ', error));
-});
 
 // NUEVO: Función para generar una lista de períodos de pago (últimos 12)
 function generarPeriodos() {
