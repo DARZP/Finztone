@@ -1,1 +1,57 @@
- 
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Perfil - FINZTONE</title>
+    <link rel="stylesheet" href="editar_perfil.style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="main-header">
+        <a href="#" id="back-to-profile-btn" class="back-button">← Cancelar</a>
+        <h1 class="logo">FINZTONE</h1>
+    </header>
+
+    <main class="container">
+        <div class="card form-card">
+            <h2>Editar Información del Colaborador</h2>
+            <form id="edit-profile-form">
+                <div class="input-group">
+                    <label for="profile-name">Nombre Completo</label>
+                    <input type="text" id="profile-name" required>
+                </div>
+                <div class="input-group">
+                    <label for="profile-position">Cargo</label>
+                    <input type="text" id="profile-position" required>
+                </div>
+                <div class="input-group">
+                    <label for="profile-phone">Número Telefónico</label>
+                    <input type="tel" id="profile-phone" placeholder="Ej: 5512345678">
+                </div>
+                
+                <div class="input-group">
+                    <label for="profile-salary">Sueldo Bruto Mensual ($)</label>
+                    <input type="number" id="profile-salary" required>
+                </div>
+                <div class="input-group">
+                    <label for="profile-clabe">CLABE Interbancaria</label>
+                    <input type="text" id="profile-clabe" placeholder="18 dígitos">
+                </div>
+
+                <div class="input-group">
+                    <label for="profile-rfc">RFC</label>
+                    <input type="text" id="profile-rfc" placeholder="Registro Federal de Contribuyentes">
+                </div>
+
+                <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+            </form>
+        </div>
+    </main>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="editar_perfil.app.js"></script>
+</body>
+</html> 
