@@ -38,11 +38,47 @@
                     <label for="income-date">Fecha</label>
                     <input type="date" id="income-date" required>
                 </div>
+
+                <div class="input-group">
+                    <label for="income-company">Empresa o Cliente</label>
+                    <input type="text" id="income-company" placeholder="Ej: Cliente Importante S.A. de C.V.">
+                </div>
+                <div class="input-group">
+                    <label for="payment-method">Método de Cobro</label>
+                    <select id="payment-method">
+                        <option value="Efectivo">Efectivo</option>
+                        <option value="Tarjeta de Crédito">Tarjeta de Crédito</option>
+                        <option value="Tarjeta de Débito">Tarjeta de Débito</option>
+                        <option value="Transferencia">Transferencia</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="income-comments">Comentarios (Opcional)</label>
+                    <textarea id="income-comments" rows="3"></textarea>
+                </div>
+                <div class="input-group-checkbox">
+                    <input type="checkbox" id="is-invoice">
+                    <label for="is-invoice">Anexar datos de facturación</label>
+                </div>
+
+                <div id="invoice-details" style="display: none;">
+                    <div class="input-group">
+                        <label for="invoice-rfc">RFC</label>
+                        <input type="text" id="invoice-rfc" placeholder="RFC del receptor">
+                    </div>
+                    <div class="input-group">
+                        <label for="invoice-folio">Folio Fiscal (UUID)</label>
+                        <input type="text" id="invoice-folio" placeholder="Folio de la factura emitida">
+                    </div>
+                </div>
+    
                 <div class="form-actions">
                     <button type="button" id="save-draft-btn" class="btn btn-secondary">Guardar Borrador</button>
                     <button type="button" id="send-for-approval-btn" class="btn btn-primary">Enviar para Aprobación</button>
                 </div>
-            </form>
+            </form> 
+                  
+           
         </div>
         <div class="list-card">
             <h2>Mi Historial de Ingresos</h2>
