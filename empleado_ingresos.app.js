@@ -17,9 +17,17 @@ const addIncomeForm = document.getElementById('add-income-form');
 const incomeListContainer = document.getElementById('income-list');
 const saveDraftBtn = document.getElementById('save-draft-btn');
 const sendForApprovalBtn = document.getElementById('send-for-approval-btn');
+const isInvoiceCheckbox = document.getElementById('is-invoice');
+const invoiceDetailsContainer = document.getElementById('invoice-details');
 
 // ---- LÓGICA DE LA PÁGINA ----
 
+// Añade este listener para el checkbox
+isInvoiceCheckbox.addEventListener('change', () => {
+    invoiceDetailsContainer.style.display = isInvoiceCheckbox.checked ? 'block' : 'none';
+});
+
+// Reemplaza tu función guardarIngreso con esta
 async function guardarIngreso(status) {
     const user = auth.currentUser;
     if (!user) return alert('No se ha podido identificar al usuario.');
@@ -39,22 +47,36 @@ async function guardarIngreso(status) {
         monto: parseFloat(amount),
         categoria: addIncomeForm['income-category'].value,
         fecha: date,
+        // Nuevos campos
+        empresa: addIncomeForm['income-company'].value,
+        metodoPago: addIncomeForm['payment-method'].value,
+        comentarios: addIncomeForm['income-comments'].value,
+        // Datos de sistema
         creadoPor: user.uid,
         emailCreador: user.email,
         nombreCreador: userName,
         fechaDeCreacion: new Date(),
-        status: status // 'borrador' o 'pendiente'
+        status: status
     };
 
-    // Apuntamos a la colección 'ingresos'
+    if (isInvoiceCheckbox.checked) {
+        incomeData.datosFactura = {
+            rfc: document.getElementById('invoice-rfc').value,
+            folioFiscal: document.getElementById('invoice-folio').value
+        };
+    }
+
     db.collection('ingresos').add(incomeData)
     .then(() => {
         const message = status === 'borrador' ? '¡Borrador de ingreso guardado!' : '¡Ingreso enviado para aprobación!';
         alert(message);
         addIncomeForm.reset();
+        isInvoiceCheckbox.checked = false; // Aseguramos que se reinicie
+        invoiceDetailsContainer.style.display = 'none';
     })
     .catch((error) => console.error('Error al guardar el ingreso: ', error));
 }
+
 
 saveDraftBtn.addEventListener('click', () => guardarIngreso('borrador'));
 sendForApprovalBtn.addEventListener('click', () => guardarIngreso('pendiente'));
