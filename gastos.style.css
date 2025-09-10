@@ -174,32 +174,35 @@ h2 {
     text-decoration: underline;
 }
 
+/* ---- ESTILOS PARA FILTROS (CORREGIDOS) ---- */
+.card-header-filters {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap; /* Para que se ajuste en pantallas pequeñas */
+}
+.card-header-filters h2 {
+    margin: 0;
+}
 .filters-container {
     display: flex;
-    gap: 30px;
-    background-color: #fff;
-    padding: 20px 40px;
-    border-bottom: 1px solid #eee;
-    max-width: 100%; /* Ocupa todo el ancho */
+    gap: 20px;
 }
-
 .filter-group {
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    gap: 8px;
 }
-
 .filter-group label {
     font-size: 0.9em;
     font-weight: 500;
-    margin-bottom: 8px;
     color: #555;
 }
-
 .filter-group select {
     padding: 8px 12px;
     border: 1px solid #ddd;
     border-radius: 8px;
     font-family: 'Poppins', sans-serif;
-    font-size: 1em;
     background-color: #fff;
 }
