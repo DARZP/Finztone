@@ -159,7 +159,12 @@ function mostrarGastosAprobados(gastos) {
         const itemContainer = document.createElement('div');
         itemContainer.classList.add('expense-item');
         itemContainer.dataset.id = gasto.id;
-        const fecha = new Date(gasto.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+        
+        // CORRECCIÓN: Reemplazamos guiones por diagonales para compatibilidad
+        const fechaFormateada = new Date(gasto.fecha.replace(/-/g, '/')).toLocaleDateString('es-ES', {
+            day: '2-digit', month: 'long', year: 'numeric'
+        });
+
         const creadorLink = gasto.nombreCreador !== "Administrador"
             ? `<a href="perfil_empleado.html?id=${gasto.creadoPor}">${gasto.nombreCreador}</a>`
             : "Administrador";
@@ -168,18 +173,14 @@ function mostrarGastosAprobados(gastos) {
             <div class="item-summary">
                 <div class="expense-info">
                     <span class="expense-description">${gasto.descripcion}</span>
-                    <span class="expense-details">Registrado por: ${creadorLink} | ${gasto.categoria} - ${fecha}</span>
+                    <span class="expense-details">Registrado por: ${creadorLink} | ${gasto.categoria} - ${fechaFormateada}</span>
                 </div>
                 <span class="expense-amount">$${gasto.monto.toFixed(2)}</span>
             </div>
             <div class="item-details" style="display: none;">
                 <p><strong>Folio:</strong> ${gasto.folio}</p>
                 <p><strong>Empresa:</strong> ${gasto.empresa || 'No especificada'}</p>
-                <p><strong>Método de Pago:</strong> ${gasto.metodoPago}</p>
-                <p><strong>Comentarios:</strong> ${gasto.comentarios || 'Ninguno'}</p>
-                ${gasto.datosFactura ? `<p><strong>RFC:</strong> ${gasto.datosFactura.rfc}</p><p><strong>Folio Fiscal:</strong> ${gasto.datosFactura.folioFiscal}</p>` : ''}
-            </div>
-        `;
+                </div>`;
         expenseListContainer.appendChild(itemContainer);
     });
 }
@@ -196,18 +197,11 @@ expenseListContainer.addEventListener('click', (e) => {
 categoryFilter.addEventListener('change', cargarGastosAprobados);
 monthFilter.addEventListener('change', cargarGastosAprobados);
 
-// Verificamos auth y cargamos datos
 auth.onAuthStateChanged((user) => {
     if (user) {
-        cargarEmpresas(); // Cargamos las empresas al iniciar
-        db.collection('gastos')
-          .where('status', '==', 'aprobado')
-          .orderBy('fechaDeCreacion', 'desc')
-          .onSnapshot(snapshot => {
-                const gastos = [];
-                snapshot.forEach(doc => gastos.push({ id: doc.id, ...doc.data() }));
-                mostrarGastosAprobados(gastos);
-            }, error => console.error("Error al obtener gastos: ", error));
+        cargarEmpresas();
+        poblarFiltroDeMeses();    // <-- Esta llamada faltaba
+        cargarGastosAprobados(); // <-- Esta llamada faltaba
     } else {
         window.location.href = 'index.html';
     }
