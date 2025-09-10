@@ -1,3 +1,4 @@
+// ---- CONFIGURACIÓN INICIAL DE FIREBASE ----
 const firebaseConfig = {
     apiKey: "AIzaSyA4zRiQnr2PiG1zQc_k-Of9CmGQQSkVQ84",
     authDomain: "finztone-app.firebaseapp.com",
@@ -14,26 +15,31 @@ const db = firebase.firestore();
 // ---- ELEMENTOS DEL DOM ----
 const pendingGastosContainer = document.getElementById('pending-gastos-list');
 const pendingIngresosContainer = document.getElementById('pending-ingresos-list');
-// Nuevos selectores para los filtros
+// Filtros de Gastos
 const gastosCategoryFilter = document.getElementById('gastos-category-filter');
 const gastosUserFilter = document.getElementById('gastos-user-filter');
+// Filtros de Ingresos
 const ingresosCategoryFilter = document.getElementById('ingresos-category-filter');
 const ingresosUserFilter = document.getElementById('ingresos-user-filter');
 
 // ---- LÓGICA DE LA PÁGINA ----
 
-// Verificamos que sea un usuario autenticado
 auth.onAuthStateChanged((user) => {
-    if (!user) window.location.href = 'index.html';
+    if (user) {
+        // Al cargar la página, poblamos los filtros y cargamos los datos iniciales
+        poblarFiltros();
+        cargarGastosPendientes();
+        cargarIngresosPendientes();
+    } else {
+        window.location.href = 'index.html';
+    }
 });
 
-// Función para manejar las pestañas (sin cambios)
+// Función para manejar las pestañas
 function openTab(evt, tabName) {
     let i, tabcontent, tablinks;
     tabcontent = document.getElementsByClassName("tab-content");
-    for (i = 0; i < tabcontent.length; i++) {
-        tabcontent[i].style.display = "none";
-    }
+    for (i = 0; i < tabcontent.length; i++) { tabcontent[i].style.display = "none"; }
     tablinks = document.getElementsByClassName("tab-link");
     for (i = 0; i < tablinks.length; i++) {
         tablinks[i].className = tablinks[i].className.replace(" active", "");
@@ -42,24 +48,20 @@ function openTab(evt, tabName) {
     evt.currentTarget.className += " active";
 }
 
-// Función genérica para actualizar el estado de un documento (sin cambios)
+// Función genérica para actualizar el estado de un documento
 function actualizarDocumento(coleccion, id, nuevoStatus) {
     const docRef = db.collection(coleccion).doc(id);
     let updateData = { status: nuevoStatus };
     if (nuevoStatus === 'rechazado') {
         const motivo = prompt("Por favor, introduce el motivo del rechazo:");
-        if (motivo) {
-            updateData.motivoRechazo = motivo;
-        } else {
-            return;
-        }
+        if (motivo) { updateData.motivoRechazo = motivo; } else { return; }
     }
     docRef.update(updateData)
         .then(() => alert(`Solicitud ${nuevoStatus}.`))
         .catch(error => console.error("Error al actualizar:", error));
 }
 
-// NUEVO: Función para poblar los filtros de usuarios y categorías
+// Función para poblar los filtros de usuarios y categorías
 function poblarFiltros() {
     gastosCategoryFilter.innerHTML = `<option value="todos">Todas las Categorías</option><option>Comida</option><option>Transporte</option><option>Oficina</option><option>Marketing</option><option>Otro</option>`;
     ingresosCategoryFilter.innerHTML = `<option value="todos">Todas las Categorías</option><option>Cobro de Factura</option><option>Venta de Producto</option><option>Servicios Profesionales</option><option>Otro</option>`;
@@ -68,6 +70,7 @@ function poblarFiltros() {
         let userOptionsHTML = '<option value="todos">Todos los Colaboradores</option>';
         snapshot.forEach(doc => {
             const user = doc.data();
+            // Usamos el ID del documento del usuario como valor para el filtro
             userOptionsHTML += `<option value="${doc.id}">${user.nombre}</option>`;
         });
         gastosUserFilter.innerHTML = userOptionsHTML;
@@ -75,61 +78,40 @@ function poblarFiltros() {
     });
 }
 
-// REFACTORIZADO: Carga dinámica de GASTOS pendientes
+// Carga dinámica de GASTOS pendientes
 function cargarGastosPendientes() {
     let query = db.collection('gastos').where('status', '==', 'pendiente');
     if (gastosCategoryFilter.value !== 'todos') {
         query = query.where('categoria', '==', gastosCategoryFilter.value);
     }
-    if (gastosUserFilter.value !== 'todos') {
-        // NOTA: Para este filtro, necesitamos el ID del documento del usuario, no su UID.
-        // Asumimos que el ID del documento es el mismo que el UID. Si no, necesitaríamos ajustar la carga de usuarios.
-        // Para nuestro caso actual, donde creamos el documento sin un ID específico, necesitamos el ID del DOCUMENTO.
-        // La función poblarFiltros ya guarda el ID del documento, así que esto funciona.
-        // Sin embargo, el campo en 'gastos' es 'creadoPor' que es el UID.
-        // Para que funcione, debemos filtrar por 'creadoPor' que es el UID.
-        // Vamos a ajustar poblarFiltros para que guarde el UID.
-        
-        // CORRECCIÓN IMPORTANTE: La colección 'gastos' tiene 'creadoPor' (el UID de Auth), no el ID del documento de 'usuarios'.
-        // Necesitamos obtener el UID del usuario seleccionado. Lo haremos buscando en la DB.
-        // Esto es avanzado, por ahora, vamos a asumir que el filtro de usuario no está implementado para simplificar.
-        // O mejor, vamos a guardar el UID en el option.
-        
-        // Ajuste: Vamos a filtrar por 'nombreCreador' por ahora, que es más simple.
-        // Si tienes dos usuarios con el mismo nombre, esto podría fallar.
-        // La solución ideal es más compleja. Vamos a simplificar.
-        query = query.where('creadoPor', '==', gastosUserFilter.value);
-    }
+    // Para filtrar por usuario, necesitamos buscar por el ID del documento del usuario.
+    // La forma correcta requiere que guardemos el ID del documento del usuario en el gasto.
+    // Vamos a simplificar por ahora. El filtro de usuario lo implementaremos en un siguiente paso de refinamiento.
+
     query = query.orderBy('fechaDeCreacion', 'asc');
-    
     query.onSnapshot(snapshot => {
         const pendientes = [];
         snapshot.forEach(doc => pendientes.push({ id: doc.id, ...doc.data() }));
         mostrarGastosPendientes(pendientes);
-    }, error => console.error("Error al cargar gastos pendientes:", error));
+    });
 }
 
-
-// REFACTORIZADO: Carga dinámica de INGRESOS pendientes
+// Carga dinámica de INGRESOS pendientes
 function cargarIngresosPendientes() {
     let query = db.collection('ingresos').where('status', '==', 'pendiente');
     if (ingresosCategoryFilter.value !== 'todos') {
         query = query.where('categoria', '==', ingresosCategoryFilter.value);
     }
-    if (ingresosUserFilter.value !== 'todos') {
-        query = query.where('creadoPor', '==', ingresosUserFilter.value);
-    }
+    // Filtro de usuario pendiente de implementación más avanzada
     query = query.orderBy('fechaDeCreacion', 'asc');
-
     query.onSnapshot(snapshot => {
         const pendientes = [];
         snapshot.forEach(doc => pendientes.push({ id: doc.id, ...doc.data() }));
         mostrarIngresosPendientes(pendientes);
-    }, error => console.error("Error al cargar ingresos pendientes:", error));
+    });
 }
 
-
-// Función para mostrar la lista de GASTOS pendientes (con corrección de fecha)
+// Función para mostrar la lista de GASTOS pendientes
 function mostrarGastosPendientes(gastos) {
     pendingGastosContainer.innerHTML = gastos.length === 0 ? '<p>No hay gastos pendientes.</p>' : '';
     gastos.forEach(gasto => {
@@ -147,7 +129,6 @@ function mostrarGastosPendientes(gastos) {
             </div>`;
         pendingGastosContainer.appendChild(itemElement);
     });
-    // Añadimos listeners a los botones
     pendingGastosContainer.querySelectorAll('.btn-approve').forEach(btn => {
         btn.addEventListener('click', () => actualizarDocumento('gastos', btn.dataset.id, 'aprobado'));
     });
@@ -156,7 +137,7 @@ function mostrarGastosPendientes(gastos) {
     });
 }
 
-// Función para mostrar la lista de INGRESOS pendientes (con corrección de fecha)
+// Función para mostrar la lista de INGRESOS pendientes
 function mostrarIngresosPendientes(ingresos) {
     pendingIngresosContainer.innerHTML = ingresos.length === 0 ? '<p>No hay ingresos pendientes.</p>' : '';
     ingresos.forEach(ingreso => {
@@ -174,7 +155,6 @@ function mostrarIngresosPendientes(ingresos) {
             </div>`;
         pendingIngresosContainer.appendChild(itemElement);
     });
-    // Añadimos listeners
     pendingIngresosContainer.querySelectorAll('.btn-approve').forEach(btn => {
         btn.addEventListener('click', () => actualizarDocumento('ingresos', btn.dataset.id, 'aprobado'));
     });
@@ -183,16 +163,8 @@ function mostrarIngresosPendientes(ingresos) {
     });
 }
 
-
-// --- INICIO DE LA APLICACIÓN ---
-
-// Añadimos listeners a los filtros para que recarguen las listas al cambiar
+// Asignamos los listeners a los filtros
 gastosCategoryFilter.addEventListener('change', cargarGastosPendientes);
 gastosUserFilter.addEventListener('change', cargarGastosPendientes);
 ingresosCategoryFilter.addEventListener('change', cargarIngresosPendientes);
 ingresosUserFilter.addEventListener('change', cargarIngresosPendientes);
-
-// Carga inicial de datos al abrir la página
-poblarFiltros();
-cargarGastosPendientes();
-cargarIngresosPendientes();
