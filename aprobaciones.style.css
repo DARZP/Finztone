@@ -109,3 +109,35 @@ body {
 .tab-content {
     display: none; /* Oculto por defecto, JS lo mostrará */
 }
+
+.card-header-filters {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap; /* Para que se ajuste en pantallas pequeñas */
+}
+.card-header-filters h2 {
+    margin: 0;
+}
+.filters-container {
+    display: flex;
+    gap: 20px;
+}
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.filter-group label {
+    font-size: 0.9em;
+    font-weight: 500;
+    color: #555;
+}
+.filter-group select {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-family: 'Poppins', sans-serif;
+    background-color: #fff;
+}
