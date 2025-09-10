@@ -134,6 +134,7 @@ function cargarIngresosAprobados() {
     }, error => console.error("Error al obtener ingresos filtrados: ", error));
 }
 
+// Función para mostrar la lista de TODOS los ingresos aprobados
 function mostrarIngresosAprobados(ingresos) {
     incomeListContainer.innerHTML = '';
     if (ingresos.length === 0) {
@@ -143,18 +144,14 @@ function mostrarIngresosAprobados(ingresos) {
 
     ingresos.forEach(ingreso => {
         const itemContainer = document.createElement('div');
-        itemContainer.classList.add('expense-item'); // Reutilizamos la clase de estilo
+        itemContainer.classList.add('expense-item'); // Reutilizamos clase
         itemContainer.dataset.id = ingreso.id;
 
-        const fecha = new Date(ingreso.fecha.replace(/-/g, '/')).toLocaleDateString('es-ES', {
-            day: '2-digit', month: 'long', year: 'numeric'
-        });
-
+        const fecha = new Date(ingreso.fecha.replace(/-/g, '/')).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
         const creadorLink = ingreso.nombreCreador !== "Administrador"
             ? `<a href="perfil_empleado.html?id=${ingreso.creadoPor}">${ingreso.nombreCreador}</a>`
             : "Administrador";
 
-        // Estructura de dos partes: resumen visible y detalles ocultos
         itemContainer.innerHTML = `
             <div class="item-summary">
                 <div class="expense-info">
@@ -168,16 +165,12 @@ function mostrarIngresosAprobados(ingresos) {
                 <p><strong>Empresa/Cliente:</strong> ${ingreso.empresa || 'No especificada'}</p>
                 <p><strong>Método de Cobro:</strong> ${ingreso.metodoPago || 'No especificado'}</p>
                 <p><strong>Comentarios:</strong> ${ingreso.comentarios || 'Ninguno'}</p>
-                ${ingreso.datosFactura ? `
-                    <p><strong>RFC:</strong> ${ingreso.datosFactura.rfc || 'N/A'}</p>
-                    <p><strong>Folio Fiscal:</strong> ${ingreso.datosFactura.folioFiscal || 'N/A'}</p>
-                ` : ''}
+                ${ingreso.datosFactura ? `<p><strong>RFC:</strong> ${ingreso.datosFactura.rfc || 'N/A'}</p><p><strong>Folio Fiscal:</strong> ${ingreso.datosFactura.folioFiscal || 'N/A'}</p>` : ''}
             </div>
         `;
         incomeListContainer.appendChild(itemContainer);
     });
 }
-
 
 incomeListContainer.addEventListener('click', (e) => {
     if (e.target.tagName === 'A') return;
