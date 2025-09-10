@@ -57,9 +57,9 @@ function cargarIngresoEnFormulario(ingreso) {
     }
 
     saveDraftBtn.textContent = 'Actualizar Borrador';
-    sendForApprovalBtn.textContent = 'Enviar para Aprobación';
-    sendForApprovalBtn.style.display = 'inline-block'; // Mostramos ambos en modo edición
-    cancelEditBtn.style.display = 'inline-block';
+    sendForApprovalBtn.textContent = 'Enviar para Aprobación'; // <-- CAMBIO DE TEXTO
+    sendForApprovalBtn.style.display = 'block'; // <-- ASEGÚRATE DE QUE ESTÉ VISIBLE
+    cancelEditBtn.style.display = 'block';
 
     window.scrollTo(0, 0);
 }
@@ -70,7 +70,8 @@ function salirModoEdicion() {
     invoiceDetailsContainer.style.display = 'none';
 
     saveDraftBtn.textContent = 'Guardar Borrador';
-    sendForApprovalBtn.textContent = 'Enviar para Aprobación';
+    sendForApprovalBtn.textContent = 'Enviar para Aprobación'; // <-- CAMBIO DE TEXTO
+    sendForApprovalBtn.style.display = 'block';
     cancelEditBtn.style.display = 'none';
     
     modoEdicion = false;
