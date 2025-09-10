@@ -169,6 +169,7 @@ function mostrarGastosAprobados(gastos) {
             ? `<a href="perfil_empleado.html?id=${gasto.creadoPor}">${gasto.nombreCreador}</a>`
             : "Administrador";
 
+
         itemContainer.innerHTML = `
             <div class="item-summary">
                 <div class="expense-info">
@@ -178,9 +179,17 @@ function mostrarGastosAprobados(gastos) {
                 <span class="expense-amount">$${gasto.monto.toFixed(2)}</span>
             </div>
             <div class="item-details" style="display: none;">
-                <p><strong>Folio:</strong> ${gasto.folio}</p>
+                <p><strong>Folio:</strong> ${gasto.folio || 'N/A'}</p>
                 <p><strong>Empresa:</strong> ${gasto.empresa || 'No especificada'}</p>
-                </div>`;
+                <p><strong>Método de Pago:</strong> ${gasto.metodoPago || 'No especificado'}</p>
+                <p><strong>Comentarios:</strong> ${gasto.comentarios || 'Ninguno'}</p>
+                ${gasto.datosFactura ? `
+                    <p><strong>RFC:</strong> ${gasto.datosFactura.rfc || 'No especificado'}</p>
+                    <p><strong>Folio Fiscal:</strong> ${gasto.datosFactura.folioFiscal || 'No especificado'}</p>
+                ` : ''}
+            </div>
+        `;
+
         expenseListContainer.appendChild(itemContainer);
     });
 }
