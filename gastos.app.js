@@ -1,19 +1,18 @@
 // ---- CONFIGURACIÓN INICIAL DE FIREBASE ----
-// ¡Pega aquí la misma configuración de Firebase que usaste antes!
 const firebaseConfig = {
-  apiKey: "AIzaSyA4zRiQnr2PiG1zQc_k-Of9CmGQQSkVQ84", // Tu API Key está bien
-  authDomain: "finztone-app.firebaseapp.com",
-  projectId: "finztone-app",
-  storageBucket: "finztone-app.appspot.com", // Corregí un pequeño error aquí, era .appspot.com
-  messagingSenderId: "95145879307",
-  appId: "1:95145879307:web:e10017a75edf32f1fde40e",
-  measurementId: "G-T8KMJXNSTP"
+    apiKey: "AIzaSyA4zRiQnr2PiG1zQc_k-Of9CmGQQSkVQ84",
+    authDomain: "finztone-app.firebaseapp.com",
+    projectId: "finztone-app",
+    storageBucket: "finztone-app.appspot.com",
+    messagingSenderId: "95145879307",
+    appId: "1:95145879307:web:e10017a75edf32f1fde40e",
+    measurementId: "G-T8KMJXNSTP"
 };
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// ---- LÓGICA DE LA PÁGINA DE GASTOS (ADMIN) ----
+// ---- ELEMENTOS DEL DOM ----
 const addExpenseForm = document.getElementById('add-expense-form');
 const expenseListContainer = document.getElementById('expense-list');
 const isInvoiceCheckbox = document.getElementById('is-invoice');
@@ -21,6 +20,11 @@ const invoiceDetailsContainer = document.getElementById('invoice-details');
 const companyDataList = document.getElementById('company-list');
 const categoryFilter = document.getElementById('category-filter');
 const monthFilter = document.getElementById('month-filter');
+// Selectores para los nuevos botones
+const saveDraftBtn = document.getElementById('save-draft-btn');
+const addApprovedBtn = document.getElementById('add-approved-btn');
+
+// ---- LÓGICA DEL FORMULARIO Y DATOS ----
 
 // Muestra/oculta campos de factura
 isInvoiceCheckbox.addEventListener('change', () => {
@@ -47,13 +51,11 @@ function generarFolio(userId) {
     return `EXP-ADM-${userInitials}-${timestamp}`;
 }
 
-// Lógica para guardar un nuevo gasto aprobado
-addExpenseForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
+// NUEVA FUNCIÓN CENTRAL para guardar gastos del admin
+async function guardarGastoAdmin(status) {
     const user = auth.currentUser;
     if (!user) return;
 
-    // Lógica para verificar y crear la empresa si es nueva
     const companyName = addExpenseForm['expense-company'].value.trim();
     if (companyName) {
         const companiesRef = db.collection('empresas');
@@ -77,7 +79,7 @@ addExpenseForm.addEventListener('submit', async (e) => {
         emailCreador: user.email,
         nombreCreador: "Administrador",
         fechaDeCreacion: new Date(),
-        status: 'aprobado'
+        status: status // El estado ahora es dinámico ('borrador' o 'aprobado')
     };
 
     if (isInvoiceCheckbox.checked) {
@@ -89,13 +91,21 @@ addExpenseForm.addEventListener('submit', async (e) => {
 
     db.collection('gastos').add(expenseData)
     .then(() => {
-        alert('¡Gasto registrado exitosamente!');
+        const message = status === 'borrador' ? '¡Borrador guardado!' : '¡Gasto aprobado y registrado!';
+        alert(message);
         addExpenseForm.reset();
         isInvoiceCheckbox.checked = false;
         invoiceDetailsContainer.style.display = 'none';
     })
     .catch((error) => console.error('Error al agregar el gasto: ', error));
-});
+}
+
+// NUEVOS LISTENERS para los botones
+saveDraftBtn.addEventListener('click', () => guardarGastoAdmin('borrador'));
+addApprovedBtn.addEventListener('click', () => guardarGastoAdmin('aprobado'));
+
+
+// ---- LÓGICA DE FILTROS Y VISTA ----
 
 function poblarFiltroDeMeses() {
     monthFilter.innerHTML = '<option value="todos">Todos los meses</option>';
@@ -109,43 +119,29 @@ function poblarFiltroDeMeses() {
     }
 }
 
-// REFACTORIZADO: Función principal que carga los datos según los filtros
 function cargarGastosAprobados() {
     const selectedCategory = categoryFilter.value;
     const selectedMonth = monthFilter.value;
 
-    // Empezamos con la consulta base
     let query = db.collection('gastos').where('status', '==', 'aprobado');
 
-    // Añadimos filtro de categoría si se seleccionó una
     if (selectedCategory !== 'todos') {
         query = query.where('categoria', '==', selectedCategory);
     }
-
-    // Añadimos filtro de mes si se seleccionó uno
     if (selectedMonth !== 'todos') {
         const [year, month] = selectedMonth.split('-').map(Number);
-        const startDate = new Date(year, month - 1, 1);
-        const endDate = new Date(year, month, 0, 23, 59, 59); // Último día del mes
-        
-        // Firestore necesita que los campos de fecha sean strings en formato YYYY-MM-DD
-        const startDateString = startDate.toISOString().split('T')[0];
-        const endDateString = endDate.toISOString().split('T')[0];
-
-        query = query.where('fecha', '>=', startDateString).where('fecha', '<=', endDateString);
+        const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
+        const endDate = new Date(year, month, 0, 23, 59, 59).toISOString().split('T')[0];
+        query = query.where('fecha', '>=', startDate).where('fecha', '<=', endDate);
     }
     
-    // Añadimos el ordenamiento al final
     query = query.orderBy('fecha', 'desc');
 
     query.onSnapshot(snapshot => {
         const gastos = [];
         snapshot.forEach(doc => gastos.push({ id: doc.id, ...doc.data() }));
         mostrarGastosAprobados(gastos);
-    }, error => {
-        console.error("Error al obtener gastos filtrados: ", error);
-        // Si el error es por un índice, el enlace para crearlo aparecerá aquí.
-    });
+    }, error => console.error("Error al obtener gastos filtrados: ", error));
 }
 
 function mostrarGastosAprobados(gastos) {
@@ -154,22 +150,16 @@ function mostrarGastosAprobados(gastos) {
         expenseListContainer.innerHTML = '<p>No se encontraron gastos con los filtros seleccionados.</p>';
         return;
     }
-
     gastos.forEach(gasto => {
         const itemContainer = document.createElement('div');
         itemContainer.classList.add('expense-item');
         itemContainer.dataset.id = gasto.id;
-        
-        // CORRECCIÓN: Reemplazamos guiones por diagonales para compatibilidad
         const fechaFormateada = new Date(gasto.fecha.replace(/-/g, '/')).toLocaleDateString('es-ES', {
             day: '2-digit', month: 'long', year: 'numeric'
         });
-
         const creadorLink = gasto.nombreCreador !== "Administrador"
             ? `<a href="perfil_empleado.html?id=${gasto.creadoPor}">${gasto.nombreCreador}</a>`
             : "Administrador";
-
-
         itemContainer.innerHTML = `
             <div class="item-summary">
                 <div class="expense-info">
@@ -189,7 +179,6 @@ function mostrarGastosAprobados(gastos) {
                 ` : ''}
             </div>
         `;
-
         expenseListContainer.appendChild(itemContainer);
     });
 }
@@ -209,8 +198,8 @@ monthFilter.addEventListener('change', cargarGastosAprobados);
 auth.onAuthStateChanged((user) => {
     if (user) {
         cargarEmpresas();
-        poblarFiltroDeMeses();    // <-- Esta llamada faltaba
-        cargarGastosAprobados(); // <-- Esta llamada faltaba
+        poblarFiltroDeMeses();
+        cargarGastosAprobados();
     } else {
         window.location.href = 'index.html';
     }
