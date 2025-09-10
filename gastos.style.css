@@ -127,3 +127,49 @@ h2 {
     font-weight: 600;
     color: var(--primary-color);
 }
+
+/* ---- ESTILOS PARA DETALLES DESPLEGABLES ---- */
+
+/* Hacemos que el contenedor principal del item sea clickeable */
+.expense-item {
+    cursor: pointer;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    padding: 15px;
+    transition: background-color 0.2s ease;
+}
+
+.expense-item:hover {
+    background-color: #f9f9f9;
+}
+
+/* El resumen que se ve siempre */
+.item-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* La sección de detalles, oculta por defecto */
+.item-details {
+    display: none; /* JS se encargará de mostrarlo */
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px dashed #ddd;
+    font-size: 0.9em;
+    color: #555;
+}
+
+.item-details p {
+    margin: 5px 0;
+}
+
+.item-details a {
+    color: var(--primary-color);
+    font-weight: 500;
+    text-decoration: none;
+}
+.item-details a:hover {
+    text-decoration: underline;
+}
