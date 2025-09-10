@@ -21,16 +21,44 @@
             </div>
 
             <div id="Gastos" class="tab-content" style="display: block;">
-                <h2>Solicitudes de Gastos Pendientes</h2>
-                <div id="pending-gastos-list"></div>
+    <div class="card-header-filters">
+        <h2>Solicitudes de Gastos Pendientes</h2>
+        <div class="filters-container">
+            <div class="filter-group">
+                <label>Categoría</label>
+                <select id="gastos-category-filter">
+                    </select>
             </div>
-
-            <div id="Ingresos" class="tab-content">
-                <h2>Solicitudes de Ingresos Pendientes</h2>
-                <div id="pending-ingresos-list"></div>
+            <div class="filter-group">
+                <label>Colaborador</label>
+                <select id="gastos-user-filter">
+                    </select>
             </div>
         </div>
-    </main>
+    </div>
+    <div id="pending-gastos-list"></div>
+</div>
+
+<div id="Ingresos" class="tab-content">
+    <div class="card-header-filters">
+        <h2>Solicitudes de Ingresos Pendientes</h2>
+        <div class="filters-container">
+            <div class="filter-group">
+                <label>Categoría</label>
+                <select id="ingresos-category-filter">
+                    </select>
+            </div>
+            <div class="filter-group">
+                <label>Colaborador</label>
+                <select id="ingresos-user-filter">
+                    </select>
+            </div>
+        </div>
+    </div>
+    <div id="pending-ingresos-list"></div>
+</div>
+
+
     
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
