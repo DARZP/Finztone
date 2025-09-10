@@ -14,25 +14,6 @@
         <h1 class="logo">FINZTONE</h1>
     </header>
 
-    <div class="container filters-container">
-        <div class="filter-group">
-            <label for="category-filter">Filtrar por Categoría</label>
-            <select id="category-filter">
-                <option value="todos">Todas las categorías</option>
-                <option value="Comida">Comida</option>
-                <option value="Transporte">Transporte</option>
-                <option value="Oficina">Oficina</option>
-                <option value="Marketing">Marketing</option>
-                <option value="Otro">Otro</option>
-            </select>
-        </div>
-        <div class="filter-group">
-            <label for="month-filter">Filtrar por Mes</label>
-            <select id="month-filter">
-                </select>
-        </div>
-    </div>
-
     <main class="gastos-container">
         <div class="form-card">
             <h2>Registrar un Nuevo Gasto</h2>
@@ -97,11 +78,29 @@
     <button type="submit" class="btn-primary">Agregar Gasto Aprobado</button>
 </form>
         </div>
-
         <div class="list-card">
-            <h2>Historial de Gastos</h2>
-            <div id="expense-list">
-            </div>
+            <div class="card-header-filters">
+                <h2>Historial de Gastos</h2>
+                <div class="filters-container">
+                    <div class="filter-group">
+                         <label for="category-filter">Categoría</label>
+                         <select id="category-filter">
+                             <option value="todos">Todas</option>
+                             <option value="Comida">Comida</option>
+                             <option value="Transporte">Transporte</option>
+                             <option value="Oficina">Oficina</option>
+                             <option value="Marketing">Marketing</option>
+                             <option value="Otro">Otro</option>
+                         </select>
+                     </div>
+                     <div class="filter-group">
+                         <label for="month-filter">Mes</label>
+                         <select id="month-filter"></select>
+                     </div>
+                 </div>
+             </div>
+             <div id="expense-list">
+                </div>
         </div>
     </main>
     
