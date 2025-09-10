@@ -1,4 +1,12 @@
-
+auth.onAuthStateChanged((user) => {
+    if (user) {
+        cargarEmpresas();
+        poblarFiltroDeMeses();
+        cargarIngresosAprobados();
+    } else {
+        window.location.href = 'index.html';
+    }
+});
 const firebaseConfig = {
   apiKey: "AIzaSyA4zRiQnr2PiG1zQc_k-Of9CmGQQSkVQ84", // Tu API Key está bien
   authDomain: "finztone-app.firebaseapp.com",
@@ -96,6 +104,7 @@ addIncomeForm.addEventListener('submit', async (e) => {
     .catch((error) => console.error('Error al agregar el ingreso: ', error));
 });
 
+
 function poblarFiltroDeMeses() {
     monthFilter.innerHTML = '<option value="todos">Todos los meses</option>';
     let fecha = new Date();
@@ -138,23 +147,37 @@ function cargarIngresosAprobados() {
 function mostrarIngresosAprobados(ingresos) {
     incomeListContainer.innerHTML = '';
     if (ingresos.length === 0) {
-        incomeListContainer.innerHTML = '<p>No hay ingresos aprobados en el historial.</p>';
+        incomeListContainer.innerHTML = '<p>No se encontraron ingresos con los filtros seleccionados.</p>';
         return;
     }
 
     ingresos.forEach(ingreso => {
-        const ingresoElement = document.createElement('div');
-        ingresoElement.classList.add('expense-item'); // Reutilizamos estilos
-        const fecha = new Date(ingreso.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
-        
-        ingresoElement.innerHTML = `
-            <div class="expense-info">
-                <span class="expense-description">${ingreso.descripcion}</span>
-                <span class="expense-details">Registrado por: ${ingreso.nombreCreador} | ${ingreso.categoria} - ${fecha}</span>
+        const itemContainer = document.createElement('div');
+        itemContainer.classList.add('expense-item'); // Reutilizamos clase
+        itemContainer.dataset.id = ingreso.id;
+
+        const fecha = new Date(ingreso.fecha.replace(/-/g, '/')).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+        const creadorLink = ingreso.nombreCreador !== "Administrador"
+            ? `<a href="perfil_empleado.html?id=${ingreso.creadoPor}">${ingreso.nombreCreador}</a>`
+            : "Administrador";
+
+        itemContainer.innerHTML = `
+            <div class="item-summary">
+                <div class="expense-info">
+                    <span class="expense-description">${ingreso.descripcion}</span>
+                    <span class="expense-details">Registrado por: ${creadorLink} | ${ingreso.categoria} - ${fecha}</span>
+                </div>
+                <span class="expense-amount">$${ingreso.monto.toFixed(2)}</span>
             </div>
-            <span class="expense-amount">$${ingreso.monto.toFixed(2)}</span>
+            <div class="item-details" style="display: none;">
+                <p><strong>Folio:</strong> ${ingreso.folio || 'N/A'}</p>
+                <p><strong>Empresa/Cliente:</strong> ${ingreso.empresa || 'No especificada'}</p>
+                <p><strong>Método de Cobro:</strong> ${ingreso.metodoPago || 'No especificado'}</p>
+                <p><strong>Comentarios:</strong> ${ingreso.comentarios || 'Ninguno'}</p>
+                ${ingreso.datosFactura ? `<p><strong>RFC:</strong> ${ingreso.datosFactura.rfc || 'N/A'}</p><p><strong>Folio Fiscal:</strong> ${ingreso.datosFactura.folioFiscal || 'N/A'}</p>` : ''}
+            </div>
         `;
-        incomeListContainer.appendChild(ingresoElement);
+        incomeListContainer.appendChild(itemContainer);
     });
 }
 
@@ -170,18 +193,12 @@ incomeListContainer.addEventListener('click', (e) => {
 categoryFilter.addEventListener('change', cargarIngresosAprobados);
 monthFilter.addEventListener('change', cargarIngresosAprobados);
 
-// Verificamos auth y cargamos datos
+
 auth.onAuthStateChanged((user) => {
     if (user) {
-        cargarEmpresas(); // Cargamos las empresas al iniciar
-        db.collection('ingresos')
-          .where('status', '==', 'aprobado')
-          .orderBy('fechaDeCreacion', 'desc')
-          .onSnapshot(snapshot => {
-                const ingresos = [];
-                snapshot.forEach(doc => ingresos.push({ id: doc.id, ...doc.data() }));
-                mostrarIngresosAprobados(ingresos);
-            }, error => console.error("Error al obtener ingresos: ", error));
+        cargarEmpresas();
+        poblarFiltroDeMeses();
+        cargarIngresosAprobados();
     } else {
         window.location.href = 'index.html';
     }
