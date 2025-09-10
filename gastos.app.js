@@ -19,6 +19,8 @@ const expenseListContainer = document.getElementById('expense-list');
 const isInvoiceCheckbox = document.getElementById('is-invoice');
 const invoiceDetailsContainer = document.getElementById('invoice-details');
 const companyDataList = document.getElementById('company-list');
+const categoryFilter = document.getElementById('category-filter');
+const monthFilter = document.getElementById('month-filter');
 
 // Muestra/oculta campos de factura
 isInvoiceCheckbox.addEventListener('change', () => {
@@ -95,6 +97,57 @@ addExpenseForm.addEventListener('submit', async (e) => {
     .catch((error) => console.error('Error al agregar el gasto: ', error));
 });
 
+function poblarFiltroDeMeses() {
+    monthFilter.innerHTML = '<option value="todos">Todos los meses</option>';
+    let fecha = new Date();
+    for (let i = 0; i < 12; i++) {
+        const value = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
+        const text = fecha.toLocaleString('es-ES', { month: 'long', year: 'numeric' });
+        const option = new Option(text, value);
+        monthFilter.appendChild(option);
+        fecha.setMonth(fecha.getMonth() - 1);
+    }
+}
+
+// REFACTORIZADO: Función principal que carga los datos según los filtros
+function cargarGastosAprobados() {
+    const selectedCategory = categoryFilter.value;
+    const selectedMonth = monthFilter.value;
+
+    // Empezamos con la consulta base
+    let query = db.collection('gastos').where('status', '==', 'aprobado');
+
+    // Añadimos filtro de categoría si se seleccionó una
+    if (selectedCategory !== 'todos') {
+        query = query.where('categoria', '==', selectedCategory);
+    }
+
+    // Añadimos filtro de mes si se seleccionó uno
+    if (selectedMonth !== 'todos') {
+        const [year, month] = selectedMonth.split('-').map(Number);
+        const startDate = new Date(year, month - 1, 1);
+        const endDate = new Date(year, month, 0, 23, 59, 59); // Último día del mes
+        
+        // Firestore necesita que los campos de fecha sean strings en formato YYYY-MM-DD
+        const startDateString = startDate.toISOString().split('T')[0];
+        const endDateString = endDate.toISOString().split('T')[0];
+
+        query = query.where('fecha', '>=', startDateString).where('fecha', '<=', endDateString);
+    }
+    
+    // Añadimos el ordenamiento al final
+    query = query.orderBy('fecha', 'desc');
+
+    query.onSnapshot(snapshot => {
+        const gastos = [];
+        snapshot.forEach(doc => gastos.push({ id: doc.id, ...doc.data() }));
+        mostrarGastosAprobados(gastos);
+    }, error => {
+        console.error("Error al obtener gastos filtrados: ", error);
+        // Si el error es por un índice, el enlace para crearlo aparecerá aquí.
+    });
+}
+
 function mostrarGastosAprobados(gastos) {
     expenseListContainer.innerHTML = '';
     if (gastos.length === 0) {
@@ -155,6 +208,9 @@ expenseListContainer.addEventListener('click', (e) => {
         details.style.display = isVisible ? 'none' : 'block';
     }
 });
+
+categoryFilter.addEventListener('change', cargarGastosAprobados);
+monthFilter.addEventListener('change', cargarGastosAprobados);
 
 // Verificamos auth y cargamos datos
 auth.onAuthStateChanged((user) => {
