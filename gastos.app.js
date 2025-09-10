@@ -103,21 +103,58 @@ function mostrarGastosAprobados(gastos) {
     }
 
     gastos.forEach(gasto => {
-        const gastoElement = document.createElement('div');
-        gastoElement.classList.add('expense-item');
+        const itemContainer = document.createElement('div');
+        itemContainer.classList.add('expense-item');
+        // Guardamos el ID del documento en el elemento para usarlo después
+        itemContainer.dataset.id = gasto.id;
+
         const fecha = new Date(gasto.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
         
-        gastoElement.innerHTML = `
-            <div class="expense-info">
-                <span class="expense-description">${gasto.descripcion}</span>
-                <span class="expense-details">Registrado por: ${gasto.nombreCreador} | ${gasto.categoria} - ${fecha}</span>
+        // Creamos el enlace al perfil del colaborador (si no es el admin)
+        const creadorLink = gasto.nombreCreador !== "Administrador"
+            ? `<a href="perfil_empleado.html?id=${gasto.creadoPor}">${gasto.nombreCreador}</a>`
+            : "Administrador";
+
+        // Estructura de dos partes: resumen y detalles
+        itemContainer.innerHTML = `
+            <div class="item-summary">
+                <div class="expense-info">
+                    <span class="expense-description">${gasto.descripcion}</span>
+                    <span class="expense-details">Registrado por: ${creadorLink} | ${gasto.categoria} - ${fecha}</span>
+                </div>
+                <span class="expense-amount">$${gasto.monto.toFixed(2)}</span>
             </div>
-            <span class="expense-amount">$${gasto.monto.toFixed(2)}</span>
+            <div class="item-details" style="display: none;">
+                <p><strong>Folio:</strong> ${gasto.folio}</p>
+                <p><strong>Empresa:</strong> ${gasto.empresa || 'No especificada'}</p>
+                <p><strong>Método de Pago:</strong> ${gasto.metodoPago}</p>
+                <p><strong>Comentarios:</strong> ${gasto.comentarios || 'Ninguno'}</p>
+                ${gasto.datosFactura ? `
+                    <p><strong>RFC:</strong> ${gasto.datosFactura.rfc}</p>
+                    <p><strong>Folio Fiscal:</strong> ${gasto.datosFactura.folioFiscal}</p>
+                ` : ''}
+            </div>
         `;
-        expenseListContainer.appendChild(gastoElement);
+        expenseListContainer.appendChild(itemContainer);
     });
 }
 
+expenseListContainer.addEventListener('click', (e) => {
+    // Si el clic fue en un enlace (el nombre del colaborador), no hacemos nada para permitir la navegación.
+    if (e.target.tagName === 'A') {
+        return;
+    }
+
+    // Buscamos el contenedor principal del item al que se le hizo clic
+    const item = e.target.closest('.expense-item');
+    if (item) {
+        // Encontramos la sección de detalles dentro de ese item
+        const details = item.querySelector('.item-details');
+        // Mostramos u ocultamos los detalles
+        const isVisible = details.style.display === 'block';
+        details.style.display = isVisible ? 'none' : 'block';
+    }
+});
 
 // Verificamos auth y cargamos datos
 auth.onAuthStateChanged((user) => {
