@@ -9,7 +9,6 @@ const firebaseConfig = {
   appId: "1:95145879307:web:e10017a75edf32f1fde40e",
   measurementId: "G-T8KMJXNSTP"
 };
-
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
@@ -17,43 +16,85 @@ const db = firebase.firestore();
 // ---- LÓGICA DE LA PÁGINA DE GASTOS (ADMIN) ----
 const addExpenseForm = document.getElementById('add-expense-form');
 const expenseListContainer = document.getElementById('expense-list');
+const isInvoiceCheckbox = document.getElementById('is-invoice');
+const invoiceDetailsContainer = document.getElementById('invoice-details');
+const companyDataList = document.getElementById('company-list');
 
-// Función para generar un folio
+// Muestra/oculta campos de factura
+isInvoiceCheckbox.addEventListener('change', () => {
+    invoiceDetailsContainer.style.display = isInvoiceCheckbox.checked ? 'block' : 'none';
+});
+
+// Carga las empresas existentes para el autocompletado
+function cargarEmpresas() {
+    db.collection('empresas').get().then(snapshot => {
+        companyDataList.innerHTML = '';
+        snapshot.forEach(doc => {
+            const option = document.createElement('option');
+            option.value = doc.data().nombre;
+            companyDataList.appendChild(option);
+        });
+    });
+}
+
+// Genera un folio
 function generarFolio(userId) {
     const date = new Date();
     const userInitials = userId.substring(0, 4).toUpperCase();
     const timestamp = date.getTime();
-    return `${userInitials}-${timestamp}`;
+    return `EXP-ADM-${userInitials}-${timestamp}`;
 }
 
-// Lógica para guardar un nuevo gasto (directamente como 'aprobado')
-addExpenseForm.addEventListener('submit', (e) => {
+// Lógica para guardar un nuevo gasto aprobado
+addExpenseForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const user = auth.currentUser;
     if (!user) return;
 
-    db.collection('gastos').add({
+    // Lógica para verificar y crear la empresa si es nueva
+    const companyName = addExpenseForm['expense-company'].value.trim();
+    if (companyName) {
+        const companiesRef = db.collection('empresas');
+        const existingCompany = await companiesRef.where('nombre', '==', companyName).get();
+        if (existingCompany.empty) {
+            await companiesRef.add({ nombre: companyName });
+            cargarEmpresas();
+        }
+    }
+
+    const expenseData = {
         descripcion: addExpenseForm['expense-description'].value,
         monto: parseFloat(addExpenseForm['expense-amount'].value),
         categoria: addExpenseForm['expense-category'].value,
         fecha: addExpenseForm['expense-date'].value,
-        empresa: addExpenseForm['expense-company'].value,
+        empresa: companyName,
         metodoPago: addExpenseForm['payment-method'].value,
+        comentarios: addExpenseForm['expense-comments'].value,
         folio: generarFolio(user.uid),
         creadoPor: user.uid,
         emailCreador: user.email,
-        nombreCreador: "Administrador", // O podrías buscar el nombre del admin
+        nombreCreador: "Administrador",
         fechaDeCreacion: new Date(),
-        status: 'aprobado' // <-- Se guarda directamente como aprobado
-    })
+        status: 'aprobado'
+    };
+
+    if (isInvoiceCheckbox.checked) {
+        expenseData.datosFactura = {
+            rfc: document.getElementById('invoice-rfc').value,
+            folioFiscal: document.getElementById('invoice-folio').value
+        };
+    }
+
+    db.collection('gastos').add(expenseData)
     .then(() => {
         alert('¡Gasto registrado exitosamente!');
         addExpenseForm.reset();
+        isInvoiceCheckbox.checked = false;
+        invoiceDetailsContainer.style.display = 'none';
     })
     .catch((error) => console.error('Error al agregar el gasto: ', error));
 });
 
-// Función para mostrar la lista de TODOS los gastos aprobados
 function mostrarGastosAprobados(gastos) {
     expenseListContainer.innerHTML = '';
     if (gastos.length === 0) {
@@ -77,17 +118,17 @@ function mostrarGastosAprobados(gastos) {
     });
 }
 
-// Verificamos auth y cargamos TODOS los gastos con status 'aprobado'
+
+// Verificamos auth y cargamos datos
 auth.onAuthStateChanged((user) => {
     if (user) {
+        cargarEmpresas(); // Cargamos las empresas al iniciar
         db.collection('gastos')
-          .where('status', '==', 'aprobado') // <-- ¡LA CONSULTA CLAVE!
+          .where('status', '==', 'aprobado')
           .orderBy('fechaDeCreacion', 'desc')
-          .onSnapshot(querySnapshot => {
+          .onSnapshot(snapshot => {
                 const gastos = [];
-                querySnapshot.forEach(doc => {
-                    gastos.push({ id: doc.id, ...doc.data() });
-                });
+                snapshot.forEach(doc => gastos.push({ id: doc.id, ...doc.data() }));
                 mostrarGastosAprobados(gastos);
             }, error => console.error("Error al obtener gastos: ", error));
     } else {
