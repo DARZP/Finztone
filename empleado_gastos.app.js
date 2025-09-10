@@ -5,6 +5,7 @@ const firebaseConfig = {
     storageBucket: "finztone-app.appspot.com",
     messagingSenderId: "95145879307",
     appId: "1:95145879307:web:e10017a75edf32f1fde40e",
+
     measurementId: "G-T8KMJXNSTP"
 };
 firebase.initializeApp(firebaseConfig);
@@ -73,7 +74,8 @@ function cargarGastoEnFormulario(gasto) {
     }
 
     saveDraftBtn.textContent = 'Actualizar Borrador';
-    sendForApprovalBtn.style.display = 'none';
+    sendForApprovalBtn.textContent = 'Enviar para Aprobación'; // <-- CAMBIO DE TEXTO
+    sendForApprovalBtn.style.display = 'block'; // <-- ASEGÚRATE DE QUE ESTÉ VISIBLE
     cancelEditBtn.style.display = 'block';
 
     window.scrollTo(0, 0);
@@ -86,6 +88,7 @@ function salirModoEdicion() {
     invoiceDetailsContainer.style.display = 'none';
 
     saveDraftBtn.textContent = 'Guardar Borrador';
+    sendForApprovalBtn.textContent = 'Enviar para Aprobación'; // <-- CAMBIO DE TEXTO
     sendForApprovalBtn.style.display = 'block';
     cancelEditBtn.style.display = 'none';
     
