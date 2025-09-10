@@ -9,90 +9,80 @@ const firebaseConfig = {
   appId: "1:95145879307:web:e10017a75edf32f1fde40e",
   measurementId: "G-T8KMJXNSTP"
 };
-
-// Inicializamos Firebase y sus servicios
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// ---- LÓGICA DE LA PÁGINA DE INGRESOS ----
-
+// ---- LÓGICA DE LA PÁGINA DE INGRESOS (ADMIN) ----
 const addIncomeForm = document.getElementById('add-income-form');
 const incomeListContainer = document.getElementById('income-list');
 
-// Lógica para guardar un nuevo ingreso en la base de datos
+// Lógica para guardar un nuevo ingreso (directamente como 'aprobado')
 addIncomeForm.addEventListener('submit', (e) => {
     e.preventDefault();
+    const user = auth.currentUser;
+    if (!user) return;
 
-    const description = addIncomeForm['income-description'].value;
-    const amount = parseFloat(addIncomeForm['income-amount'].value);
-    const category = addIncomeForm['income-category'].value;
-    const date = addIncomeForm['income-date'].value;
-    const userId = auth.currentUser.uid;
-
-    db.collection('ingresos').add({ // <--- Apunta a la nueva colección 'ingresos'
-        descripcion: description,
-        monto: amount,
-        categoria: category,
-        fecha: date,
-        creadoPor: userId,
-        fechaDeCreacion: new Date()
+    db.collection('ingresos').add({
+        descripcion: addIncomeForm['income-description'].value,
+        monto: parseFloat(addIncomeForm['income-amount'].value),
+        categoria: addIncomeForm['income-category'].value,
+        fecha: addIncomeForm['income-date'].value,
+        empresa: addIncomeForm['income-company'].value,
+        metodoPago: addIncomeForm['payment-method'].value,
+        creadoPor: user.uid,
+        emailCreador: user.email,
+        nombreCreador: "Administrador",
+        fechaDeCreacion: new Date(),
+        status: 'aprobado' // <-- Se guarda directamente como aprobado
     })
-    .then((docRef) => {
-        console.log('Ingreso registrado con ID: ', docRef.id);
+    .then(() => {
         alert('¡Ingreso registrado exitosamente!');
         addIncomeForm.reset();
     })
-    .catch((error) => {
-        console.error('Error al agregar el ingreso: ', error);
-        alert('Ocurrió un error al registrar el ingreso.');
-    });
+    .catch((error) => console.error('Error al agregar el ingreso: ', error));
 });
 
-// Función que se encarga de mostrar los ingresos en la página
-function mostrarIngresos(ingresos) {
+// Función para mostrar la lista de TODOS los ingresos aprobados
+function mostrarIngresosAprobados(ingresos) {
     incomeListContainer.innerHTML = '';
-
     if (ingresos.length === 0) {
-        incomeListContainer.innerHTML = '<p>Aún no hay ingresos registrados.</p>';
+        incomeListContainer.innerHTML = '<p>No hay ingresos aprobados en el historial.</p>';
         return;
     }
 
     ingresos.forEach(ingreso => {
         const ingresoElement = document.createElement('div');
-        ingresoElement.classList.add('income-item'); // Clase CSS para ingresos
-
-        const fecha = new Date(ingreso.fecha).toLocaleDateString('es-ES', {
-            day: '2-digit', month: 'long', year: 'numeric'
-        });
-
+        // Reusamos los estilos de la lista de gastos
+        ingresoElement.classList.add('expense-item');
+        const fecha = new Date(ingreso.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+        
         ingresoElement.innerHTML = `
-            <div class="income-info">
-                <span class="income-description">${ingreso.descripcion}</span>
-                <span class="income-details">${ingreso.categoria} - ${fecha}</span>
+            <div class="expense-info">
+                <span class="expense-description">${ingreso.descripcion}</span>
+                <span class="expense-details">Registrado por: ${ingreso.nombreCreador} | ${ingreso.categoria} - ${fecha}</span>
             </div>
-            <span class="income-amount">$${ingreso.monto.toFixed(2)}</span>
+            <span class="expense-amount">$${ingreso.monto.toFixed(2)}</span>
         `;
         incomeListContainer.appendChild(ingresoElement);
     });
 }
 
-// Verificamos el estado de autenticación y cargamos los datos
+// Verificamos auth y cargamos TODOS los ingresos con status 'aprobado'
 auth.onAuthStateChanged((user) => {
     if (user) {
-        console.log('Usuario autenticado:', user.uid);
-        
-        db.collection('ingresos') // <--- Lee de la nueva colección 'ingresos'
-          .where('creadoPor', '==', user.uid)
+        db.collection('ingresos')
+          .where('status', '==', 'aprobado') // <-- ¡LA CONSULTA CLAVE!
           .orderBy('fechaDeCreacion', 'desc')
           .onSnapshot(querySnapshot => {
                 const ingresos = [];
                 querySnapshot.forEach(doc => {
                     ingresos.push({ id: doc.id, ...doc.data() });
                 });
-                mostrarIngresos(ingresos); // Llama a la función para mostrar ingresos
+                mostrarIngresosAprobados(ingresos);
             }, error => {
-                console.error("Error al obtener ingresos: ", error);
+              // Si te pide un índice, la consola mostrará el error con el enlace para crearlo.
+              console.error("Error al obtener ingresos aprobados: ", error);
             });
     } else {
         window.location.href = 'index.html';
