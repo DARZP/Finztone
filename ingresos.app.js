@@ -1,12 +1,3 @@
-auth.onAuthStateChanged((user) => {
-    if (user) {
-        cargarEmpresas();
-        poblarFiltroDeMeses();
-        cargarIngresosAprobados();
-    } else {
-        window.location.href = 'index.html';
-    }
-});
 const firebaseConfig = {
   apiKey: "AIzaSyA4zRiQnr2PiG1zQc_k-Of9CmGQQSkVQ84", // Tu API Key está bien
   authDomain: "finztone-app.firebaseapp.com",
