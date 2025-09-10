@@ -147,3 +147,30 @@ h2 {
     font-size: 0.9em;
     background-color: #fff;
 }
+
+.filters-container {
+    display: flex;
+    gap: 30px;
+    background-color: #fff;
+    padding: 20px 40px;
+    border-bottom: 1px solid #eee;
+    max-width: 100%;
+}
+.filter-group { display: flex; flex-direction: column; }
+.filter-group label { font-size: 0.9em; font-weight: 500; margin-bottom: 8px; color: #555; }
+.filter-group select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-family: 'Poppins', sans-serif; font-size: 1em; background-color: #fff; }
+
+.expense-item { /* Reutilizamos esta clase */
+    cursor: pointer;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    padding: 15px;
+    transition: background-color 0.2s ease;
+}
+.expense-item:hover { background-color: #f9f9f9; }
+.item-summary { display: flex; justify-content: space-between; align-items: center; }
+.item-details { display: none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ddd; font-size: 0.9em; color: #555; }
+.item-details p { margin: 5px 0; }
+.item-details a { color: var(--primary-color); font-weight: 500; text-decoration: none; }
+.item-details a:hover { text-decoration: underline; }
