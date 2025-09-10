@@ -20,19 +20,19 @@
             <form id="add-income-form">
                 <div class="input-group">
                     <label for="income-description">Concepto del Ingreso</label>
-                    <input type="text" id="income-description" placeholder="Ej: Venta de producto" required>
+                    <input type="text" id="income-description" required>
                 </div>
                 <div class="input-group">
                     <label for="income-amount">Monto ($)</label>
-                    <input type="number" id="income-amount" placeholder="Ej: 1500.00" step="0.01" required>
+                    <input type="number" id="income-amount" step="0.01" required>
                 </div>
                 <div class="input-group">
                     <label for="income-category">Categoría</label>
                     <select id="income-category" required>
                         <option value="" disabled selected>Selecciona una categoría</option>
-                        <option value="Ventas">Ventas</option>
-                        <option value="Servicios">Servicios</option>
-                        <option value="Nómina">Nómina</option>
+                        <option value="Cobro de Factura">Cobro de Factura</option>
+                        <option value="Venta de Producto">Venta de Producto</option>
+                        <option value="Servicios Profesionales">Servicios Profesionales</option>
                         <option value="Otro">Otro</option>
                     </select>
                 </div>
@@ -40,7 +40,19 @@
                     <label for="income-date">Fecha</label>
                     <input type="date" id="income-date" required>
                 </div>
-                <button type="submit" class="btn-primary">Agregar Ingreso</button>
+                <div class="input-group">
+                    <label for="income-company">Empresa o Cliente</label>
+                    <input type="text" id="income-company">
+                </div>
+                <div class="input-group">
+                    <label for="payment-method">Método de Cobro</label>
+                    <select id="payment-method">
+                        <option value="Efectivo">Efectivo</option>
+                        <option value="Transferencia">Transferencia</option>
+                        <option value="Tarjeta de Crédito">Tarjeta de Crédito</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary">Agregar Ingreso Aprobado</button>
             </form>
         </div>
 
