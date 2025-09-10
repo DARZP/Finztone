@@ -16,29 +16,81 @@ const db = firebase.firestore();
 // ---- LÓGICA DE LA PÁGINA DE INGRESOS (ADMIN) ----
 const addIncomeForm = document.getElementById('add-income-form');
 const incomeListContainer = document.getElementById('income-list');
+const isInvoiceCheckbox = document.getElementById('is-invoice');
+const invoiceDetailsContainer = document.getElementById('invoice-details');
+const companyDataList = document.getElementById('company-list');
 
-// Lógica para guardar un nuevo ingreso (directamente como 'aprobado')
-addIncomeForm.addEventListener('submit', (e) => {
+// Muestra/oculta campos de factura
+isInvoiceCheckbox.addEventListener('change', () => {
+    invoiceDetailsContainer.style.display = isInvoiceCheckbox.checked ? 'block' : 'none';
+});
+
+// Carga las empresas existentes para el autocompletado
+function cargarEmpresas() {
+    db.collection('empresas').get().then(snapshot => {
+        companyDataList.innerHTML = '';
+        snapshot.forEach(doc => {
+            const option = document.createElement('option');
+            option.value = doc.data().nombre;
+            companyDataList.appendChild(option);
+        });
+    });
+}
+
+// Genera un folio
+function generarFolio(userId) {
+    const date = new Date();
+    const userInitials = userId.substring(0, 4).toUpperCase();
+    const timestamp = date.getTime();
+    return `INC-ADM-${userInitials}-${timestamp}`;
+}
+
+// Lógica para guardar un nuevo ingreso aprobado
+addIncomeForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const user = auth.currentUser;
     if (!user) return;
 
-    db.collection('ingresos').add({
+    // Lógica para verificar y crear la empresa si es nueva
+    const companyName = addIncomeForm['income-company'].value.trim();
+    if (companyName) {
+        const companiesRef = db.collection('empresas');
+        const existingCompany = await companiesRef.where('nombre', '==', companyName).get();
+        if (existingCompany.empty) {
+            await companiesRef.add({ nombre: companyName });
+            cargarEmpresas();
+        }
+    }
+
+    const incomeData = {
         descripcion: addIncomeForm['income-description'].value,
         monto: parseFloat(addIncomeForm['income-amount'].value),
         categoria: addIncomeForm['income-category'].value,
         fecha: addIncomeForm['income-date'].value,
-        empresa: addIncomeForm['income-company'].value,
+        empresa: companyName,
         metodoPago: addIncomeForm['payment-method'].value,
+        comentarios: addIncomeForm['income-comments'].value,
+        folio: generarFolio(user.uid),
         creadoPor: user.uid,
         emailCreador: user.email,
         nombreCreador: "Administrador",
         fechaDeCreacion: new Date(),
-        status: 'aprobado' // <-- Se guarda directamente como aprobado
-    })
+        status: 'aprobado'
+    };
+
+    if (isInvoiceCheckbox.checked) {
+        incomeData.datosFactura = {
+            rfc: document.getElementById('invoice-rfc').value,
+            folioFiscal: document.getElementById('invoice-folio').value
+        };
+    }
+
+    db.collection('ingresos').add(incomeData)
     .then(() => {
         alert('¡Ingreso registrado exitosamente!');
         addIncomeForm.reset();
+        isInvoiceCheckbox.checked = false;
+        invoiceDetailsContainer.style.display = 'none';
     })
     .catch((error) => console.error('Error al agregar el ingreso: ', error));
 });
@@ -53,8 +105,7 @@ function mostrarIngresosAprobados(ingresos) {
 
     ingresos.forEach(ingreso => {
         const ingresoElement = document.createElement('div');
-        // Reusamos los estilos de la lista de gastos
-        ingresoElement.classList.add('expense-item');
+        ingresoElement.classList.add('expense-item'); // Reutilizamos estilos
         const fecha = new Date(ingreso.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
         
         ingresoElement.innerHTML = `
@@ -68,22 +119,18 @@ function mostrarIngresosAprobados(ingresos) {
     });
 }
 
-// Verificamos auth y cargamos TODOS los ingresos con status 'aprobado'
+// Verificamos auth y cargamos datos
 auth.onAuthStateChanged((user) => {
     if (user) {
+        cargarEmpresas(); // Cargamos las empresas al iniciar
         db.collection('ingresos')
-          .where('status', '==', 'aprobado') // <-- ¡LA CONSULTA CLAVE!
+          .where('status', '==', 'aprobado')
           .orderBy('fechaDeCreacion', 'desc')
-          .onSnapshot(querySnapshot => {
+          .onSnapshot(snapshot => {
                 const ingresos = [];
-                querySnapshot.forEach(doc => {
-                    ingresos.push({ id: doc.id, ...doc.data() });
-                });
+                snapshot.forEach(doc => ingresos.push({ id: doc.id, ...doc.data() }));
                 mostrarIngresosAprobados(ingresos);
-            }, error => {
-              // Si te pide un índice, la consola mostrará el error con el enlace para crearlo.
-              console.error("Error al obtener ingresos aprobados: ", error);
-            });
+            }, error => console.error("Error al obtener ingresos: ", error));
     } else {
         window.location.href = 'index.html';
     }
