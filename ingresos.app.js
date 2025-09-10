@@ -1,5 +1,4 @@
-// ---- CONFIGURACIÓN INICIAL DE FIREBASE ----
-// ¡Pega aquí la misma configuración de Firebase que usaste antes!
+
 const firebaseConfig = {
   apiKey: "AIzaSyA4zRiQnr2PiG1zQc_k-Of9CmGQQSkVQ84", // Tu API Key está bien
   authDomain: "finztone-app.firebaseapp.com",
@@ -19,6 +18,8 @@ const incomeListContainer = document.getElementById('income-list');
 const isInvoiceCheckbox = document.getElementById('is-invoice');
 const invoiceDetailsContainer = document.getElementById('invoice-details');
 const companyDataList = document.getElementById('company-list');
+const categoryFilter = document.getElementById('category-filter');
+const monthFilter = document.getElementById('month-filter');
 
 // Muestra/oculta campos de factura
 isInvoiceCheckbox.addEventListener('change', () => {
@@ -95,6 +96,44 @@ addIncomeForm.addEventListener('submit', async (e) => {
     .catch((error) => console.error('Error al agregar el ingreso: ', error));
 });
 
+function poblarFiltroDeMeses() {
+    monthFilter.innerHTML = '<option value="todos">Todos los meses</option>';
+    let fecha = new Date();
+    for (let i = 0; i < 12; i++) {
+        const value = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
+        const text = fecha.toLocaleString('es-ES', { month: 'long', year: 'numeric' });
+        const option = new Option(text, value);
+        monthFilter.appendChild(option);
+        fecha.setMonth(fecha.getMonth() - 1);
+    }
+}
+
+
+function cargarIngresosAprobados() {
+    const selectedCategory = categoryFilter.value;
+    const selectedMonth = monthFilter.value;
+
+    let query = db.collection('ingresos').where('status', '==', 'aprobado');
+
+    if (selectedCategory !== 'todos') {
+        query = query.where('categoria', '==', selectedCategory);
+    }
+    if (selectedMonth !== 'todos') {
+        const [year, month] = selectedMonth.split('-').map(Number);
+        const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
+        const endDate = new Date(year, month, 0, 23, 59, 59).toISOString().split('T')[0];
+        query = query.where('fecha', '>=', startDate).where('fecha', '<=', endDate);
+    }
+    
+    query = query.orderBy('fecha', 'desc');
+
+    query.onSnapshot(snapshot => {
+        const ingresos = [];
+        snapshot.forEach(doc => ingresos.push({ id: doc.id, ...doc.data() }));
+        mostrarIngresosAprobados(ingresos);
+    }, error => console.error("Error al obtener ingresos filtrados: ", error));
+}
+
 // Función para mostrar la lista de TODOS los ingresos aprobados
 function mostrarIngresosAprobados(ingresos) {
     incomeListContainer.innerHTML = '';
@@ -118,6 +157,18 @@ function mostrarIngresosAprobados(ingresos) {
         incomeListContainer.appendChild(ingresoElement);
     });
 }
+
+incomeListContainer.addEventListener('click', (e) => {
+    if (e.target.tagName === 'A') return;
+    const item = e.target.closest('.expense-item');
+    if (item) {
+        const details = item.querySelector('.item-details');
+        details.style.display = details.style.display === 'block' ? 'none' : 'block';
+    }
+});
+
+categoryFilter.addEventListener('change', cargarIngresosAprobados);
+monthFilter.addEventListener('change', cargarIngresosAprobados);
 
 // Verificamos auth y cargamos datos
 auth.onAuthStateChanged((user) => {
