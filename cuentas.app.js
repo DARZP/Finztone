@@ -20,7 +20,7 @@ const accountsListContainer = document.getElementById('accounts-list');
 // Protección de la ruta
 auth.onAuthStateChanged(user => {
     if (user) {
-        cargarCuentas();
+        cargarCuentasConHistorial();
     } else {
         window.location.href = 'index.html';
     }
