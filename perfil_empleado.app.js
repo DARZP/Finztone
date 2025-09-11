@@ -29,13 +29,14 @@ const profileClabe = document.getElementById('profile-clabe');
 const profileRfc = document.getElementById('profile-rfc');
 const activityFeed = document.getElementById('activity-feed');
 const editProfileBtn = document.getElementById('edit-profile-btn');
+const profileDeductionsList = document.getElementById('profile-deductions-list');
+const profileNetSalary = document.getElementById('profile-net-salary');
 
 // Hacemos que el botón "Editar" apunte a la página de edición correcta
 if (userId) {
     editProfileBtn.href = `editar_perfil.html?id=${userId}`;
 }
 
-// 2. Función para cargar los datos del perfil
 function cargarDatosPerfil() {
     if (!userId) {
         profileName.textContent = "ID de usuario no proporcionado.";
@@ -45,14 +46,45 @@ function cargarDatosPerfil() {
     db.collection('usuarios').doc(userId).onSnapshot(doc => {
         if (doc.exists) {
             const userData = doc.data();
+            
+            // Llenamos los datos básicos (sin cambios)
             profileName.textContent = userData.nombre;
             profileEmail.textContent = userData.email;
             profilePosition.textContent = userData.cargo;
             profileSalary.textContent = `$${userData.sueldoBruto.toLocaleString('es-MX')}`;
-            // Mostramos los datos adicionales o un texto por defecto si no existen
             profilePhone.textContent = userData.telefono || 'No registrado';
             profileClabe.textContent = userData.clabe || 'No registrada';
             profileRfc.textContent = userData.rfc || 'No registrado';
+
+            // --- LÓGICA DE CÁLCULO DE DEDUCCIONES Y SUELDO NETO ---
+            const sueldoBruto = userData.sueldoBruto || 0;
+            const deducciones = userData.deducciones || [];
+            let totalDeducciones = 0;
+            let deduccionesHTML = '';
+
+            deducciones.forEach(ded => {
+                let montoDeducido = 0;
+                if (ded.tipo === 'porcentaje') {
+                    montoDeducido = (sueldoBruto * ded.valor) / 100;
+                } else { // Es 'fijo'
+                    montoDeducido = ded.valor;
+                }
+                totalDeducciones += montoDeducido;
+
+                deduccionesHTML += `
+                    <div class="deduction-line">
+                        <span class="name">(-) ${ded.nombre}</span>
+                        <span class="amount">-$${montoDeducido.toLocaleString('es-MX')}</span>
+                    </div>
+                `;
+            });
+
+            const sueldoNeto = sueldoBruto - totalDeducciones;
+
+            // Mostramos los resultados en el HTML
+            profileDeductionsList.innerHTML = deduccionesHTML;
+            profileNetSalary.textContent = `$${sueldoNeto.toLocaleString('es-MX')}`;
+
         } else {
             profileName.textContent = "Usuario no encontrado";
         }
@@ -60,6 +92,7 @@ function cargarDatosPerfil() {
         console.log("Error obteniendo datos:", error);
     });
 }
+
 
 // 3. Función para cargar la actividad (gastos) del empleado
 function cargarActividad() {
