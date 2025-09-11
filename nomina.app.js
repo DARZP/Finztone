@@ -54,8 +54,8 @@ function generarSelectorDeCuentas() {
 
 // Registra el pago usando una Transacción segura
 async function marcarPago(userId, userName, amount) {
-    const userItemElement = userListContainer.querySelector(`[data-user-id="${userId}"]`);
-    const accountSelector = userItemElement.querySelector('.account-selector-payroll');
+    const filaUsuario = document.querySelector(`[data-user-id="${userId}"]`);
+    const accountSelector = filaUsuario.querySelector('.account-selector-payroll');
     const cuentaId = accountSelector.value;
     const periodo = periodSelector.value;
 
@@ -78,12 +78,18 @@ async function marcarPago(userId, userName, amount) {
             const nuevoSaldo = saldoActual - amount;
 
             transaction.set(newPaymentRef, {
-                userId: userId, periodo: periodo, monto: amount, fechaDePago: new Date(), cuentaId: cuentaId, cuentaNombre: cuentaNombre
+                userId: userId,
+                userName: userName, // <-- CAMPO AÑADIDO
+                periodo: periodo,
+                monto: amount,
+                fechaDePago: new Date(),
+                cuentaId: cuentaId,
+                cuentaNombre: cuentaNombre
             });
             transaction.update(accountRef, { saldoActual: nuevoSaldo });
         });
         alert(`Pago para ${userName} registrado y saldo actualizado!`);
-        cargarCuentas(); // Recargamos para que se actualicen los saldos en los selectores
+        cargarCuentas();
     } catch (error) {
         console.error("Error en la transacción de pago de nómina: ", error);
         alert("Ocurrió un error al registrar el pago.");
