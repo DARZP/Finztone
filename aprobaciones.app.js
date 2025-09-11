@@ -15,27 +15,45 @@ const db = firebase.firestore();
 // ---- ELEMENTOS DEL DOM ----
 const pendingGastosContainer = document.getElementById('pending-gastos-list');
 const pendingIngresosContainer = document.getElementById('pending-ingresos-list');
-// Filtros de Gastos
 const gastosCategoryFilter = document.getElementById('gastos-category-filter');
 const gastosUserFilter = document.getElementById('gastos-user-filter');
-// Filtros de Ingresos
 const ingresosCategoryFilter = document.getElementById('ingresos-category-filter');
 const ingresosUserFilter = document.getElementById('ingresos-user-filter');
+
+let listaDeCuentas = []; // Para no consultar la DB repetidamente
 
 // ---- LÓGICA DE LA PÁGINA ----
 
 auth.onAuthStateChanged((user) => {
     if (user) {
-        // Al cargar la página, poblamos los filtros y cargamos los datos iniciales
-        poblarFiltros();
-        cargarGastosPendientes();
-        cargarIngresosPendientes();
+        cargarCuentas().then(() => {
+            poblarFiltros();
+            cargarGastosPendientes();
+            cargarIngresosPendientes();
+        });
     } else {
         window.location.href = 'index.html';
     }
 });
 
-// Función para manejar las pestañas
+// Función para obtener y guardar la lista de cuentas
+async function cargarCuentas() {
+    listaDeCuentas = [];
+    const snapshot = await db.collection('cuentas').get();
+    snapshot.forEach(doc => {
+        listaDeCuentas.push({ id: doc.id, ...doc.data() });
+    });
+}
+
+// Función para generar el HTML del selector de cuentas
+function generarSelectorDeCuentas(itemId) {
+    let optionsHTML = '<option value="" disabled selected>Seleccionar cuenta</option>';
+    listaDeCuentas.forEach(cuenta => {
+        optionsHTML += `<option value="${cuenta.id}">${cuenta.nombre}</option>`;
+    });
+    return `<select class="account-selector" data-item-id="${itemId}">${optionsHTML}</select>`;
+}
+
 function openTab(evt, tabName) {
     let i, tabcontent, tablinks;
     tabcontent = document.getElementsByClassName("tab-content");
@@ -48,17 +66,46 @@ function openTab(evt, tabName) {
     evt.currentTarget.className += " active";
 }
 
-// Función genérica para actualizar el estado de un documento
-function actualizarDocumento(coleccion, id, nuevoStatus) {
-    const docRef = db.collection(coleccion).doc(id);
-    let updateData = { status: nuevoStatus };
-    if (nuevoStatus === 'rechazado') {
-        const motivo = prompt("Por favor, introduce el motivo del rechazo:");
-        if (motivo) { updateData.motivoRechazo = motivo; } else { return; }
+// Lógica de APROBACIÓN con Transacción
+async function aprobarDocumento(coleccion, docId, monto, tipo) {
+    const accountSelector = document.querySelector(`.account-selector[data-item-id="${docId}"]`);
+    const cuentaId = accountSelector.value;
+
+    if (!cuentaId) {
+        return alert('Por favor, selecciona una cuenta para aprobar esta transacción.');
     }
-    docRef.update(updateData)
-        .then(() => alert(`Solicitud ${nuevoStatus}.`))
-        .catch(error => console.error("Error al actualizar:", error));
+    const cuentaNombre = accountSelector.options[accountSelector.selectedIndex].text;
+
+    const docRef = db.collection(coleccion).doc(docId);
+    const accountRef = db.collection('cuentas').doc(cuentaId);
+
+    try {
+        await db.runTransaction(async (transaction) => {
+            const accountDoc = await transaction.get(accountRef);
+            if (!accountDoc.exists) throw "La cuenta seleccionada no existe.";
+
+            const saldoActual = accountDoc.data().saldoActual;
+            const nuevoSaldo = tipo === 'ingreso' ? saldoActual + monto : saldoActual - monto;
+            
+            transaction.update(docRef, { status: 'aprobado', cuentaId: cuentaId, cuentaNombre: cuentaNombre });
+            transaction.update(accountRef, { saldoActual: nuevoSaldo });
+        });
+        alert('¡Solicitud aprobada y saldo actualizado!');
+        cargarCuentas();
+    } catch (error) {
+        console.error("Error en la transacción de aprobación: ", error);
+        alert("Ocurrió un error al aprobar. La operación fue cancelada.");
+    }
+}
+
+function rechazarDocumento(coleccion, id) {
+    const motivo = prompt("Por favor, introduce el motivo del rechazo:");
+    if (motivo) {
+        db.collection(coleccion).doc(id).update({
+            status: 'rechazado',
+            motivoRechazo: motivo
+        }).then(() => alert('Solicitud rechazada.'));
+    }
 }
 
 // Función para poblar los filtros de usuarios y categorías
@@ -111,33 +158,6 @@ function cargarIngresosPendientes() {
     });
 }
 
-// Función para mostrar la lista de GASTOS pendientes
-function mostrarGastosPendientes(gastos) {
-    pendingGastosContainer.innerHTML = gastos.length === 0 ? '<p>No hay gastos pendientes.</p>' : '';
-    gastos.forEach(gasto => {
-        const itemElement = document.createElement('div');
-        itemElement.classList.add('pending-item');
-        const fecha = new Date(gasto.fecha.replace(/-/g, '/')).toLocaleDateString('es-ES');
-        itemElement.innerHTML = `
-            <div class="item-details">
-                <div><span class="description">${gasto.descripcion}</span><span class="amount">$${gasto.monto.toFixed(2)}</span></div>
-                <div class="meta">Enviado por: ${gasto.nombreCreador || gasto.emailCreador} | Cat: ${gasto.categoria} | Fecha: ${fecha}</div>
-            </div>
-            <div class="item-actions">
-                <button class="btn btn-approve" data-id="${gasto.id}">Aprobar</button>
-                <button class="btn btn-reject" data-id="${gasto.id}">Rechazar</button>
-            </div>`;
-        pendingGastosContainer.appendChild(itemElement);
-    });
-    pendingGastosContainer.querySelectorAll('.btn-approve').forEach(btn => {
-        btn.addEventListener('click', () => actualizarDocumento('gastos', btn.dataset.id, 'aprobado'));
-    });
-    pendingGastosContainer.querySelectorAll('.btn-reject').forEach(btn => {
-        btn.addEventListener('click', () => actualizarDocumento('gastos', btn.dataset.id, 'rechazado'));
-    });
-}
-
-// Función para mostrar la lista de INGRESOS pendientes
 function mostrarIngresosPendientes(ingresos) {
     pendingIngresosContainer.innerHTML = ingresos.length === 0 ? '<p>No hay ingresos pendientes.</p>' : '';
     ingresos.forEach(ingreso => {
@@ -149,21 +169,23 @@ function mostrarIngresosPendientes(ingresos) {
                 <div><span class="description">${ingreso.descripcion}</span><span class="amount">$${ingreso.monto.toFixed(2)}</span></div>
                 <div class="meta">Enviado por: ${ingreso.nombreCreador || ingreso.emailCreador} | Cat: ${ingreso.categoria} | Fecha: ${fecha}</div>
             </div>
+            <div class="account-selector-container">
+                ${generarSelectorDeCuentas(ingreso.id)}
+            </div>
             <div class="item-actions">
-                <button class="btn btn-approve" data-id="${ingreso.id}">Aprobar</button>
+                <button class="btn btn-approve" data-id="${ingreso.id}" data-monto="${ingreso.monto}">Aprobar</button>
                 <button class="btn btn-reject" data-id="${ingreso.id}">Rechazar</button>
             </div>`;
         pendingIngresosContainer.appendChild(itemElement);
     });
     pendingIngresosContainer.querySelectorAll('.btn-approve').forEach(btn => {
-        btn.addEventListener('click', () => actualizarDocumento('ingresos', btn.dataset.id, 'aprobado'));
+        btn.addEventListener('click', () => aprobarDocumento('ingresos', btn.dataset.id, parseFloat(btn.dataset.monto), 'ingreso'));
     });
     pendingIngresosContainer.querySelectorAll('.btn-reject').forEach(btn => {
-        btn.addEventListener('click', () => actualizarDocumento('ingresos', btn.dataset.id, 'rechazado'));
+        btn.addEventListener('click', () => rechazarDocumento('ingresos', btn.dataset.id));
     });
 }
 
-// Asignamos los listeners a los filtros
 gastosCategoryFilter.addEventListener('change', cargarGastosPendientes);
 gastosUserFilter.addEventListener('change', cargarGastosPendientes);
 ingresosCategoryFilter.addEventListener('change', cargarIngresosPendientes);
