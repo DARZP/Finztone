@@ -41,12 +41,14 @@ body {
 
 .pending-item {
     display: grid;
-    grid-template-columns: 1fr auto;
+    /* Cambiamos a 3 columnas: detalles | selector | acciones */
+    grid-template-columns: 1fr auto auto; 
     gap: 20px;
     padding: 20px;
     border: 1px solid #eee;
     border-radius: 8px;
     margin-bottom: 15px;
+    align-items: center; /* Centramos verticalmente */
 }
 
 .item-details .description {
@@ -84,6 +86,7 @@ body {
 }
 .btn:hover { opacity: 0.8; }
 .btn-approve { background-color: var(--approve-color); }
+
 .btn-reject { background-color: var(--reject-color); }
 
 /* ---- ESTILOS PARA PESTAÑAS ---- */
