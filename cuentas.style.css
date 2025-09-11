@@ -227,3 +227,56 @@ h2 {
     font-weight: 600;
     color: var(--primary-color);
 }
+
+/* ---- ESTILOS PARA HISTORIAL DE MOVIMIENTOS ---- */
+.account-item {
+    padding: 20px;
+    border-top: 1px solid #eee;
+    cursor: pointer; /* Hacemos que se vea clickeable */
+}
+.account-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.account-history {
+    display: none; /* Oculto por defecto */
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px dashed #ddd;
+}
+.history-item {
+    display: grid;
+    grid-template-columns: 50px 1fr auto;
+    gap: 15px;
+    align-items: center;
+    padding: 10px 0;
+    font-size: 0.9em;
+}
+.history-item:not(:last-child) {
+    border-bottom: 1px solid #f5f5f5;
+}
+.history-icon {
+    font-size: 1.5em;
+    text-align: center;
+}
+.history-icon.ingreso { color: var(--positive-balance, #2e7d32); }
+.history-icon.gasto { color: var(--negative-balance, #c62828); }
+
+.history-details .description {
+    font-weight: 500;
+}
+.history-details .meta {
+    color: #777;
+    font-size: 0.9em;
+}
+.history-amount {
+    font-weight: 600;
+    text-align: right;
+}
+.history-amount .balance {
+    display: block;
+    font-weight: 400;
+    font-size: 0.8em;
+    color: #777;
+}
