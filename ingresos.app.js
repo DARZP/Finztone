@@ -19,6 +19,7 @@ const invoiceDetailsContainer = document.getElementById('invoice-details');
 const companyDataList = document.getElementById('company-list');
 const categoryFilter = document.getElementById('category-filter');
 const monthFilter = document.getElementById('month-filter');
+const accountSelect = document.getElementById('account-select');
 
 // Muestra/oculta campos de factura
 isInvoiceCheckbox.addEventListener('change', () => {
@@ -37,6 +38,18 @@ function cargarEmpresas() {
     });
 }
 
+function cargarCuentasEnSelector() {
+    db.collection('cuentas').get().then(snapshot => {
+        // Limpiamos el selector excepto la primera opción
+        accountSelect.innerHTML = '<option value="" disabled selected>Selecciona una cuenta</option>';
+        snapshot.forEach(doc => {
+            const cuenta = doc.data();
+            const option = new Option(`${cuenta.nombre} ($${cuenta.saldoActual.toLocaleString('es-MX')})`, doc.id);
+            accountSelect.appendChild(option);
+        });
+    });
+}
+
 // Genera un folio
 function generarFolio(userId) {
     const date = new Date();
@@ -51,20 +64,40 @@ addIncomeForm.addEventListener('submit', async (e) => {
     const user = auth.currentUser;
     if (!user) return;
 
-    // Lógica para verificar y crear la empresa si es nueva
-    const companyName = addIncomeForm['income-company'].value.trim();
-    if (companyName) {
-        const companiesRef = db.collection('empresas');
-        const existingCompany = await companiesRef.where('nombre', '==', companyName).get();
-        if (existingCompany.empty) {
-            await companiesRef.add({ nombre: companyName });
-            cargarEmpresas();
-        }
+    const accountId = accountSelect.value;
+    if (!accountId) {
+        return alert('Por favor, selecciona una cuenta de destino.');
     }
+    const accountName = accountSelect.options[accountSelect.selectedIndex].text.split(' (')[0];
+    const montoIngreso = parseFloat(addIncomeForm['income-amount'].value);
+
+    const accountRef = db.collection('cuentas').doc(accountId);
+    const newIncomeRef = db.collection('ingresos').doc();
+
+    try {
+        await db.runTransaction(async (transaction) => {
+            const accountDoc = await transaction.get(accountRef);
+            if (!accountDoc.exists) {
+                throw "¡La cuenta seleccionada no existe!";
+            }
+
+            const saldoActual = accountDoc.data().saldoActual;
+            const nuevoSaldo = saldoActual + montoIngreso;
+
+    const companyName = addIncomeForm['income-company'].value.trim();
+            if (companyName) {
+                const companiesRef = db.collection('empresas');
+                const existingCompany = await companiesRef.where('nombre', '==', companyName).get();
+                if (existingCompany.empty) {
+                    // Nota: .add() no se puede usar en transacciones. Usaremos .set() en una nueva referencia.
+                    const newCompanyRef = companiesRef.doc();
+                    transaction.set(newCompanyRef, { nombre: companyName });
+                }
+            }
 
     const incomeData = {
-        descripcion: addIncomeForm['income-description'].value,
-        monto: parseFloat(addIncomeForm['income-amount'].value),
+        descripcion: addIncomeForm['income-description'].value,  
+        monto: montoIngreso,
         categoria: addIncomeForm['income-category'].value,
         fecha: addIncomeForm['income-date'].value,
         empresa: companyName,
@@ -75,7 +108,9 @@ addIncomeForm.addEventListener('submit', async (e) => {
         emailCreador: user.email,
         nombreCreador: "Administrador",
         fechaDeCreacion: new Date(),
-        status: 'aprobado'
+        status: 'aprobado',         
+        cuentaId: accountId,
+        cuentaNombre: accountName
     };
 
     if (isInvoiceCheckbox.checked) {
@@ -85,14 +120,20 @@ addIncomeForm.addEventListener('submit', async (e) => {
         };
     }
 
-    db.collection('ingresos').add(incomeData)
-    .then(() => {
-        alert('¡Ingreso registrado exitosamente!');
+    transaction.update(accountRef, { saldoActual: nuevoSaldo });
+            transaction.set(newIncomeRef, incomeData);
+        });
+
+        alert('¡Ingreso registrado y saldo actualizado!');
         addIncomeForm.reset();
         isInvoiceCheckbox.checked = false;
         invoiceDetailsContainer.style.display = 'none';
-    })
-    .catch((error) => console.error('Error al agregar el ingreso: ', error));
+        cargarCuentasEnSelector(); // Recargamos para mostrar el nuevo saldo
+
+    } catch (error) {
+        console.error("Error en la transacción: ", error);
+        alert("Ocurrió un error al guardar el ingreso. La operación fue cancelada.");
+    }
 });
 
 
@@ -189,6 +230,7 @@ auth.onAuthStateChanged((user) => {
     if (user) {
         cargarEmpresas();
         poblarFiltroDeMeses();
+        cargarCuentasEnSelector();
         cargarIngresosAprobados();
     } else {
         window.location.href = 'index.html';
