@@ -81,3 +81,26 @@ body {
 .item-info .item-description { font-weight: 500; }
 .item-info .item-details { font-size: 0.9em; color: #777; }
 .item-amount { font-weight: 600; font-size: 1.1em; } 
+
+/* ---- ESTILOS PARA DEDUCCIONES Y SUELDO NETO ---- */
+#profile-deductions-list {
+    padding-left: 20px;
+    font-size: 1em;
+    color: #555;
+}
+
+.deduction-line {
+    display: flex;
+    justify-content: space-between;
+}
+
+.deduction-line .name { color: #c62828; } /* Rojo para las deducciones */
+.deduction-line .amount { font-weight: 500; }
+
+.net-salary {
+    margin-top: 15px !important;
+    padding-top: 15px !important;
+    border-top: 2px solid var(--primary-color) !important;
+    font-size: 1.2em !important;
+    font-weight: 600;
+}
