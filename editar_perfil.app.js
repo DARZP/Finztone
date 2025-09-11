@@ -1,11 +1,11 @@
 const firebaseConfig = {
-  apiKey: "AIzaSyA4zRiQnr2PiG1zQc_k-Of9CmGQQSkVQ84", // Tu API Key está bien
-  authDomain: "finztone-app.firebaseapp.com",
-  projectId: "finztone-app",
-  storageBucket: "finztone-app.appspot.com", // Corregí un pequeño error aquí, era .appspot.com
-  messagingSenderId: "95145879307",
-  appId: "1:95145879307:web:e10017a75edf32f1fde40e",
-  measurementId: "G-T8KMJXNSTP"
+    apiKey: "AIzaSyA4zRiQnr2PiG1zQc_k-Of9CmGQQSkVQ84",
+    authDomain: "finztone-app.firebaseapp.com",
+    projectId: "finztone-app",
+    storageBucket: "finztone-app.appspot.com",
+    messagingSenderId: "95145879307",
+    appId: "1:95145879307:web:e10017a75edf32f1fde40e",
+    measurementId: "G-T8KMJXNSTP"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -44,26 +44,22 @@ function mostrarDefinicionesDeImpuestos(impuestosDefinidos, deduccionesActuales 
 async function cargarDatosParaEdicion() {
     if (!userId) return;
 
-    // 1. Obtenemos el perfil del usuario
     const userDoc = await db.collection('usuarios').doc(userId).get();
     if (!userDoc.exists) return alert('Usuario no encontrado.');
     const userData = userDoc.data();
 
-    // 2. Obtenemos todas las definiciones de impuestos
     const impuestosSnapshot = await db.collection('impuestos_definiciones').get();
     const impuestosDefinidos = impuestosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-    // 3. Llenamos el formulario con los datos del usuario
     editForm['profile-name'].value = userData.nombre || '';
-    // ... (llena el resto de los campos: cargo, sueldo, etc.)
     editForm['profile-position'].value = userData.cargo || '';
     editForm['profile-salary'].value = userData.sueldoBruto || 0;
     editForm['profile-phone'].value = userData.telefono || '';
     editForm['profile-clabe'].value = userData.clabe || '';
     editForm['profile-rfc'].value = userData.rfc || '';
     
-    // 4. Mostramos los checkboxes, marcando los que el usuario ya tiene
-    mostrarDefinicionesDeImpuestos(impuestosDefinidos, userData.deducciones);
+    // CORRECCIÓN: Nos aseguramos de pasar un array vacío si no hay deducciones previas
+    mostrarDefinicionesDeImpuestos(impuestosDefinidos, userData.deducciones || []);
 }
 
 // Lógica para guardar los cambios, incluyendo las deducciones seleccionadas
@@ -71,7 +67,6 @@ editForm.addEventListener('submit', (e) => {
     e.preventDefault();
     if (!userId) return;
 
-    // Recopilamos las deducciones seleccionadas
     const deduccionesSeleccionadas = [];
     document.querySelectorAll('#deductions-checklist input[type="checkbox"]:checked').forEach(checkbox => {
         const impuestoData = JSON.parse(checkbox.dataset.impuesto);
@@ -83,7 +78,6 @@ editForm.addEventListener('submit', (e) => {
         });
     });
 
-
     const updatedData = {
         nombre: editForm['profile-name'].value,
         cargo: editForm['profile-position'].value,
@@ -91,7 +85,7 @@ editForm.addEventListener('submit', (e) => {
         telefono: editForm['profile-phone'].value,
         clabe: editForm['profile-clabe'].value,
         rfc: editForm['profile-rfc'].value,
-        deducciones: deduccionesSeleccionadas // <-- Guardamos el array de deducciones
+        deducciones: deduccionesSeleccionadas
     };
 
     db.collection('usuarios').doc(userId).update(updatedData)
@@ -113,7 +107,4 @@ auth.onAuthStateChanged(user => {
         window.location.href = 'index.html';
     }
 });
-Pruébalo
-
-
-}); 
+// CORRECCIÓN: Se eliminó el }); extra que estaba aquí
