@@ -14,11 +14,13 @@ const db = firebase.firestore();
 // --- ELEMENTOS DEL DOM ---
 const addTaxForm = document.getElementById('add-tax-form');
 const taxesListContainer = document.getElementById('taxes-list');
+const taxMovementsContainer = document.getElementById('tax-movements-list'); // Contenedor para el historial
 
 // --- LÓGICA DE LA PÁGINA ---
 auth.onAuthStateChanged(user => {
     if (user) {
         cargarImpuestosDefinidos();
+        cargarMovimientosDeImpuestos(); // <--- Llamamos a la nueva función
     } else {
         window.location.href = 'index.html';
     }
@@ -54,10 +56,8 @@ function cargarImpuestosDefinidos() {
         snapshot.forEach(doc => {
             const tax = doc.data();
             const itemElement = document.createElement('div');
-            itemElement.classList.add('account-item'); // Reutilizamos estilos
-            
+            itemElement.classList.add('account-item');
             const valorDisplay = tax.tipo === 'porcentaje' ? `${tax.valor}%` : `$${tax.valor.toLocaleString('es-MX')}`;
-
             itemElement.innerHTML = `
                 <div class="account-info">
                     <div class="account-name">${tax.nombre}</div>
@@ -65,6 +65,33 @@ function cargarImpuestosDefinidos() {
                 <div class="account-balance">${valorDisplay}</div>
             `;
             taxesListContainer.appendChild(itemElement);
+        });
+    });
+}
+
+// ¡ESTA ES LA FUNCIÓN QUE FALTABA!
+// Carga y muestra el historial de movimientos de impuestos
+function cargarMovimientosDeImpuestos() {
+    db.collection('movimientos_impuestos').orderBy('fecha', 'desc')
+      .onSnapshot(snapshot => {
+        if (!taxMovementsContainer) return;
+        taxMovementsContainer.innerHTML = '';
+        if (snapshot.empty) {
+            taxMovementsContainer.innerHTML = '<tr><td colspan="5">No hay movimientos de impuestos registrados.</td></tr>';
+            return;
+        }
+        snapshot.forEach(doc => {
+            const mov = doc.data();
+            const fecha = mov.fecha.toDate().toLocaleDateString('es-ES');
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${fecha}</td>
+                <td>${mov.origen}</td>
+                <td>${mov.tipoImpuesto}</td>
+                <td>$${mov.monto.toLocaleString('es-MX')}</td>
+                <td><span class="status status-${mov.status.replace(/ /g, '-')}">${mov.status}</span></td>
+            `;
+            taxMovementsContainer.appendChild(row);
         });
     });
 }
