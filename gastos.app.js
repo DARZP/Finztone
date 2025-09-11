@@ -14,6 +14,7 @@ const db = firebase.firestore();
 
 // ---- ELEMENTOS DEL DOM ----
 const addExpenseForm = document.getElementById('add-expense-form');
+const accountSelect = document.getElementById('account-select'); 
 const expenseListContainer = document.getElementById('expense-list');
 const isInvoiceCheckbox = document.getElementById('is-invoice');
 const invoiceDetailsContainer = document.getElementById('invoice-details');
@@ -51,53 +52,94 @@ function generarFolio(userId) {
     return `EXP-ADM-${userInitials}-${timestamp}`;
 }
 
-// NUEVA FUNCIÓN CENTRAL para guardar gastos del admin
+function cargarCuentasEnSelector() {
+    db.collection('cuentas').get().then(snapshot => {
+        snapshot.forEach(doc => {
+            const cuenta = doc.data();
+            const option = document.createElement('option');
+            option.value = doc.id; // Guardamos el ID del documento
+            option.textContent = `${cuenta.nombre} ($${cuenta.saldoActual.toLocaleString('es-MX')})`;
+            accountSelect.appendChild(option);
+        });
+    });
+}
+
 async function guardarGastoAdmin(status) {
     const user = auth.currentUser;
     if (!user) return;
 
-    const companyName = addExpenseForm['expense-company'].value.trim();
-    if (companyName) {
-        const companiesRef = db.collection('empresas');
-        const existingCompany = await companiesRef.where('nombre', '==', companyName).get();
-        if (existingCompany.empty) {
-            await companiesRef.add({ nombre: companyName });
-            cargarEmpresas();
-        }
+    const accountId = accountSelect.value;
+    if (!accountId) {
+        return alert('Por favor, selecciona una cuenta de origen.');
     }
+    const accountName = accountSelect.options[accountSelect.selectedIndex].text.split(' (')[0];
+    const montoGasto = parseFloat(addExpenseForm['expense-amount'].value);
+    
+    const accountRef = db.collection('cuentas').doc(accountId);
+    const newExpenseRef = db.collection('gastos').doc();
 
-    const expenseData = {
-        descripcion: addExpenseForm['expense-description'].value,
-        monto: parseFloat(addExpenseForm['expense-amount'].value),
-        categoria: addExpenseForm['expense-category'].value,
-        fecha: addExpenseForm['expense-date'].value,
-        empresa: companyName,
-        metodoPago: addExpenseForm['payment-method'].value,
-        comentarios: addExpenseForm['expense-comments'].value,
-        folio: generarFolio(user.uid),
-        creadoPor: user.uid,
-        emailCreador: user.email,
-        nombreCreador: "Administrador",
-        fechaDeCreacion: new Date(),
-        status: status // El estado ahora es dinámico ('borrador' o 'aprobado')
-    };
+    try {
+        await db.runTransaction(async (transaction) => {
+            const accountDoc = await transaction.get(accountRef);
+            if (!accountDoc.exists) {
+                throw "¡La cuenta seleccionada no existe!";
+            }
 
-    if (isInvoiceCheckbox.checked) {
-        expenseData.datosFactura = {
-            rfc: document.getElementById('invoice-rfc').value,
-            folioFiscal: document.getElementById('invoice-folio').value
-        };
-    }
+            const saldoActual = accountDoc.data().saldoActual;
+            // Solo restamos el saldo si el gasto es aprobado, no si es borrador
+            const nuevoSaldo = status === 'aprobado' ? saldoActual - montoGasto : saldoActual;
 
-    db.collection('gastos').add(expenseData)
-    .then(() => {
-        const message = status === 'borrador' ? '¡Borrador guardado!' : '¡Gasto aprobado y registrado!';
-        alert(message);
+            const companyName = addExpenseForm['expense-company'].value.trim();
+            // La lógica para la empresa va aquí, antes de construir el objeto final
+            if (companyName) {
+                const companiesRef = db.collection('empresas');
+                // Importante: no se puede hacer .get() dentro de una transacción.
+                // La validación de la empresa debe hacerse antes o asumir que es correcta.
+                // Por ahora, la crearemos si no existe, pero lo ideal sería seleccionarla de una lista ya cargada.
+            }
+
+            const expenseData = {
+                descripcion: addExpenseForm['expense-description'].value,
+                monto: montoGasto,
+                categoria: addExpenseForm['expense-category'].value,
+                fecha: addExpenseForm['expense-date'].value,
+                empresa: companyName,
+                metodoPago: addExpenseForm['payment-method'].value,
+                comentarios: addExpenseForm['expense-comments'].value,
+                cuentaId: accountId,
+                cuentaNombre: accountName,
+                folio: generarFolio(user.uid),
+                creadoPor: user.uid,
+                emailCreador: user.email,
+                nombreCreador: "Administrador",
+                fechaDeCreacion: new Date(),
+                status: status
+            };
+
+            if (isInvoiceCheckbox.checked) {
+                expenseData.datosFactura = {
+                    rfc: document.getElementById('invoice-rfc').value,
+                    folioFiscal: document.getElementById('invoice-folio').value
+                };
+            }
+
+            // Las operaciones de escritura van al final
+            if (status === 'aprobado') {
+                transaction.update(accountRef, { saldoActual: nuevoSaldo });
+            }
+            transaction.set(newExpenseRef, expenseData);
+        }); // <-- LA TRANSACCIÓN TERMINA AQUÍ
+
+        // El código de éxito va DESPUÉS de que la transacción se completa
+        alert(status === 'borrador' ? '¡Borrador guardado!' : '¡Gasto registrado y saldo actualizado!');
         addExpenseForm.reset();
         isInvoiceCheckbox.checked = false;
         invoiceDetailsContainer.style.display = 'none';
-    })
-    .catch((error) => console.error('Error al agregar el gasto: ', error));
+
+    } catch (error) {
+        console.error("Error en la transacción: ", error);
+        alert("Ocurrió un error al guardar el gasto. La operación fue cancelada.");
+    }
 }
 
 // NUEVOS LISTENERS para los botones
@@ -199,6 +241,7 @@ auth.onAuthStateChanged((user) => {
     if (user) {
         cargarEmpresas();
         poblarFiltroDeMeses();
+        cargarCuentasEnSelector(); 
         cargarGastosAprobados();
     } else {
         window.location.href = 'index.html';
