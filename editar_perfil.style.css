@@ -127,3 +127,34 @@ a.user-item {
 a.user-item:hover {
     background-color: #f9f9f9;
 } 
+
+/* ---- ESTILOS PARA SECCIÓN DE DEDUCCIONES ---- */
+.deductions-section {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+#deductions-checklist {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.deduction-item {
+    display: flex;
+    align-items: center;
+    background-color: #f9f9f9;
+    padding: 10px;
+    border-radius: 6px;
+}
+
+.deduction-item input {
+    margin-right: 10px;
+    width: auto; /* Anula el 100% de ancho del input-group */
+}
+
+.deduction-item label {
+    margin: 0;
+    font-weight: 400;
+}
