@@ -15,8 +15,6 @@ const db = firebase.firestore();
 const addAccountForm = document.getElementById('add-account-form');
 const accountsListContainer = document.getElementById('accounts-list');
 
-// --- LÓGICA DE LA PÁGINA ---
-
 // Protección de la ruta
 auth.onAuthStateChanged(user => {
     if (user) {
@@ -50,14 +48,16 @@ async function cargarCuentasConHistorial() {
     const cuentasSnapshot = await db.collection('cuentas').orderBy('fechaDeCreacion', 'desc').get();
     const cuentas = cuentasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-    // 2. Obtenemos TODOS los ingresos y gastos que han sido aprobados y asignados a una cuenta
+    // 2. Obtenemos TODOS los movimientos (ingresos, gastos Y NÓMINA)
     const ingresosSnapshot = await db.collection('ingresos').where('status', '==', 'aprobado').get();
     const gastosSnapshot = await db.collection('gastos').where('status', '==', 'aprobado').get();
+    const nominaSnapshot = await db.collection('pagos_nomina').get(); // <-- NUEVA CONSULTA
     
     const todosLosMovimientos = [];
     ingresosSnapshot.forEach(doc => todosLosMovimientos.push({ tipo: 'ingreso', ...doc.data() }));
     gastosSnapshot.forEach(doc => todosLosMovimientos.push({ tipo: 'gasto', ...doc.data() }));
-
+    nominaSnapshot.forEach(doc => todosLosMovimientos.push({ tipo: 'nomina', ...doc.data() }));
+        
     // 3. Mostramos las cuentas y les asignamos sus movimientos
     accountsListContainer.innerHTML = '';
     if (cuentas.length === 0) {
@@ -72,7 +72,8 @@ async function cargarCuentasConHistorial() {
         // Buscamos los movimientos que pertenecen a ESTA cuenta y los ordenamos por fecha
         const historial = todosLosMovimientos
             .filter(mov => mov.cuentaId === cuenta.id)
-            .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+            // Usamos fechaDeCreacion o fechaDePago para ordenar correctamente
+            .sort((a, b) => (b.fechaDeCreacion?.toDate() || b.fechaDePago.toDate()) - (a.fechaDeCreacion?.toDate() || a.fechaDePago.toDate()));
 
         let historialHTML = '<p>No hay movimientos en esta cuenta.</p>';
         if (historial.length > 0) {
@@ -80,14 +81,25 @@ async function cargarCuentasConHistorial() {
                 const esIngreso = mov.tipo === 'ingreso';
                 const signo = esIngreso ? '+' : '-';
                 const icono = esIngreso ? '🟢' : '🔴';
-                const claseIcono = esIngreso ? 'ingreso' : 'gasto';
+                const claseIcono = esIngreso ? 'ingreso' : 'gasto'; // Reutilizamos la clase gasto para nómina
 
+                // Creamos descripciones y fechas personalizadas según el tipo
+                let descripcion = mov.descripcion;
+                let fecha = mov.fecha ? new Date(mov.fecha.replace(/-/g, '/')).toLocaleDateString('es-ES') : 'N/A';
+                let creador = mov.nombreCreador;
+
+                if (mov.tipo === 'nomina') {
+                    descripcion = `Pago de nómina: ${mov.userName}`;
+                    fecha = mov.fechaDePago.toDate().toLocaleDateString('es-ES');
+                    creador = 'Sistema (Nómina)';
+                }
+                
                 return `
                     <div class="history-item">
                         <div class="history-icon ${claseIcono}">${icono}</div>
                         <div class="history-details">
-                            <div class="description">${mov.descripcion}</div>
-                            <div class="meta">${new Date(mov.fecha.replace(/-/g, '/')).toLocaleDateString('es-ES')} por ${mov.nombreCreador}</div>
+                            <div class="description">${descripcion}</div>
+                            <div class="meta">${fecha} por ${creador}</div>
                         </div>
                         <div class="history-amount">
                             <span>${signo}$${mov.monto.toLocaleString('es-MX')}</span>
@@ -113,7 +125,6 @@ async function cargarCuentasConHistorial() {
     });
 }
 
-// Listener para manejar el despliegue del historial
 accountsListContainer.addEventListener('click', (e) => {
     const header = e.target.closest('.account-item-header');
     if (header) {
@@ -122,3 +133,4 @@ accountsListContainer.addEventListener('click', (e) => {
         history.style.display = isVisible ? 'none' : 'block';
     }
 });
+        
