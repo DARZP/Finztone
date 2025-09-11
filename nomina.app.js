@@ -52,10 +52,10 @@ function generarSelectorDeCuentas() {
     return `<select class="account-selector-payroll">${optionsHTML}</select>`;
 }
 
-// Registra el pago usando una Transacción segura
+// En nomina.app.js, reemplaza esta función completa
 async function marcarPago(userId, userName, amount) {
-    const filaUsuario = document.querySelector(`[data-user-id="${userId}"]`);
-    const accountSelector = filaUsuario.querySelector('.account-selector-payroll');
+    const userItemElement = userListContainer.querySelector(`[data-user-id="${userId}"]`);
+    const accountSelector = userItemElement.querySelector('.account-selector-payroll');
     const cuentaId = accountSelector.value;
     const periodo = periodSelector.value;
 
@@ -64,35 +64,63 @@ async function marcarPago(userId, userName, amount) {
     }
     const cuentaNombre = accountSelector.options[accountSelector.selectedIndex].text;
 
-    if (!confirm(`Confirmas el pago de $${amount.toLocaleString('es-MX')} a ${userName} desde la cuenta ${cuentaNombre} para el período ${periodo}?`)) return;
+    if (!confirm(`Confirmas el pago de $${amount.toLocaleString('es-MX')} a ${userName} desde la cuenta ${cuentaNombre}?`)) return;
 
+    // Referencias a los documentos que vamos a modificar
     const accountRef = db.collection('cuentas').doc(cuentaId);
     const newPaymentRef = db.collection('pagos_nomina').doc();
+    const userRef = db.collection('usuarios').doc(userId); // <-- Referencia al perfil del empleado
 
     try {
         await db.runTransaction(async (transaction) => {
             const accountDoc = await transaction.get(accountRef);
-            if (!accountDoc.exists) throw "La cuenta seleccionada no existe.";
+            const userDoc = await transaction.get(userRef); // <-- Obtenemos los datos del empleado
+            if (!accountDoc.exists || !userDoc.exists) {
+                throw "La cuenta o el usuario seleccionado no existen.";
+            }
 
+            // --- CÁLCULOS ---
             const saldoActual = accountDoc.data().saldoActual;
-            const nuevoSaldo = saldoActual - amount;
+            const nuevoSaldo = saldoActual - amount; // Siempre se descuenta el sueldo BRUTO
+            const deducciones = userDoc.data().deducciones || [];
 
+            // --- OPERACIONES DE ESCRITURA ---
+
+            // 1. Creamos el registro del pago de nómina (como antes)
             transaction.set(newPaymentRef, {
                 userId: userId,
-                userName: userName, // <-- CAMPO AÑADIDO
+                userName: userName,
                 periodo: periodo,
-                monto: amount,
+                monto: amount, // Sueldo Bruto
                 fechaDePago: new Date(),
                 cuentaId: cuentaId,
                 cuentaNombre: cuentaNombre
             });
+
+            // 2. NUEVO: Creamos un registro por cada deducción en la herramienta de Impuestos
+            deducciones.forEach(ded => {
+                let montoDeducido = ded.tipo === 'porcentaje' ? (amount * ded.valor) / 100 : ded.valor;
+                
+                const newTaxMovementRef = db.collection('movimientos_impuestos').doc();
+                transaction.set(newTaxMovementRef, {
+                    origen: `Nómina - ${userName}`,
+                    origenId: userId,
+                    tipoImpuesto: ded.nombre,
+                    monto: montoDeducido,
+                    fecha: new Date(),
+                    status: 'pendiente de pago' // Estado para el futuro pago de estos impuestos al gobierno
+                });
+            });
+
+            // 3. Actualizamos el saldo de la cuenta de origen (como antes)
             transaction.update(accountRef, { saldoActual: nuevoSaldo });
         });
-        alert(`Pago para ${userName} registrado y saldo actualizado!`);
-        cargarCuentas();
+
+        alert(`¡Pago para ${userName} registrado y deducciones generadas exitosamente!`);
+        cargarCuentas(); // Recargamos para que se actualicen los saldos en los selectores
     } catch (error) {
         console.error("Error en la transacción de pago de nómina: ", error);
-        alert("Ocurrió un error al registrar el pago.");
+        alert("Ocurrió un error al registrar el pago. La operación fue cancelada para proteger los datos.");
     }
 }
 
