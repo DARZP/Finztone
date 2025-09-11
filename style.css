@@ -1,150 +1,106 @@
-/* Estilos Generales */
 :root {
-    --primary-color: #00A99D; /* Un tono de aqua/teal */
-    --primary-hover-color: #007A72;
-    --background-color: #f4f7f6;
-    --box-background-color: #ffffff;
-    --text-color: #333333;
-    --input-border-color: #dddddd;
-    --input-focus-color: #00A99D;
+    --primary-color: #00A99D;
+    --secondary-color: #0D2A4B; /* Un azul oscuro para el fondo */
+    --text-color-light: #ffffff;
+    --text-color-dark: #333333;
+    --background-light: #f4f7f6;
+    --box-background: #ffffff;
+    --input-border: #dddddd;
 }
 
 body {
     margin: 0;
     font-family: 'Poppins', sans-serif;
-    background-color: var(--background-color);
+    background-color: var(--box-background);
+}
+
+.main-container {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Panel Izquierdo (Branding) */
+.left-pane {
+    flex-basis: 50%;
+    background-color: var(--secondary-color);
+    color: var(--text-color-light);
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
-    color: var(--text-color);
+    padding: 60px;
+    box-sizing: border-box;
 }
-
-/* Contenedor Principal */
-.login-container {
-    padding: 20px;
-}
-
-.login-box {
-    background-color: var(--box-background-color);
-    padding: 40px 30px;
-    border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-    width: 100%;
-    max-width: 400px;
+.branding {
+    max-width: 450px;
     text-align: center;
 }
-
-.logo {
-    font-size: 2.5em;
+.logo-main {
+    font-size: 4em;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin: 0;
+}
+.branding h2 {
+    font-size: 2em;
     font-weight: 600;
-    color: var(--primary-color);
-    margin: 0 0 10px 0;
+    margin-top: 10px;
 }
-
-.subtitle {
-    margin-bottom: 30px;
-    color: #777;
-}
-
-/* Pestañas de Selección */
-.tabs {
-    display: flex;
-    margin-bottom: 20px;
-    border-bottom: 1px solid var(--input-border-color);
-}
-
-.tab-link {
-    flex: 1;
-    padding: 12px;
-    border: none;
-    background: none;
-    cursor: pointer;
-    font-size: 1em;
-    font-family: 'Poppins', sans-serif;
-    color: #999;
-    border-bottom: 3px solid transparent;
-    transition: all 0.3s ease;
-}
-
-.tab-link:hover {
-    color: var(--primary-color);
-}
-
-.tab-link.active {
-    color: var(--primary-color);
-    border-bottom: 3px solid var(--primary-color);
-    font-weight: 500;
-}
-
-.tab-content {
-    display: none;
-}
-
-/* Formularios y Campos */
-.input-group {
-    text-align: left;
-    margin-bottom: 20px;
-}
-
-.input-group label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 500;
-    font-size: 0.9em;
-}
-
-.input-group input {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid var(--input-border-color);
-    border-radius: 8px;
-    box-sizing: border-box;
-    font-size: 1em;
-    transition: border-color 0.3s ease;
-}
-
-.input-group input:focus {
-    outline: none;
-    border-color: var(--input-focus-color);
-}
-
-/* Botones y Enlaces */
-.btn-primary {
-    width: 100%;
-    padding: 14px;
-    background-color: var(--primary-color);
-    color: white;
-    border: none;
-    border-radius: 8px;
+.branding p {
     font-size: 1.1em;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
+    line-height: 1.6;
+    opacity: 0.8;
 }
 
-.btn-primary:hover {
-    background-color: var(--primary-hover-color);
+/* Panel Derecho (Login) */
+.right-pane {
+    flex-basis: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px;
+    box-sizing: border-box;
 }
-
-.forgot-password, .signup-link {
-    display: block;
-    margin-top: 15px;
-    text-decoration: none;
-    color: #555;
-    font-size: 0.9em;
-    transition: color 0.3s ease;
+.login-box {
+    width: 100%;
+    max-width: 400px;
 }
+.tabs { display: flex; border-bottom: 1px solid var(--input-border); }
+.tab-link { flex: 1; padding: 15px; border: none; background: none; cursor: pointer; font-size: 1em; font-family: 'Poppins', sans-serif; color: #999; border-bottom: 3px solid transparent; transition: all 0.3s ease; }
+.tab-link:hover { color: var(--primary-color); }
+.tab-link.active { color: var(--primary-color); border-bottom-color: var(--primary-color); font-weight: 600; }
+.tab-content { display: none; margin-top: 30px; }
+.input-group { margin-bottom: 20px; }
+.input-group input { width: 100%; padding: 14px; border: 1px solid var(--input-border); border-radius: 8px; box-sizing: border-box; font-size: 1em; }
+.btn-primary { width: 100%; padding: 14px; background-color: var(--primary-color); color: white; border: none; border-radius: 8px; font-size: 1.1em; cursor: pointer; }
+.forgot-password, .signup-link { display: block; text-align: center; margin-top: 15px; text-decoration: none; color: #555; font-size: 0.9em; }
 
-.forgot-password:hover, .signup-link:hover {
-    color: var(--primary-color);
+/* Sección de Herramientas */
+.features-section {
+    padding: 80px 40px;
+    text-align: center;
+    background-color: var(--background-light);
 }
+.features-section h2 { font-size: 2.5em; color: var(--secondary-color); }
+.features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px; margin-top: 40px; max-width: 1200px; margin-left: auto; margin-right: auto; }
+.feature-card { background: var(--box-background); padding: 30px; border-radius: 16px; box-shadow: 0 8px 20px rgba(0,0,0,0.07); font-size: 1.2em; font-weight: 500; display: flex; flex-direction: column; align-items: center; gap: 15px; }
+.feature-card span { font-size: 2.5em; }
 
-.info-text {
-    margin-top: 20px;
-    font-size: 0.85em;
-    color: #888;
-    background-color: #f8f8f8;
-    padding: 10px;
-    border-radius: 6px;
+/* Sección de WhatsApp */
+.whatsapp-section {
+    display: flex;
+    align-items: center;
+    padding: 80px 60px;
+    background-color: var(--box-background);
+    gap: 50px;
+}
+.whatsapp-content { flex: 1; }
+.whatsapp-content h2 { font-size: 2.5em; color: var(--secondary-color); }
+.whatsapp-image { flex: 1; text-align: center; }
+.whatsapp-image img { max-width: 100%; height: auto; }
+
+/* Diseño Responsivo para Móviles */
+@media (max-width: 900px) {
+    .main-container { flex-direction: column; }
+    .left-pane { padding: 40px 20px; text-align: center; }
+    .whatsapp-section { flex-direction: column-reverse; padding: 60px 30px; }
 }
