@@ -5,74 +5,81 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bienvenido a FINZTONE</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="login-container">
-        <div class="login-box">
-            <h1 class="logo">FINZTONE</h1>
-            <p class="subtitle">Toma el control de tus finanzas</p>
 
-            <div class="tabs">
-                <button class="tab-link active" onclick="openTab(event, 'Admin')">Administrador</button>
-                <button class="tab-link" onclick="openTab(event, 'Employee')">Empleado</button>
-                <button class="tab-link" onclick="openTab(event, 'Personal')">Cuenta Personal</button>
+    <div class="main-container">
+        <div class="left-pane">
+            <div class="branding">
+                <h1 class="logo-main">FINZTONE</h1>
+                <h2>Bienvenido al Futuro de tus Finanzas</h2>
+                <p>Potencia tu precisión, optimiza tu tiempo y transforma la gestión de tu empresa o finanzas personales. Únete a la nueva era de la contabilidad inteligente.</p>
             </div>
+        </div>
+        <div class="right-pane">
+            <div class="login-box">
+                <div class="tabs">
+                    <button class="tab-link active" onclick="openTab(event, 'Admin')">Administrador</button>
+                    <button class="tab-link" onclick="openTab(event, 'Employee')">Empleado</button>
+                    <button class="tab-link" onclick="openTab(event, 'Personal')">Cuenta Personal</button>
+                </div>
 
-            <div id="Admin" class="tab-content" style="display: block;">
-                <form id="admin-login-form"> 
-                    <div class="input-group">
-                        <label for="admin-email">Correo Electrónico</label>
-                        <input type="email" id="admin-email" placeholder="tu@empresa.com" required>
-                    </div>
-                    <div class="input-group">
-                        <label for="admin-password">Contraseña</label>
-                        <input type="password" id="admin-password" required>
-                    </div>
-                    <button type="submit" class="btn-primary">Iniciar Sesión</button>
-                    <a href="#" class="forgot-password">¿Olvidaste tu contraseña?</a>
-                </form>
+                <div id="Admin" class="tab-content">
+                    <form id="admin-login-form">
+                        <div class="input-group"><input type="email" id="admin-email" placeholder="Correo de Administrador" required></div>
+                        <div class="input-group"><input type="password" id="admin-password" placeholder="Contraseña" required></div>
+                        <button type="submit" class="btn-primary">Acceder</button>
+                        <a href="#" class="forgot-password">¿Olvidaste tu contraseña?</a>
+                    </form>
+                </div>
+                <div id="Employee" class="tab-content">
+                    <form id="employee-login-form">
+                         <div class="input-group"><input type="email" id="employee-email" placeholder="Correo de Empleado" required></div>
+                         <div class="input-group"><input type="password" id="employee-password" placeholder="Contraseña" required></div>
+                         <button type="submit" class="btn-primary">Acceder</button>
+                         <a href="#" class="forgot-password">¿Olvidaste tu contraseña?</a>
+                    </form>
+                </div>
+                <div id="Personal" class="tab-content">
+                     <form id="personal-login-form">
+                        <div class="input-group"><input type="email" id="personal-email" placeholder="Tu Correo" required></div>
+                        <div class="input-group"><input type="password" id="personal-password" placeholder="Contraseña" required></div>
+                        <button type="submit" class="btn-primary">Acceder</button>
+                        <a href="registro.html" class="signup-link">¿No tienes una cuenta? Regístrate aquí</a>
+                    </form>
+                </div>
             </div>
-
-            <div id="Employee" class="tab-content">
-                <form id="employee-login-form"> 
-                    <div class="input-group">
-                        <label for="employee-email">Correo de Empleado</label>
-                        <input type="email" id="employee-email" placeholder="tu@correo.com" required>
-                    </div>
-                    <div class="input-group">
-                        <label for="employee-password">Contraseña</label>
-                        <input type="password" id="employee-password" required>
-                    </div>
-                    <button type="submit" class="btn-primary">Iniciar Sesión</button>
-                    <a href="#" class="forgot-password">¿Olvidaste tu contraseña?</a>
-                    <p class="info-text">Tu cuenta es creada por un administrador.</p>
-                </form>
-            </div>
-
-            <div id="Personal" class="tab-content">
-                 <form>
-                    <div class="input-group">
-                        <label for="personal-email">Correo Electrónico</label>
-                        <input type="email" id="personal-email" placeholder="tu@correo.com" required>
-                    </div>
-                    <div class="input-group">
-                        <label for="personal-password">Contraseña</label>
-                        <input type="password" id="personal-password" required>
-                    </div>
-                    <button type="submit" class="btn-primary">Iniciar Sesión</button>
-                    <a href="#" class="forgot-password">¿Olvidaste tu contraseña?</a>
-                    <a href="#" class="signup-link">¿No tienes cuenta? Regístrate aquí</a>
-                </form>
-            </div>
-
         </div>
     </div>
+
+    <section class="features-section">
+        <h2>Un Ecosistema de Herramientas a tu Medida</h2>
+        <p>Desde la gestión de gastos hasta el análisis estadístico, todo en un solo lugar.</p>
+        <div class="features-grid">
+            <div class="feature-card"><span>📊</span> Reportes y Agenda</div>
+            <div class="feature-card"><span>👥</span> Gestión de Colaboradores</div>
+            <div class="feature-card"><span>📋</span> Aprobaciones</div>
+            <div class="feature-card"><span>💸</span> Control de Gastos</div>
+            <div class="feature-card"><span>💰</span> Control de Ingresos</div>
+            <div class="feature-card"><span>🧾</span> Nómina</div>
+        </div>
+    </section>
+
+    <section class="whatsapp-section">
+        <div class="whatsapp-content">
+            <h2>Tu Asistente Financiero en WhatsApp</h2>
+            <p>Gestiona tus finanzas, consulta información y potencia tus decisiones con un simple mensaje. Próximamente podrás registrar tus gastos e ingresos directamente desde WhatsApp.</p>
+        </div>
+        <div class="whatsapp-image">
+                    </div>
+    </section>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-
     <script src="app.js"></script>
 </body>
 </html>
