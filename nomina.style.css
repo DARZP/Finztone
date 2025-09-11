@@ -94,12 +94,21 @@ h2 {
 }
 
 .user-item {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    /* Cambiamos a 4 columnas: info | cuenta | estado | botón */
+    grid-template-columns: 1fr auto auto auto;
+    gap: 15px;
     align-items: center;
     padding: 15px;
     border-bottom: 1px solid #eee;
 }
+
+.account-selector-payroll {
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-family: 'Poppins', sans-serif;
+    min-width: 150px; /* Ancho mínimo */
 
 .user-info .user-name {
     font-weight: 500;
