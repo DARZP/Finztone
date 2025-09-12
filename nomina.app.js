@@ -58,19 +58,16 @@ async function marcarPago(userId, userName, amount) {
     const accountSelector = userItemElement.querySelector('.account-selector-payroll');
     const cuentaId = accountSelector.value;
     const periodo = periodSelector.value;
-
-    if (!cuentaId) {
-        return alert(`Por favor, selecciona una cuenta de origen para ${userName}.`);
-    }
     const cuentaNombre = accountSelector.options[accountSelector.selectedIndex].text;
+
+    const tipoDeDescuento = document.querySelector('input[name="payment-type"]:checked').value;
 
     if (!confirm(`Confirmas el pago de $${amount.toLocaleString('es-MX')} a ${userName} desde la cuenta ${cuentaNombre}?`)) return;
 
-    // Referencias a los documentos que vamos a modificar
     const accountRef = db.collection('cuentas').doc(cuentaId);
     const newPaymentRef = db.collection('pagos_nomina').doc();
     const userRef = db.collection('usuarios').doc(userId); // <-- Referencia al perfil del empleado
-
+    
     try {
         await db.runTransaction(async (transaction) => {
             const accountDoc = await transaction.get(accountRef);
@@ -79,10 +76,20 @@ async function marcarPago(userId, userName, amount) {
                 throw "La cuenta o el usuario seleccionado no existen.";
             }
 
-            // --- CÁLCULOS ---
             const saldoActual = accountDoc.data().saldoActual;
-            const nuevoSaldo = saldoActual - amount; // Siempre se descuenta el sueldo BRUTO
+            const sueldoBruto = userDoc.data().sueldoBruto || 0;
             const deducciones = userDoc.data().deducciones || [];
+
+            // --- CÁLCULOS ---
+            let totalDeducciones = 0;
+            deducciones.forEach(ded => {
+                totalDeducciones += ded.tipo === 'porcentaje' ? (sueldoBruto * ded.valor) / 100 : ded.valor;
+            });
+            const sueldoNeto = sueldoBruto - totalDeducciones;
+
+            // NUEVO: Decidimos cuánto se descuenta del saldo de la cuenta
+            const montoADescontar = tipoDeDescuento === 'neto' ? sueldoNeto : sueldoBruto;
+            const nuevoSaldo = saldoActual - montoADescontar;
 
             // --- OPERACIONES DE ESCRITURA ---
 
@@ -91,24 +98,28 @@ async function marcarPago(userId, userName, amount) {
                 userId: userId,
                 userName: userName,
                 periodo: periodo,
-                monto: amount, // Sueldo Bruto
+                montoBruto: sueldoBruto,
+                montoNeto: sueldoNeto,
+                montoDescontado: montoADescontar,
                 fechaDePago: new Date(),
                 cuentaId: cuentaId,
                 cuentaNombre: cuentaNombre
             });
-
+            
             // 2. NUEVO: Creamos un registro por cada deducción en la herramienta de Impuestos
             deducciones.forEach(ded => {
-                let montoDeducido = ded.tipo === 'porcentaje' ? (amount * ded.valor) / 100 : ded.valor;
-                
+                let montoDeducido = ded.tipo === 'porcentaje' ? (sueldoBruto * ded.valor) / 100 : ded.valor;
                 const newTaxMovementRef = db.collection('movimientos_impuestos').doc();
+                
+                // NUEVO: El estado del impuesto depende de si ya se descontó o no
+                const estadoImpuesto = tipoDeDescuento === 'neto' ? 'pagado (retenido)' : 'pendiente de pago';
+                
                 transaction.set(newTaxMovementRef, {
                     origen: `Nómina - ${userName}`,
-                    origenId: userId,
                     tipoImpuesto: ded.nombre,
                     monto: montoDeducido,
                     fecha: new Date(),
-                    status: 'pendiente de pago' // Estado para el futuro pago de estos impuestos al gobierno
+                    status: estadoImpuesto
                 });
             });
 
@@ -116,14 +127,13 @@ async function marcarPago(userId, userName, amount) {
             transaction.update(accountRef, { saldoActual: nuevoSaldo });
         });
 
-        alert(`¡Pago para ${userName} registrado y deducciones generadas exitosamente!`);
-        cargarCuentas(); // Recargamos para que se actualicen los saldos en los selectores
+        alert(`¡Pago para ${userName} registrado! Se descontó un total de $${montoADescontar.toLocaleString('es-MX')}`);
+        cargarCuentas();
     } catch (error) {
-        console.error("Error en la transacción de pago de nómina: ", error);
-        alert("Ocurrió un error al registrar el pago. La operación fue cancelada para proteger los datos.");
+        console.error("Error en la transacción: ", error);
+        alert("Ocurrió un error al registrar el pago.");
     }
 }
-
 // Dibuja la lista de usuarios en el HTML
 function mostrarUsuarios(usuarios, pagosDelPeriodo) {
     userListContainer.innerHTML = '';
