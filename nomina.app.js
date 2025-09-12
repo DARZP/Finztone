@@ -52,46 +52,47 @@ function generarSelectorDeCuentas() {
     return `<select class="account-selector-payroll">${optionsHTML}</select>`;
 }
 
-// En nomina.app.js, reemplaza esta función completa
-async function marcarPago(userId, userName, amount) {
+Referencia al perfil del empleado
+    
+    async function marcarPago(userId, userName, amount) {
     const userItemElement = userListContainer.querySelector(`[data-user-id="${userId}"]`);
     const accountSelector = userItemElement.querySelector('.account-selector-payroll');
     const cuentaId = accountSelector.value;
     const periodo = periodSelector.value;
-    const cuentaNombre = accountSelector.options[accountSelector.selectedIndex].text;
 
+    if (!cuentaId) {
+        return alert(`Por favor, selecciona una cuenta de origen para ${userName}.`);
+    }
+    const cuentaNombre = accountSelector.options[accountSelector.selectedIndex].text;
     const tipoDeDescuento = document.querySelector('input[name="payment-type"]:checked').value;
 
-    if (!confirm(`Confirmas el pago de $${amount.toLocaleString('es-MX')} a ${userName} desde la cuenta ${cuentaNombre}?`)) return;
+    if (!confirm(`Confirmas el pago a ${userName} desde la cuenta ${cuentaNombre}?`)) return;
 
     const accountRef = db.collection('cuentas').doc(cuentaId);
     const newPaymentRef = db.collection('pagos_nomina').doc();
-    const userRef = db.collection('usuarios').doc(userId); // <-- Referencia al perfil del empleado
-    
+    const userRef = db.collection('usuarios').doc(userId);
+
+    let montoADescontar; // <-- CORRECCIÓN: Declaramos la variable aquí
+
     try {
         await db.runTransaction(async (transaction) => {
             const accountDoc = await transaction.get(accountRef);
-            const userDoc = await transaction.get(userRef); // <-- Obtenemos los datos del empleado
-            if (!accountDoc.exists || !userDoc.exists) {
-                throw "La cuenta o el usuario seleccionado no existen.";
-            }
+            const userDoc = await transaction.get(userRef);
+            if (!accountDoc.exists || !userDoc.exists) throw "La cuenta o el usuario no existen.";
 
             const saldoActual = accountDoc.data().saldoActual;
             const sueldoBruto = userDoc.data().sueldoBruto || 0;
             const deducciones = userDoc.data().deducciones || [];
 
-            // --- CÁLCULOS ---
             let totalDeducciones = 0;
             deducciones.forEach(ded => {
                 totalDeducciones += ded.tipo === 'porcentaje' ? (sueldoBruto * ded.valor) / 100 : ded.valor;
             });
             const sueldoNeto = sueldoBruto - totalDeducciones;
 
-            // NUEVO: Decidimos cuánto se descuenta del saldo de la cuenta
-            const montoADescontar = tipoDeDescuento === 'neto' ? sueldoNeto : sueldoBruto;
+            // Asignamos el valor a la variable que declaramos antes
+            montoADescontar = tipoDeDescuento === 'neto' ? sueldoNeto : sueldoBruto;
             const nuevoSaldo = saldoActual - montoADescontar;
-
-            // --- OPERACIONES DE ESCRITURA ---
 
             // 1. Creamos el registro del pago de nómina (como antes)
             transaction.set(newPaymentRef, {
