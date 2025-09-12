@@ -52,9 +52,10 @@ function generarSelectorDeCuentas() {
     return `<select class="account-selector-payroll">${optionsHTML}</select>`;
 }
 
-Referencia al perfil del empleado
-    
-    async function marcarPago(userId, userName, amount) {
+
+
+
+async function marcarPago(userId, userName, amount) {
     const userItemElement = userListContainer.querySelector(`[data-user-id="${userId}"]`);
     const accountSelector = userItemElement.querySelector('.account-selector-payroll');
     const cuentaId = accountSelector.value;
@@ -73,7 +74,7 @@ Referencia al perfil del empleado
     const userRef = db.collection('usuarios').doc(userId);
 
     let montoADescontar; // <-- CORRECCIÓN: Declaramos la variable aquí
-
+    
     try {
         await db.runTransaction(async (transaction) => {
             const accountDoc = await transaction.get(accountRef);
@@ -135,6 +136,9 @@ Referencia al perfil del empleado
         alert("Ocurrió un error al registrar el pago.");
     }
 }
+
+
+
 // Dibuja la lista de usuarios en el HTML
 function mostrarUsuarios(usuarios, pagosDelPeriodo) {
     userListContainer.innerHTML = '';
