@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión de Empleados - FINZTONE</title>
+    <title>Gestión de Nómina - FINZTONE</title>
     <link rel="stylesheet" href="nomina.style.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
@@ -15,10 +15,26 @@
 
     <main class="container">
         <div class="list-card">
-            <div class="list-header">
+            <div class="card-header-filters">
                 <h2>Lista de Empleados</h2>
-                <select id="period-selector"></select>
+                
+                <div class="payroll-controls">
+                    <div class="payroll-options">
+                        <label>Descontar:</label>
+                        <div class="radio-group">
+                            <input type="radio" id="pay-bruto" name="payment-type" value="bruto" checked>
+                            <label for="pay-bruto">Sueldo Bruto</label>
+                        </div>
+                        <div class="radio-group">
+                            <input type="radio" id="pay-neto" name="payment-type" value="neto">
+                            <label for="pay-neto">Sueldo Neto</label>
+                        </div>
+                    </div>
+                    
+                    <select id="period-selector" class="period-selector-styled"></select>
+                </div>
             </div>
+            
             <div id="user-list"></div>
         </div>
     </main>
