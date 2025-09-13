@@ -52,9 +52,6 @@ function generarSelectorDeCuentas() {
     return `<select class="account-selector-payroll">${optionsHTML}</select>`;
 }
 
-
-
-
 async function marcarPago(userId, userName, amount) {
     const userItemElement = userListContainer.querySelector(`[data-user-id="${userId}"]`);
     const accountSelector = userItemElement.querySelector('.account-selector-payroll');
@@ -70,7 +67,7 @@ async function marcarPago(userId, userName, amount) {
     if (!confirm(`Confirmas el pago a ${userName} desde la cuenta ${cuentaNombre}?`)) return;
 
     const accountRef = db.collection('cuentas').doc(cuentaId);
-    const newPaymentRef = db.collection('pagos_nomina').doc();
+    const newPaymentRef = db.collection('pagos_nomina').doc(); // Este es el "pago padre"
     const userRef = db.collection('usuarios').doc(userId);
     let montoADescontar;
     
@@ -114,30 +111,29 @@ async function marcarPago(userId, userName, amount) {
                 cuentaNombre: cuentaNombre
             });
             
-            // 2. NUEVO: Creamos UN SOLO registro consolidado para los impuestos
-            if (totalDeducciones > 0) {
+            // 2. Creamos un documento por cada deducción, enlazado al ID del pago
+            const estadoImpuesto = tipoDeDescuento === 'neto' ? 'pagado (retenido)' : 'pendiente de pago';
+            deducciones.forEach(ded => {
+                let montoDeducido = ded.tipo === 'porcentaje' ? (sueldoBruto * ded.valor) / 100 : ded.valor;
                 const newTaxMovementRef = db.collection('movimientos_impuestos').doc();
-                const estadoImpuesto = tipoDeDescuento === 'neto' ? 'pagado (retenido)' : 'pendiente de pago';
-                
                 transaction.set(newTaxMovementRef, {
                     origen: `Nómina - ${userName}`,
-                    origenId: userId,
-                    montoTotal: totalDeducciones, // Guardamos el total
-                    desglose: desgloseDeducciones, // Guardamos el array con el detalle
+                    pagoId: newPaymentRef.id, // <-- ¡LA CLAVE! Enlace al pago padre
+                    tipoImpuesto: ded.nombre,
+                    monto: montoDeducido,
                     fecha: new Date(),
                     status: estadoImpuesto
                 });
-            }
+            });
 
-            // 3. Actualizamos el saldo de la cuenta (sin cambios)
+            // 3. Actualizamos el saldo de la cuenta
             transaction.update(accountRef, { saldoActual: nuevoSaldo });
         });
-
-        alert(`¡Pago para ${userName} registrado! Se descontó un total de $${montoADescontar.toLocaleString('es-MX')}`);
+        alert(`¡Pago para ${userName} registrado y deducciones generadas!`);
         cargarCuentas();
     } catch (error) {
-        console.error("Error en la transacción de pago de nómina: ", error);
-        alert("Ocurrió un error al registrar el pago.");
+        console.error("Error en la transacción: ", error);
+        alert("Ocurrió un error.");
     }
 }
 
@@ -164,7 +160,7 @@ function mostrarUsuarios(usuarios, pagosDelPeriodo) {
                 <div class="user-details">${usuario.cargo} - ${usuario.email}</div>
             </a>
             <div class="account-selector-container">
-                ${isPaid ? '' : generarSelectorDeCuentas()}
+                ${isPaid ? '' : generarelectorDeCuentas()}
             </div>
             <div class="status ${statusClass}">${statusText}</div>
             <button class="btn-pay" ${isPaid ? 'disabled' : ''}>
