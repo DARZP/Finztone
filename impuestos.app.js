@@ -18,18 +18,24 @@ const taxMovementsContainer = document.getElementById('tax-movements-list');
 const taxTypeFilter = document.getElementById('tax-type-filter');
 const monthFilter = document.getElementById('month-filter');
 const statusFilter = document.getElementById('status-filter');
+const paymentSection = document.getElementById('payment-section');
+const paymentAccountSelect = document.getElementById('payment-account-select');
+const paySelectedBtn = document.getElementById('pay-selected-btn');
+const selectedCountSpan = document.getElementById('selected-count');
 
 // --- LÓGICA DE LA PÁGINA ---
 auth.onAuthStateChanged(user => {
     if (user) {
         cargarImpuestosDefinidos();
         poblarFiltros();
+        cargarCuentasEnSelector();
         cargarMovimientosDeImpuestos();
     } else {
         window.location.href = 'index.html';
     }
 });
 
+// Lógica para crear una nueva definición de impuesto
 addTaxForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const taxName = addTaxForm['tax-name'].value;
@@ -37,13 +43,17 @@ addTaxForm.addEventListener('submit', (e) => {
     const taxValue = parseFloat(addTaxForm['tax-value'].value);
 
     db.collection('impuestos_definiciones').add({
-        nombre: taxName, tipo: taxType, valor: taxValue, fechaDeCreacion: new Date()
+        nombre: taxName,
+        tipo: taxType,
+        valor: taxValue,
+        fechaDeCreacion: new Date()
     }).then(() => {
         alert(`¡El impuesto "${taxName}" ha sido guardado!`);
         addTaxForm.reset();
     }).catch(error => console.error("Error al guardar el impuesto: ", error));
 });
 
+// Carga y muestra la lista de impuestos definidos
 function cargarImpuestosDefinidos() {
     db.collection('impuestos_definiciones').orderBy('nombre').onSnapshot(snapshot => {
         taxesListContainer.innerHTML = '';
@@ -65,6 +75,7 @@ function cargarImpuestosDefinidos() {
     });
 }
 
+// Puebla los menús de filtro
 function poblarFiltros() {
     monthFilter.innerHTML = '<option value="todos">Todos los meses</option>';
     let fecha = new Date();
@@ -83,6 +94,21 @@ function poblarFiltros() {
     });
 }
 
+// Carga las cuentas en el selector de pago
+function cargarCuentasEnSelector() {
+    db.collection('cuentas').orderBy('nombre').onSnapshot(snapshot => {
+        const selectedValue = paymentAccountSelect.value;
+        paymentAccountSelect.innerHTML = '<option value="" disabled selected>Selecciona una cuenta</option>';
+        snapshot.forEach(doc => {
+            const cuenta = doc.data();
+            const option = new Option(`${cuenta.nombre} ($${cuenta.saldoActual.toLocaleString('es-MX')})`, doc.id);
+            paymentAccountSelect.appendChild(option);
+        });
+        paymentAccountSelect.value = selectedValue;
+    });
+}
+
+// Carga los movimientos de impuestos aplicando los filtros
 function cargarMovimientosDeImpuestos() {
     let query = db.collection('movimientos_impuestos');
 
@@ -101,35 +127,36 @@ function cargarMovimientosDeImpuestos() {
     query.onSnapshot(snapshot => {
         const movimientos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         const tipoImpuestoFiltrado = taxTypeFilter.value;
-        
         const movimientosFiltrados = tipoImpuestoFiltrado === 'todos'
             ? movimientos
             : movimientos.filter(mov => {
-                // Maneja ambos casos: registros viejos y nuevos (consolidados)
-                if (mov.desglose) { // Si es consolidado
+                if (mov.desglose) {
                     return mov.desglose.some(d => d.nombre === tipoImpuestoFiltrado);
-                } else { // Si es individual
+                } else {
                     return mov.tipoImpuesto === tipoImpuestoFiltrado;
                 }
             });
-            
         mostrarMovimientos(movimientosFiltrados);
     }, error => {
-        console.error("Error al obtener movimientos de impuestos:", error);
-        alert("Error al cargar los datos. Revisa la consola por si falta un índice de Firestore.");
+        console.error("Error al obtener movimientos:", error);
     });
 }
 
+// Muestra el historial de movimientos en la tabla
 function mostrarMovimientos(movimientos) {
     taxMovementsContainer.innerHTML = '';
     if (movimientos.length === 0) {
-        taxMovementsContainer.innerHTML = '<tr><td colspan="5">No se encontraron movimientos con los filtros seleccionados.</td></tr>';
+        taxMovementsContainer.innerHTML = '<tr><td colspan="6">No se encontraron movimientos.</td></tr>';
         return;
     }
     movimientos.forEach(mov => {
         const fecha = mov.fecha.toDate().toLocaleDateString('es-ES');
         const row = document.createElement('tr');
         
+        const checkboxHTML = mov.status === 'pendiente de pago'
+            ? `<td><input type="checkbox" class="tax-checkbox" data-id="${mov.id}" data-monto="${mov.montoTotal || mov.monto}"></td>`
+            : '<td></td>';
+
         const esConsolidado = mov.desglose && mov.desglose.length > 0;
         const tipoDisplay = esConsolidado ? `Consolidado (${mov.desglose.length} ded.)` : mov.tipoImpuesto;
         const montoDisplay = mov.montoTotal !== undefined ? mov.montoTotal : mov.monto;
@@ -140,6 +167,7 @@ function mostrarMovimientos(movimientos) {
         }
 
         row.innerHTML = `
+            ${checkboxHTML}
             <td>${fecha}</td>
             <td>${mov.origen}</td>
             <td>${tipoDisplay}</td>
@@ -157,13 +185,15 @@ function mostrarMovimientos(movimientos) {
             mov.desglose.forEach(item => {
                 detailsHTML += `<div class="deduction-detail"><span>- ${item.nombre}</span><span>$${item.monto.toLocaleString('es-MX')}</span></div>`;
             });
-            detailsRow.innerHTML = `<td colspan="5" class="details-cell">${detailsHTML}</td>`;
+            detailsRow.innerHTML = `<td colspan="6">${detailsHTML}</td>`;
             taxMovementsContainer.appendChild(detailsRow);
         }
     });
 }
 
+// Listener para desplegar detalles
 taxMovementsContainer.addEventListener('click', (e) => {
+    if (e.target.classList.contains('tax-checkbox')) return;
     const mainRow = e.target.closest('.tax-movement-item');
     if (mainRow) {
         const detailsRow = taxMovementsContainer.querySelector(`[data-details-for="${mainRow.dataset.id}"]`);
@@ -173,6 +203,73 @@ taxMovementsContainer.addEventListener('click', (e) => {
     }
 });
 
+// Listeners para los filtros
 taxTypeFilter.addEventListener('change', cargarMovimientosDeImpuestos);
 monthFilter.addEventListener('change', cargarMovimientosDeImpuestos);
 statusFilter.addEventListener('change', cargarMovimientosDeImpuestos);
+
+// Lógica para el botón de pagar
+paySelectedBtn.addEventListener('click', async () => {
+    const selectedCheckboxes = document.querySelectorAll('.tax-checkbox:checked');
+    const cuentaId = paymentAccountSelect.value;
+
+    if (selectedCheckboxes.length === 0) return alert('No has seleccionado ningún impuesto para pagar.');
+    if (!cuentaId) return alert('Por favor, selecciona una cuenta de origen para el pago.');
+
+    let totalAPagar = 0;
+    const idsAPagar = [];
+    selectedCheckboxes.forEach(cb => {
+        totalAPagar += parseFloat(cb.dataset.monto);
+        idsAPagar.push(cb.dataset.id);
+    });
+
+    if (!confirm(`El total a pagar es $${totalAPagar.toLocaleString()}. ¿Proceder con el pago?`)) return;
+
+    const cuentaRef = db.collection('cuentas').doc(cuentaId);
+    
+    try {
+        await db.runTransaction(async (transaction) => {
+            const cuentaDoc = await transaction.get(cuentaRef);
+            if (!cuentaDoc.exists) throw "La cuenta no existe.";
+            const saldoActual = cuentaDoc.data().saldoActual;
+            if (saldoActual < totalAPagar) throw "No hay saldo suficiente en la cuenta.";
+            
+            const nuevoSaldo = saldoActual - totalAPagar;
+
+            idsAPagar.forEach(id => {
+                const movRef = db.collection('movimientos_impuestos').doc(id);
+                transaction.update(movRef, { status: 'pagado' });
+            });
+            
+            const newExpenseRef = db.collection('gastos').doc();
+            transaction.set(newExpenseRef, {
+                descripcion: `Pago de impuestos consolidados (${idsAPagar.length} items)`,
+                monto: totalAPagar,
+                categoria: 'Impuestos',
+                fecha: new Date().toISOString().split('T')[0],
+                status: 'aprobado',
+                cuentaId: cuentaId,
+                cuentaNombre: paymentAccountSelect.options[paymentAccountSelect.selectedIndex].text.split(' (')[0],
+                creadoPor: auth.currentUser.uid,
+                nombreCreador: "Administrador",
+                fechaDeCreacion: new Date()
+            });
+
+            transaction.update(cuentaRef, { saldoActual: nuevoSaldo });
+        });
+        alert('¡Pago de impuestos registrado exitosamente!');
+        cargarCuentasEnSelector();
+    } catch (error) {
+        console.error("Error en la transacción de pago de impuestos: ", error);
+        alert("Error: " + error);
+    }
+});
+
+// Listener para mostrar/ocultar la sección de pago
+taxMovementsContainer.addEventListener('change', (e) => {
+    if (e.target.classList.contains('tax-checkbox')) {
+        const selectedCount = document.querySelectorAll('.tax-checkbox:checked').length;
+        paymentSection.style.display = selectedCount > 0 ? 'block' : 'none';
+        selectedCountSpan.textContent = selectedCount;
+    }
+});
