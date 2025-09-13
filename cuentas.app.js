@@ -48,16 +48,16 @@ async function cargarCuentasConHistorial() {
     const cuentasSnapshot = await db.collection('cuentas').orderBy('fechaDeCreacion', 'desc').get();
     const cuentas = cuentasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-    // 2. Obtenemos TODOS los movimientos (ingresos, gastos Y NÓMINA)
+    // 2. Obtenemos TODOS los movimientos
     const ingresosSnapshot = await db.collection('ingresos').where('status', '==', 'aprobado').get();
     const gastosSnapshot = await db.collection('gastos').where('status', '==', 'aprobado').get();
-    const nominaSnapshot = await db.collection('pagos_nomina').get(); // <-- NUEVA CONSULTA
+    const nominaSnapshot = await db.collection('pagos_nomina').get();
     
     const todosLosMovimientos = [];
     ingresosSnapshot.forEach(doc => todosLosMovimientos.push({ tipo: 'ingreso', ...doc.data() }));
     gastosSnapshot.forEach(doc => todosLosMovimientos.push({ tipo: 'gasto', ...doc.data() }));
     nominaSnapshot.forEach(doc => todosLosMovimientos.push({ tipo: 'nomina', ...doc.data() }));
-        
+
     // 3. Mostramos las cuentas y les asignamos sus movimientos
     accountsListContainer.innerHTML = '';
     if (cuentas.length === 0) {
@@ -69,11 +69,14 @@ async function cargarCuentasConHistorial() {
         const itemElement = document.createElement('div');
         itemElement.classList.add('account-item');
         
-        // Buscamos los movimientos que pertenecen a ESTA cuenta y los ordenamos por fecha
         const historial = todosLosMovimientos
             .filter(mov => mov.cuentaId === cuenta.id)
-            // Usamos fechaDeCreacion o fechaDePago para ordenar correctamente
-            .sort((a, b) => (b.fechaDeCreacion?.toDate() || b.fechaDePago.toDate()) - (a.fechaDeCreacion?.toDate() || a.fechaDePago.toDate()));
+            .sort((a, b) => {
+                // Hacemos el ordenamiento más seguro
+                const dateA = a.fechaDeCreacion?.toDate() || a.fechaDePago?.toDate() || 0;
+                const dateB = b.fechaDeCreacion?.toDate() || b.fechaDePago?.toDate() || 0;
+                return dateB - dateA;
+            });
 
         let historialHTML = '<p>No hay movimientos en esta cuenta.</p>';
         if (historial.length > 0) {
@@ -81,11 +84,10 @@ async function cargarCuentasConHistorial() {
                 const esIngreso = mov.tipo === 'ingreso';
                 const signo = esIngreso ? '+' : '-';
                 const icono = esIngreso ? '🟢' : '🔴';
-                const claseIcono = esIngreso ? 'ingreso' : 'gasto'; // Reutilizamos la clase gasto para nómina
+                const claseIcono = esIngreso ? 'ingreso' : 'gasto';
 
-                // Creamos descripciones y fechas personalizadas según el tipo
                 let descripcion = mov.descripcion;
-                let fecha = mov.fecha ? new Date(mov.fecha.replace(/-/g, '/')).toLocaleDateString('es-ES') : 'N/A';
+                let fecha = mov.fecha ? new Date(mov.fecha.replace(/-/g, '/')).toLocaleDateString('es-ES') : 'Fecha no disp.';
                 let creador = mov.nombreCreador;
 
                 if (mov.tipo === 'nomina') {
@@ -93,6 +95,8 @@ async function cargarCuentasConHistorial() {
                     fecha = mov.fechaDePago.toDate().toLocaleDateString('es-ES');
                     creador = 'Sistema (Nómina)';
                 }
+
+                const montoFormateado = (typeof mov.monto === 'number') ? mov.monto.toLocaleString('es-MX') : '0.00';
                 
                 return `
                     <div class="history-item">
@@ -102,7 +106,7 @@ async function cargarCuentasConHistorial() {
                             <div class="meta">${fecha} por ${creador}</div>
                         </div>
                         <div class="history-amount">
-                            <span>${signo}$${mov.monto.toLocaleString('es-MX')}</span>
+                            <span>${signo}$${montoFormateado}</span>
                         </div>
                     </div>
                 `;
