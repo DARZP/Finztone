@@ -137,7 +137,6 @@ async function marcarPago(userId, userName, amount) {
     }
 }
 
-// Dibuja la lista de usuarios en el HTML
 function mostrarUsuarios(usuarios, pagosDelPeriodo) {
     userListContainer.innerHTML = '';
     if (usuarios.length === 0) {
@@ -145,6 +144,8 @@ function mostrarUsuarios(usuarios, pagosDelPeriodo) {
         return;
     }
     
+    const selectedPeriodIsCurrent = periodSelector.value === generarPeriodos()[0].value;
+
     usuarios.forEach(usuario => {
         const isPaid = pagosDelPeriodo.some(pago => pago.userId === usuario.id);
         const userElement = document.createElement('div');
@@ -160,7 +161,7 @@ function mostrarUsuarios(usuarios, pagosDelPeriodo) {
                 <div class="user-details">${usuario.cargo} - ${usuario.email}</div>
             </a>
             <div class="account-selector-container">
-                ${isPaid ? '' : generarelectorDeCuentas()}
+                ${isPaid ? '' : generarSelectorDeCuentas()}
             </div>
             <div class="status ${statusClass}">${statusText}</div>
             <button class="btn-pay" ${isPaid ? 'disabled' : ''}>
