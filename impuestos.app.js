@@ -14,13 +14,13 @@ const db = firebase.firestore();
 // --- ELEMENTOS DEL DOM ---
 const addTaxForm = document.getElementById('add-tax-form');
 const taxesListContainer = document.getElementById('taxes-list');
-const taxMovementsContainer = document.getElementById('tax-movements-list'); // Contenedor para el historial
+const taxMovementsContainer = document.getElementById('tax-movements-list');
 
 // --- LÓGICA DE LA PÁGINA ---
 auth.onAuthStateChanged(user => {
     if (user) {
         cargarImpuestosDefinidos();
-        cargarMovimientosDeImpuestos(); // <--- Llamamos a la nueva función
+        cargarMovimientosDeImpuestos();
     } else {
         window.location.href = 'index.html';
     }
@@ -74,7 +74,6 @@ function cargarImpuestosDefinidos() {
 function cargarMovimientosDeImpuestos() {
     db.collection('movimientos_impuestos').orderBy('fecha', 'desc')
       .onSnapshot(snapshot => {
-        if (!taxMovementsContainer) return;
         taxMovementsContainer.innerHTML = '';
         if (snapshot.empty) {
             taxMovementsContainer.innerHTML = '<tr><td colspan="5">No hay movimientos de impuestos registrados.</td></tr>';
@@ -83,15 +82,49 @@ function cargarMovimientosDeImpuestos() {
         snapshot.forEach(doc => {
             const mov = doc.data();
             const fecha = mov.fecha.toDate().toLocaleDateString('es-ES');
+            
+            // Fila principal (visible)
             const row = document.createElement('tr');
+            row.classList.add('tax-movement-item');
+            row.dataset.id = doc.id; // Asignamos un ID para el click
             row.innerHTML = `
                 <td>${fecha}</td>
                 <td>${mov.origen}</td>
-                <td>${mov.tipoImpuesto}</td>
-                <td>$${mov.monto.toLocaleString('es-MX')}</td>
+                <td>Consolidado (${mov.desglose.length} deducciones)</td>
+                <td>$${mov.montoTotal.toLocaleString('es-MX')}</td>
                 <td><span class="status status-${mov.status.replace(/ /g, '-')}">${mov.status}</span></td>
             `;
+
+            // Fila de detalles (oculta)
+            const detailsRow = document.createElement('tr');
+            detailsRow.classList.add('details-row');
+            detailsRow.dataset.detailsFor = doc.id; // La vinculamos a la fila principal
+            
+            let detailsHTML = '';
+            mov.desglose.forEach(item => {
+                detailsHTML += `
+                    <div class="deduction-detail">
+                        <span>- ${item.nombre}</span>
+                        <span>$${item.monto.toLocaleString('es-MX')}</span>
+                    </div>
+                `;
+            });
+
+            detailsRow.innerHTML = `<td colspan="5" class="details-cell">${detailsHTML}</td>`;
+
             taxMovementsContainer.appendChild(row);
+            taxMovementsContainer.appendChild(detailsRow);
         });
     });
 }
+
+taxMovementsContainer.addEventListener('click', (e) => {
+    const mainRow = e.target.closest('.tax-movement-item');
+    if (mainRow) {
+        const detailsRow = taxMovementsContainer.querySelector(`[data-details-for="${mainRow.dataset.id}"]`);
+        if (detailsRow) {
+            const isVisible = detailsRow.style.display === 'table-row';
+            detailsRow.style.display = isVisible ? 'none' : 'table-row';
+        }
+    }
+});
