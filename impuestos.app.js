@@ -15,17 +15,22 @@ const db = firebase.firestore();
 const addTaxForm = document.getElementById('add-tax-form');
 const taxesListContainer = document.getElementById('taxes-list');
 const taxMovementsContainer = document.getElementById('tax-movements-list');
+const taxTypeFilter = document.getElementById('tax-type-filter');
+const monthFilter = document.getElementById('month-filter');
+const statusFilter = document.getElementById('status-filter');
 
 // --- LÓGICA DE LA PÁGINA ---
 auth.onAuthStateChanged(user => {
     if (user) {
         cargarImpuestosDefinidos();
+        poblarFiltros();
         cargarMovimientosDeImpuestos();
     } else {
         window.location.href = 'index.html';
     }
 });
 
+// Lógica para crear una nueva definición de impuesto
 addTaxForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const taxName = addTaxForm['tax-name'].value;
@@ -33,24 +38,19 @@ addTaxForm.addEventListener('submit', (e) => {
     const taxValue = parseFloat(addTaxForm['tax-value'].value);
 
     db.collection('impuestos_definiciones').add({
-        nombre: taxName,
-        tipo: taxType,
-        valor: taxValue,
-        fechaDeCreacion: new Date()
-    })
-    .then(() => {
+        nombre: taxName, tipo: taxType, valor: taxValue, fechaDeCreacion: new Date()
+    }).then(() => {
         alert(`¡El impuesto "${taxName}" ha sido guardado!`);
         addTaxForm.reset();
-    })
-    .catch(error => console.error("Error al guardar el impuesto: ", error));
+    }).catch(error => console.error("Error al guardar el impuesto: ", error));
 });
 
+// Carga y muestra la lista de impuestos definidos
 function cargarImpuestosDefinidos() {
-    db.collection('impuestos_definiciones').orderBy('nombre')
-      .onSnapshot(snapshot => {
+    db.collection('impuestos_definiciones').orderBy('nombre').onSnapshot(snapshot => {
         taxesListContainer.innerHTML = '';
         if (snapshot.empty) {
-            taxesListContainer.innerHTML = '<p>Aún no has definido ningún tipo de impuesto o deducción.</p>';
+            taxesListContainer.innerHTML = '<p>Aún no has definido ningún tipo de impuesto.</p>';
             return;
         }
         snapshot.forEach(doc => {
@@ -59,9 +59,7 @@ function cargarImpuestosDefinidos() {
             itemElement.classList.add('account-item');
             const valorDisplay = tax.tipo === 'porcentaje' ? `${tax.valor}%` : `$${tax.valor.toLocaleString('es-MX')}`;
             itemElement.innerHTML = `
-                <div class="account-info">
-                    <div class="account-name">${tax.nombre}</div>
-                </div>
+                <div class="account-info"><div class="account-name">${tax.nombre}</div></div>
                 <div class="account-balance">${valorDisplay}</div>
             `;
             taxesListContainer.appendChild(itemElement);
@@ -69,62 +67,106 @@ function cargarImpuestosDefinidos() {
     });
 }
 
-// ¡ESTA ES LA FUNCIÓN QUE FALTABA!
-// Carga y muestra el historial de movimientos de impuestos
-function cargarMovimientosDeImpuestos() {
-    db.collection('movimientos_impuestos').orderBy('fecha', 'desc')
-      .onSnapshot(snapshot => {
-        taxMovementsContainer.innerHTML = '';
-        if (snapshot.empty) {
-            taxMovementsContainer.innerHTML = '<tr><td colspan="5">No hay movimientos de impuestos registrados.</td></tr>';
-            return;
-        }
+// Puebla los menús de filtro
+function poblarFiltros() {
+    monthFilter.innerHTML = '<option value="todos">Todos los meses</option>';
+    let fecha = new Date();
+    for (let i = 0; i < 12; i++) {
+        const value = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
+        const text = fecha.toLocaleString('es-ES', { month: 'long', year: 'numeric' });
+        monthFilter.appendChild(new Option(text, value));
+        fecha.setMonth(fecha.getMonth() - 1);
+    }
+
+    db.collection('impuestos_definiciones').orderBy('nombre').get().then(snapshot => {
+        taxTypeFilter.innerHTML = '<option value="todos">Todos los tipos</option>';
         snapshot.forEach(doc => {
-            const mov = doc.data();
-            const fecha = mov.fecha.toDate().toLocaleDateString('es-ES');
-            
-            // Fila principal (visible)
-            const row = document.createElement('tr');
-            row.classList.add('tax-movement-item');
-            row.dataset.id = doc.id; // Asignamos un ID para el click
-            row.innerHTML = `
-                <td>${fecha}</td>
-                <td>${mov.origen}</td>
-                <td>Consolidado (${mov.desglose.length} deducciones)</td>
-                <td>$${mov.montoTotal.toLocaleString('es-MX')}</td>
-                <td><span class="status status-${mov.status.replace(/ /g, '-')}">${mov.status}</span></td>
-            `;
-
-            // Fila de detalles (oculta)
-            const detailsRow = document.createElement('tr');
-            detailsRow.classList.add('details-row');
-            detailsRow.dataset.detailsFor = doc.id; // La vinculamos a la fila principal
-            
-            let detailsHTML = '';
-            mov.desglose.forEach(item => {
-                detailsHTML += `
-                    <div class="deduction-detail">
-                        <span>- ${item.nombre}</span>
-                        <span>$${item.monto.toLocaleString('es-MX')}</span>
-                    </div>
-                `;
-            });
-
-            detailsRow.innerHTML = `<td colspan="5" class="details-cell">${detailsHTML}</td>`;
-
-            taxMovementsContainer.appendChild(row);
-            taxMovementsContainer.appendChild(detailsRow);
+            const taxName = doc.data().nombre;
+            // Usamos el nombre del impuesto como valor para el filtro
+            taxTypeFilter.appendChild(new Option(taxName, taxName));
         });
     });
 }
 
+// Carga los movimientos de impuestos aplicando los filtros seleccionados
+function cargarMovimientosDeImpuestos() {
+    let query = db.collection('movimientos_impuestos');
+
+    if (statusFilter.value !== 'todos') {
+        query = query.where('status', '==', statusFilter.value);
+    }
+    if (monthFilter.value !== 'todos') {
+        const [year, month] = monthFilter.value.split('-').map(Number);
+        const startDate = new Date(year, month - 1, 1);
+        const endDate = new Date(year, month, 1);
+        query = query.where('fecha', '>=', startDate).where('fecha', '<', endDate);
+    }
+
+    // Nota: Firestore tiene limitaciones. Para filtrar por tipo de impuesto (que está en un array 'desglose'),
+    // necesitaríamos una estructura de datos diferente. Por ahora, este filtro no se puede aplicar eficientemente en la consulta.
+    // La funcionalidad del filtro de tipo de impuesto requerirá un cambio más avanzado en el futuro.
+
+    query = query.orderBy('fecha', 'desc');
+
+    query.onSnapshot(snapshot => {
+        const movimientos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Filtramos por tipo de impuesto aquí en el cliente (solución temporal)
+        const tipoImpuestoFiltrado = taxTypeFilter.value;
+        const movimientosFiltrados = tipoImpuestoFiltrado === 'todos'
+            ? movimientos
+            : movimientos.filter(mov => mov.desglose.some(d => d.nombre === tipoImpuestoFiltrado));
+            
+        mostrarMovimientos(movimientosFiltrados);
+    }, error => {
+        console.error("Error al obtener movimientos de impuestos:", error);
+    });
+}
+
+
+// Muestra el historial de movimientos en la tabla
+function mostrarMovimientos(movimientos) {
+    taxMovementsContainer.innerHTML = '';
+    if (movimientos.length === 0) {
+        taxMovementsContainer.innerHTML = '<tr><td colspan="5">No se encontraron movimientos con los filtros seleccionados.</td></tr>';
+        return;
+    }
+    movimientos.forEach(mov => {
+        const fecha = mov.fecha.toDate().toLocaleDateString('es-ES');
+        const row = document.createElement('tr');
+        row.classList.add('tax-movement-item');
+        row.dataset.id = doc.id;
+        row.innerHTML = `
+            <td>${fecha}</td>
+            <td>${mov.origen}</td>
+            <td>Consolidado (${mov.desglose.length} ded.)</td>
+            <td>$${mov.montoTotal.toLocaleString('es-MX')}</td>
+            <td><span class="status status-${mov.status.replace(/ /g, '-')}">${mov.status}</span></td>
+        `;
+        const detailsRow = document.createElement('tr');
+        detailsRow.classList.add('details-row');
+        detailsRow.dataset.detailsFor = doc.id;
+        let detailsHTML = '';
+        mov.desglose.forEach(item => {
+            detailsHTML += `<div class="deduction-detail"><span>- ${item.nombre}</span><span>$${item.monto.toLocaleString('es-MX')}</span></div>`;
+        });
+        detailsRow.innerHTML = `<td colspan="5" class="details-cell">${detailsHTML}</td>`;
+        taxMovementsContainer.appendChild(row);
+        taxMovementsContainer.appendChild(detailsRow);
+    });
+}
+
+// Listener para desplegar detalles
 taxMovementsContainer.addEventListener('click', (e) => {
     const mainRow = e.target.closest('.tax-movement-item');
     if (mainRow) {
         const detailsRow = taxMovementsContainer.querySelector(`[data-details-for="${mainRow.dataset.id}"]`);
         if (detailsRow) {
-            const isVisible = detailsRow.style.display === 'table-row';
-            detailsRow.style.display = isVisible ? 'none' : 'table-row';
+            detailsRow.style.display = detailsRow.style.display === 'table-row' ? 'none' : 'table-row';
         }
     }
 });
+
+// Listeners para los filtros
+taxTypeFilter.addEventListener('change', cargarMovimientosDeImpuestos);
+monthFilter.addEventListener('change', cargarMovimientosDeImpuestos);
+statusFilter.addEventListener('change', cargarMovimientosDeImpuestos);
