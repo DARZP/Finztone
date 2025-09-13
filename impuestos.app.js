@@ -120,6 +120,17 @@ function mostrarMovimientos(movimientos) {
     movimientos.forEach(mov => {
         const fecha = mov.fecha.toDate().toLocaleDateString('es-ES');
         const row = document.createElement('tr');
+
+        const esConsolidado = mov.desglose && mov.desglose.length > 0;
+
+        const tipoDisplay = esConsolidado ? `Consolidado (${mov.desglose.length} ded.)` : mov.tipoImpuesto;
+        const montoDisplay = mov.montoTotal !== undefined ? mov.montoTotal : mov.monto;
+
+        if (esConsolidado) {
+            row.classList.add('tax-movement-item');
+            row.dataset.id = mov.id;
+        }
+
         row.innerHTML = `
             <td>${fecha}</td>
             <td>${mov.origen}</td>
@@ -127,6 +138,7 @@ function mostrarMovimientos(movimientos) {
             <td>$${mov.monto.toLocaleString('es-MX')}</td>
             <td><span class="status status-${mov.status.replace(/ /g, '-')}">${mov.status}</span></td>
         `;
+        
         taxMovementsContainer.appendChild(row);
     });
 }
