@@ -83,16 +83,11 @@ function poblarFiltros() {
     });
 }
 
-// REESCRITO: Carga de movimientos con filtros directos a la base de datos
 function cargarMovimientosDeImpuestos() {
     let query = db.collection('movimientos_impuestos');
 
-    // Ahora los filtros funcionan directamente en la consulta, ¡mucho más eficiente!
     if (statusFilter.value !== 'todos') {
         query = query.where('status', '==', statusFilter.value);
-    }
-    if (taxTypeFilter.value !== 'todos') {
-        query = query.where('tipoImpuesto', '==', taxTypeFilter.value);
     }
     if (monthFilter.value !== 'todos') {
         const [year, month] = monthFilter.value.split('-').map(Number);
@@ -104,9 +99,23 @@ function cargarMovimientosDeImpuestos() {
     query = query.orderBy('fecha', 'desc');
 
     query.onSnapshot(snapshot => {
-        mostrarMovimientos(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        const movimientos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const tipoImpuestoFiltrado = taxTypeFilter.value;
+        
+        const movimientosFiltrados = tipoImpuestoFiltrado === 'todos'
+            ? movimientos
+            : movimientos.filter(mov => {
+                // Maneja ambos casos: registros viejos y nuevos (consolidados)
+                if (mov.desglose) { // Si es consolidado
+                    return mov.desglose.some(d => d.nombre === tipoImpuestoFiltrado);
+                } else { // Si es individual
+                    return mov.tipoImpuesto === tipoImpuestoFiltrado;
+                }
+            });
+            
+        mostrarMovimientos(movimientosFiltrados);
     }, error => {
-        console.error("Error al obtener movimientos:", error);
+        console.error("Error al obtener movimientos de impuestos:", error);
         alert("Error al cargar los datos. Revisa la consola por si falta un índice de Firestore.");
     });
 }
@@ -114,15 +123,14 @@ function cargarMovimientosDeImpuestos() {
 function mostrarMovimientos(movimientos) {
     taxMovementsContainer.innerHTML = '';
     if (movimientos.length === 0) {
-        taxMovementsContainer.innerHTML = '<tr><td colspan="5">No se encontraron movimientos.</td></tr>';
+        taxMovementsContainer.innerHTML = '<tr><td colspan="5">No se encontraron movimientos con los filtros seleccionados.</td></tr>';
         return;
     }
     movimientos.forEach(mov => {
         const fecha = mov.fecha.toDate().toLocaleDateString('es-ES');
         const row = document.createElement('tr');
-
+        
         const esConsolidado = mov.desglose && mov.desglose.length > 0;
-
         const tipoDisplay = esConsolidado ? `Consolidado (${mov.desglose.length} ded.)` : mov.tipoImpuesto;
         const montoDisplay = mov.montoTotal !== undefined ? mov.montoTotal : mov.monto;
 
@@ -134,16 +142,37 @@ function mostrarMovimientos(movimientos) {
         row.innerHTML = `
             <td>${fecha}</td>
             <td>${mov.origen}</td>
-            <td>${mov.tipoImpuesto}</td>
-            <td>$${mov.monto.toLocaleString('es-MX')}</td>
+            <td>${tipoDisplay}</td>
+            <td>$${montoDisplay.toLocaleString('es-MX')}</td>
             <td><span class="status status-${mov.status.replace(/ /g, '-')}">${mov.status}</span></td>
         `;
         
         taxMovementsContainer.appendChild(row);
+
+        if (esConsolidado) {
+            const detailsRow = document.createElement('tr');
+            detailsRow.classList.add('details-row');
+            detailsRow.dataset.detailsFor = mov.id;
+            let detailsHTML = '';
+            mov.desglose.forEach(item => {
+                detailsHTML += `<div class="deduction-detail"><span>- ${item.nombre}</span><span>$${item.monto.toLocaleString('es-MX')}</span></div>`;
+            });
+            detailsRow.innerHTML = `<td colspan="5" class="details-cell">${detailsHTML}</td>`;
+            taxMovementsContainer.appendChild(detailsRow);
+        }
     });
 }
 
-// Los listeners para los filtros se quedan igual
+taxMovementsContainer.addEventListener('click', (e) => {
+    const mainRow = e.target.closest('.tax-movement-item');
+    if (mainRow) {
+        const detailsRow = taxMovementsContainer.querySelector(`[data-details-for="${mainRow.dataset.id}"]`);
+        if (detailsRow) {
+            detailsRow.style.display = detailsRow.style.display === 'table-row' ? 'none' : 'table-row';
+        }
+    }
+});
+
 taxTypeFilter.addEventListener('change', cargarMovimientosDeImpuestos);
 monthFilter.addEventListener('change', cargarMovimientosDeImpuestos);
 statusFilter.addEventListener('change', cargarMovimientosDeImpuestos);
