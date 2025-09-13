@@ -40,44 +40,42 @@
             <h2>Impuestos y Deducciones Definidos</h2>
             <div id="taxes-list"></div>
         </div>
-        
+
         <div class="list-card">
-             <div class="card-header-filters">
-                 <h2>Historial de Movimientos de Impuestos</h2>
-                 <div class="filters-container">    
-                     <div class="filter-group">
-                         <label>Tipo</label>
-                         <select id="tax-type-filter"></select>
-                     </div>
-                     <div class="filter-group">
-                         <label>Mes</label>
-                         <select id="month-filter"></select>
-                     </div>
-                     <div class="filter-group">        
-                         <label>Estado</label>   
-                         <select id="status-filter">
-                             <option value="todos">Todos</option>
-                             <option value="pendiente de pago">Pendiente de pago</option>
-                             <option value="pagado (retenido)">Pagado (retenido)</option>
-                         </select> 
-                     </div>
-                 </div>
-             </div>
-            
+            <div class="card-header-filters">
+                <h2>Historial de Movimientos de Impuestos</h2>
+                <div class="filters-container">
+                    <div class="filter-group">
+                        <label>Tipo</label>
+                        <select id="tax-type-filter"></select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Mes</label>
+                        <select id="month-filter"></select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Estado</label>
+                        <select id="status-filter">
+                            <option value="todos">Todos</option>
+                            <option value="pendiente de pago">Pendiente de pago</option>
+                            <option value="pagado (retenido)">Pagado (retenido)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
             <table>
-        <thead>
-            <tr>
-                <th>Fecha</th>
-                <th>Origen</th>
-                <th>Tipo</th>
-                <th>Monto</th>
-                <th>Estado</th>
-            </tr>
-        </thead>
-        <tbody id="tax-movements-list">
-            </tbody>
-    </table>
-</div>
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Origen</th>
+                        <th>Tipo</th>
+                        <th>Monto</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody id="tax-movements-list"></tbody>
+            </table>
+        </div>
     </main>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
