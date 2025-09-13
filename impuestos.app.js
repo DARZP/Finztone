@@ -101,21 +101,22 @@ function cargarMovimientosDeImpuestos() {
     query.onSnapshot(snapshot => {
         const movimientos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         const tipoImpuestoFiltrado = taxTypeFilter.value;
+
+        // CORRECCIÓN: Añadimos una comprobación de que 'mov.desglose' exista
         const movimientosFiltrados = tipoImpuestoFiltrado === 'todos'
             ? movimientos
-            : movimientos.filter(mov => mov.desglose.some(d => d.nombre === tipoImpuestoFiltrado));
+            : movimientos.filter(mov => mov.desglose && mov.desglose.some(d => d.nombre === tipoImpuestoFiltrado));
             
         mostrarMovimientos(movimientosFiltrados);
     }, error => {
-        console.error("Error al obtener movimientos de impuestos:", error);
-        alert("Error al cargar los datos. Es posible que necesites crear un índice en Firestore. Revisa la consola para ver el enlace.");
+        console.error("Error al obtener movimientos:", error);
     });
 }
 
 function mostrarMovimientos(movimientos) {
     taxMovementsContainer.innerHTML = '';
     if (movimientos.length === 0) {
-        taxMovementsContainer.innerHTML = '<tr><td colspan="5">No se encontraron movimientos con los filtros seleccionados.</td></tr>';
+        taxMovementsContainer.innerHTML = '<tr><td colspan="5">No se encontraron movimientos.</td></tr>';
         return;
     }
     movimientos.forEach(mov => {
@@ -123,35 +124,39 @@ function mostrarMovimientos(movimientos) {
         const row = document.createElement('tr');
         row.classList.add('tax-movement-item');
         row.dataset.id = mov.id;
+
+        // CORRECCIÓN: Manejamos ambos tipos de registros (consolidados y no consolidados)
+        const esConsolidado = mov.desglose && mov.desglose.length > 0;
+        const tipoDisplay = esConsolidado ? `Consolidado (${mov.desglose.length} ded.)` : mov.tipoImpuesto;
+        const montoDisplay = esConsolidado ? mov.montoTotal : mov.monto;
+
         row.innerHTML = `
             <td>${fecha}</td>
             <td>${mov.origen}</td>
-            <td>Consolidado (${mov.desglose.length} ded.)</td>
-            <td>$${mov.montoTotal.toLocaleString('es-MX')}</td>
+            <td>${tipoDisplay}</td>
+            <td>$${montoDisplay.toLocaleString('es-MX')}</td>
             <td><span class="status status-${mov.status.replace(/ /g, '-')}">${mov.status}</span></td>
         `;
+
         const detailsRow = document.createElement('tr');
         detailsRow.classList.add('details-row');
         detailsRow.dataset.detailsFor = mov.id;
-        let detailsHTML = '';
-        mov.desglose.forEach(item => {
-            detailsHTML += `<div class="deduction-detail"><span>- ${item.nombre}</span><span>$${item.monto.toLocaleString('es-MX')}</span></div>`;
-        });
-        detailsRow.innerHTML = `<td colspan="5" class="details-cell">${detailsHTML}</td>`;
+
+        if (esConsolidado) {
+            let detailsHTML = '';
+            mov.desglose.forEach(item => {
+                detailsHTML += `<div class="deduction-detail"><span>- ${item.nombre}</span><span>$${item.monto.toLocaleString('es-MX')}</span></div>`;
+            });
+            detailsRow.innerHTML = `<td colspan="5" class="details-cell">${detailsHTML}</td>`;
+        }
+        
         taxMovementsContainer.appendChild(row);
-        taxMovementsContainer.appendChild(detailsRow);
+        if (esConsolidado) {
+            taxMovementsContainer.appendChild(detailsRow);
+        }
     });
 }
 
-taxMovementsContainer.addEventListener('click', (e) => {
-    const mainRow = e.target.closest('.tax-movement-item');
-    if (mainRow) {
-        const detailsRow = taxMovementsContainer.querySelector(`[data-details-for="${mainRow.dataset.id}"]`);
-        if (detailsRow) {
-            detailsRow.style.display = detailsRow.style.display === 'table-row' ? 'none' : 'table-row';
-        }
-    }
-});
 
 taxTypeFilter.addEventListener('change', cargarMovimientosDeImpuestos);
 monthFilter.addEventListener('change', cargarMovimientosDeImpuestos);
