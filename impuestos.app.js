@@ -30,7 +30,6 @@ auth.onAuthStateChanged(user => {
     }
 });
 
-// Lógica para crear una nueva definición de impuesto
 addTaxForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const taxName = addTaxForm['tax-name'].value;
@@ -45,7 +44,6 @@ addTaxForm.addEventListener('submit', (e) => {
     }).catch(error => console.error("Error al guardar el impuesto: ", error));
 });
 
-// Carga y muestra la lista de impuestos definidos
 function cargarImpuestosDefinidos() {
     db.collection('impuestos_definiciones').orderBy('nombre').onSnapshot(snapshot => {
         taxesListContainer.innerHTML = '';
@@ -67,7 +65,6 @@ function cargarImpuestosDefinidos() {
     });
 }
 
-// Puebla los menús de filtro
 function poblarFiltros() {
     monthFilter.innerHTML = '<option value="todos">Todos los meses</option>';
     let fecha = new Date();
@@ -86,7 +83,6 @@ function poblarFiltros() {
     });
 }
 
-// Carga los movimientos de impuestos aplicando los filtros
 function cargarMovimientosDeImpuestos() {
     let query = db.collection('movimientos_impuestos');
 
@@ -116,7 +112,6 @@ function cargarMovimientosDeImpuestos() {
     });
 }
 
-// Muestra el historial de movimientos en la tabla
 function mostrarMovimientos(movimientos) {
     taxMovementsContainer.innerHTML = '';
     if (movimientos.length === 0) {
@@ -125,11 +120,9 @@ function mostrarMovimientos(movimientos) {
     }
     movimientos.forEach(mov => {
         const fecha = mov.fecha.toDate().toLocaleDateString('es-ES');
-        
-        // CORRECCIÓN: El error estaba aquí. En el código anterior decía `doc.id` pero la variable es `mov.id`.
         const row = document.createElement('tr');
         row.classList.add('tax-movement-item');
-        row.dataset.id = mov.id; // Corregido
+        row.dataset.id = mov.id;
         row.innerHTML = `
             <td>${fecha}</td>
             <td>${mov.origen}</td>
@@ -137,10 +130,9 @@ function mostrarMovimientos(movimientos) {
             <td>$${mov.montoTotal.toLocaleString('es-MX')}</td>
             <td><span class="status status-${mov.status.replace(/ /g, '-')}">${mov.status}</span></td>
         `;
-
         const detailsRow = document.createElement('tr');
         detailsRow.classList.add('details-row');
-        detailsRow.dataset.detailsFor = mov.id; // Corregido
+        detailsRow.dataset.detailsFor = mov.id;
         let detailsHTML = '';
         mov.desglose.forEach(item => {
             detailsHTML += `<div class="deduction-detail"><span>- ${item.nombre}</span><span>$${item.monto.toLocaleString('es-MX')}</span></div>`;
@@ -151,7 +143,6 @@ function mostrarMovimientos(movimientos) {
     });
 }
 
-// Listener para desplegar detalles
 taxMovementsContainer.addEventListener('click', (e) => {
     const mainRow = e.target.closest('.tax-movement-item');
     if (mainRow) {
@@ -162,7 +153,6 @@ taxMovementsContainer.addEventListener('click', (e) => {
     }
 });
 
-// Listeners para los filtros
 taxTypeFilter.addEventListener('change', cargarMovimientosDeImpuestos);
 monthFilter.addEventListener('change', cargarMovimientosDeImpuestos);
 statusFilter.addEventListener('change', cargarMovimientosDeImpuestos);
