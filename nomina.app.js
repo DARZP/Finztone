@@ -72,8 +72,7 @@ async function marcarPago(userId, userName, amount) {
     const accountRef = db.collection('cuentas').doc(cuentaId);
     const newPaymentRef = db.collection('pagos_nomina').doc();
     const userRef = db.collection('usuarios').doc(userId);
-
-    let montoADescontar; // <-- CORRECCIÓN: Declaramos la variable aquí
+    let montoADescontar;
     
     try {
         await db.runTransaction(async (transaction) => {
@@ -85,13 +84,20 @@ async function marcarPago(userId, userName, amount) {
             const sueldoBruto = userDoc.data().sueldoBruto || 0;
             const deducciones = userDoc.data().deducciones || [];
 
+            // --- NUEVA LÓGICA DE CÁLCULO Y AGRUPACIÓN DE IMPUESTOS ---
             let totalDeducciones = 0;
-            deducciones.forEach(ded => {
-                totalDeducciones += ded.tipo === 'porcentaje' ? (sueldoBruto * ded.valor) / 100 : ded.valor;
-            });
-            const sueldoNeto = sueldoBruto - totalDeducciones;
+            const desgloseDeducciones = []; // Array para guardar el detalle
 
-            // Asignamos el valor a la variable que declaramos antes
+            deducciones.forEach(ded => {
+                let montoDeducido = ded.tipo === 'porcentaje' ? (sueldoBruto * ded.valor) / 100 : ded.valor;
+                totalDeducciones += montoDeducido;
+                desgloseDeducciones.push({
+                    nombre: ded.nombre,
+                    monto: montoDeducido
+                });
+            });
+            
+            const sueldoNeto = sueldoBruto - totalDeducciones;
             montoADescontar = tipoDeDescuento === 'neto' ? sueldoNeto : sueldoBruto;
             const nuevoSaldo = saldoActual - montoADescontar;
 
@@ -108,36 +114,32 @@ async function marcarPago(userId, userName, amount) {
                 cuentaNombre: cuentaNombre
             });
             
-            // 2. NUEVO: Creamos un registro por cada deducción en la herramienta de Impuestos
-            deducciones.forEach(ded => {
-                let montoDeducido = ded.tipo === 'porcentaje' ? (sueldoBruto * ded.valor) / 100 : ded.valor;
+            // 2. NUEVO: Creamos UN SOLO registro consolidado para los impuestos
+            if (totalDeducciones > 0) {
                 const newTaxMovementRef = db.collection('movimientos_impuestos').doc();
-                
-                // NUEVO: El estado del impuesto depende de si ya se descontó o no
                 const estadoImpuesto = tipoDeDescuento === 'neto' ? 'pagado (retenido)' : 'pendiente de pago';
                 
                 transaction.set(newTaxMovementRef, {
                     origen: `Nómina - ${userName}`,
-                    tipoImpuesto: ded.nombre,
-                    monto: montoDeducido,
+                    origenId: userId,
+                    montoTotal: totalDeducciones, // Guardamos el total
+                    desglose: desgloseDeducciones, // Guardamos el array con el detalle
                     fecha: new Date(),
                     status: estadoImpuesto
                 });
-            });
+            }
 
-            // 3. Actualizamos el saldo de la cuenta de origen (como antes)
+            // 3. Actualizamos el saldo de la cuenta (sin cambios)
             transaction.update(accountRef, { saldoActual: nuevoSaldo });
         });
 
         alert(`¡Pago para ${userName} registrado! Se descontó un total de $${montoADescontar.toLocaleString('es-MX')}`);
         cargarCuentas();
     } catch (error) {
-        console.error("Error en la transacción: ", error);
+        console.error("Error en la transacción de pago de nómina: ", error);
         alert("Ocurrió un error al registrar el pago.");
     }
 }
-
-
 
 // Dibuja la lista de usuarios en el HTML
 function mostrarUsuarios(usuarios, pagosDelPeriodo) {
