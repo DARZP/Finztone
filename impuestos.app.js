@@ -83,11 +83,16 @@ function poblarFiltros() {
     });
 }
 
+// REESCRITO: Carga de movimientos con filtros directos a la base de datos
 function cargarMovimientosDeImpuestos() {
     let query = db.collection('movimientos_impuestos');
 
+    // Ahora los filtros funcionan directamente en la consulta, ¡mucho más eficiente!
     if (statusFilter.value !== 'todos') {
         query = query.where('status', '==', statusFilter.value);
+    }
+    if (taxTypeFilter.value !== 'todos') {
+        query = query.where('tipoImpuesto', '==', taxTypeFilter.value);
     }
     if (monthFilter.value !== 'todos') {
         const [year, month] = monthFilter.value.split('-').map(Number);
@@ -99,17 +104,10 @@ function cargarMovimientosDeImpuestos() {
     query = query.orderBy('fecha', 'desc');
 
     query.onSnapshot(snapshot => {
-        const movimientos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        const tipoImpuestoFiltrado = taxTypeFilter.value;
-
-        // CORRECCIÓN: Añadimos una comprobación de que 'mov.desglose' exista
-        const movimientosFiltrados = tipoImpuestoFiltrado === 'todos'
-            ? movimientos
-            : movimientos.filter(mov => mov.desglose && mov.desglose.some(d => d.nombre === tipoImpuestoFiltrado));
-            
-        mostrarMovimientos(movimientosFiltrados);
+        mostrarMovimientos(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, error => {
         console.error("Error al obtener movimientos:", error);
+        alert("Error al cargar los datos. Revisa la consola por si falta un índice de Firestore.");
     });
 }
 
@@ -122,42 +120,18 @@ function mostrarMovimientos(movimientos) {
     movimientos.forEach(mov => {
         const fecha = mov.fecha.toDate().toLocaleDateString('es-ES');
         const row = document.createElement('tr');
-        row.classList.add('tax-movement-item');
-        row.dataset.id = mov.id;
-
-        // CORRECCIÓN: Manejamos ambos tipos de registros (consolidados y no consolidados)
-        const esConsolidado = mov.desglose && mov.desglose.length > 0;
-        const tipoDisplay = esConsolidado ? `Consolidado (${mov.desglose.length} ded.)` : mov.tipoImpuesto;
-        const montoDisplay = esConsolidado ? mov.montoTotal : mov.monto;
-
         row.innerHTML = `
             <td>${fecha}</td>
             <td>${mov.origen}</td>
-            <td>${tipoDisplay}</td>
-            <td>$${montoDisplay.toLocaleString('es-MX')}</td>
+            <td>${mov.tipoImpuesto}</td>
+            <td>$${mov.monto.toLocaleString('es-MX')}</td>
             <td><span class="status status-${mov.status.replace(/ /g, '-')}">${mov.status}</span></td>
         `;
-
-        const detailsRow = document.createElement('tr');
-        detailsRow.classList.add('details-row');
-        detailsRow.dataset.detailsFor = mov.id;
-
-        if (esConsolidado) {
-            let detailsHTML = '';
-            mov.desglose.forEach(item => {
-                detailsHTML += `<div class="deduction-detail"><span>- ${item.nombre}</span><span>$${item.monto.toLocaleString('es-MX')}</span></div>`;
-            });
-            detailsRow.innerHTML = `<td colspan="5" class="details-cell">${detailsHTML}</td>`;
-        }
-        
         taxMovementsContainer.appendChild(row);
-        if (esConsolidado) {
-            taxMovementsContainer.appendChild(detailsRow);
-        }
     });
 }
 
-
+// Los listeners para los filtros se quedan igual
 taxTypeFilter.addEventListener('change', cargarMovimientosDeImpuestos);
 monthFilter.addEventListener('change', cargarMovimientosDeImpuestos);
 statusFilter.addEventListener('change', cargarMovimientosDeImpuestos);
