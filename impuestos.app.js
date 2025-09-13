@@ -77,18 +77,16 @@ function poblarFiltros() {
         monthFilter.appendChild(new Option(text, value));
         fecha.setMonth(fecha.getMonth() - 1);
     }
-
     db.collection('impuestos_definiciones').orderBy('nombre').get().then(snapshot => {
         taxTypeFilter.innerHTML = '<option value="todos">Todos los tipos</option>';
         snapshot.forEach(doc => {
             const taxName = doc.data().nombre;
-            // Usamos el nombre del impuesto como valor para el filtro
             taxTypeFilter.appendChild(new Option(taxName, taxName));
         });
     });
 }
 
-// Carga los movimientos de impuestos aplicando los filtros seleccionados
+// Carga los movimientos de impuestos aplicando los filtros
 function cargarMovimientosDeImpuestos() {
     let query = db.collection('movimientos_impuestos');
 
@@ -101,16 +99,11 @@ function cargarMovimientosDeImpuestos() {
         const endDate = new Date(year, month, 1);
         query = query.where('fecha', '>=', startDate).where('fecha', '<', endDate);
     }
-
-    // Nota: Firestore tiene limitaciones. Para filtrar por tipo de impuesto (que está en un array 'desglose'),
-    // necesitaríamos una estructura de datos diferente. Por ahora, este filtro no se puede aplicar eficientemente en la consulta.
-    // La funcionalidad del filtro de tipo de impuesto requerirá un cambio más avanzado en el futuro.
-
+    
     query = query.orderBy('fecha', 'desc');
 
     query.onSnapshot(snapshot => {
         const movimientos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        // Filtramos por tipo de impuesto aquí en el cliente (solución temporal)
         const tipoImpuestoFiltrado = taxTypeFilter.value;
         const movimientosFiltrados = tipoImpuestoFiltrado === 'todos'
             ? movimientos
@@ -119,9 +112,9 @@ function cargarMovimientosDeImpuestos() {
         mostrarMovimientos(movimientosFiltrados);
     }, error => {
         console.error("Error al obtener movimientos de impuestos:", error);
+        alert("Error al cargar los datos. Es posible que necesites crear un índice en Firestore. Revisa la consola para ver el enlace.");
     });
 }
-
 
 // Muestra el historial de movimientos en la tabla
 function mostrarMovimientos(movimientos) {
@@ -132,9 +125,11 @@ function mostrarMovimientos(movimientos) {
     }
     movimientos.forEach(mov => {
         const fecha = mov.fecha.toDate().toLocaleDateString('es-ES');
+        
+        // CORRECCIÓN: El error estaba aquí. En el código anterior decía `doc.id` pero la variable es `mov.id`.
         const row = document.createElement('tr');
         row.classList.add('tax-movement-item');
-        row.dataset.id = doc.id;
+        row.dataset.id = mov.id; // Corregido
         row.innerHTML = `
             <td>${fecha}</td>
             <td>${mov.origen}</td>
@@ -142,9 +137,10 @@ function mostrarMovimientos(movimientos) {
             <td>$${mov.montoTotal.toLocaleString('es-MX')}</td>
             <td><span class="status status-${mov.status.replace(/ /g, '-')}">${mov.status}</span></td>
         `;
+
         const detailsRow = document.createElement('tr');
         detailsRow.classList.add('details-row');
-        detailsRow.dataset.detailsFor = doc.id;
+        detailsRow.dataset.detailsFor = mov.id; // Corregido
         let detailsHTML = '';
         mov.desglose.forEach(item => {
             detailsHTML += `<div class="deduction-detail"><span>- ${item.nombre}</span><span>$${item.monto.toLocaleString('es-MX')}</span></div>`;
