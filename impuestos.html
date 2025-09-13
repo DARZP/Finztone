@@ -75,6 +75,19 @@
                 </thead>
                 <tbody id="tax-movements-list"></tbody>
             </table>
+
+            <div id="payment-section" class="payment-section" style="display: none;">
+        <hr>
+        <h3>Realizar Pago de Impuestos Seleccionados</h3>
+        <div class="payment-controls">
+            <div class="filter-group">
+                <label for="payment-account-select">Pagar desde la cuenta:</label>
+                <select id="payment-account-select" required></select>
+            </div>
+            <button id="pay-selected-btn" class="btn-pay">Pagar Seleccionados (<span id="selected-count">0</span>)</button>
+        </div>
+    </div>
+</div>
         </div>
     </main>
     
