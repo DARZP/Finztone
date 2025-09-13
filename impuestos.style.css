@@ -301,3 +301,7 @@ h2 {
     padding: 4px 0;
     font-size: 0.9em;
 }
+
+.payment-section { margin-top: 30px; }
+.payment-controls { display: flex; align-items: flex-end; gap: 20px; }
+.btn-pay { background-color: var(--approve-color, #2e7d32); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1em; }
