@@ -11,7 +11,6 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// --- ELEMENTOS DEL DOM ---
 const addExpenseForm = document.getElementById('add-expense-form');
 const expenseListContainer = document.getElementById('expense-list');
 const isInvoiceCheckbox = document.getElementById('is-invoice');
@@ -25,12 +24,9 @@ const monthFilter = document.getElementById('month-filter');
 const taxesChecklistContainer = document.getElementById('taxes-checklist');
 const formCategorySelect = document.getElementById('expense-category');
 
-// --- VARIABLES DE ESTADO ---
 let modoEdicion = false;
 let idGastoEditando = null;
 let impuestosDefinidos = [];
-
-// --- LÓGICA DE LA PÁGINA ---
 
 auth.onAuthStateChanged((user) => {
     if (user) {
@@ -72,7 +68,6 @@ function cargarEmpresas() {
 async function cargarImpuestosParaSeleccion() {
     const snapshot = await db.collection('impuestos_definiciones').get();
     impuestosDefinidos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    
     taxesChecklistContainer.innerHTML = '';
     if (impuestosDefinidos.length === 0) {
         taxesChecklistContainer.innerHTML = '<p style="font-size: 0.9em; color: #777;">No hay impuestos definidos.</p>';
@@ -82,10 +77,7 @@ async function cargarImpuestosParaSeleccion() {
         const valorDisplay = impuesto.tipo === 'porcentaje' ? `${impuesto.valor}%` : `$${impuesto.valor}`;
         const item = document.createElement('div');
         item.classList.add('tax-item');
-        item.innerHTML = `
-            <input type="checkbox" id="tax-${impuesto.id}" data-impuesto='${JSON.stringify(impuesto)}'>
-            <label for="tax-${impuesto.id}">${impuesto.nombre} (${valorDisplay})</label>
-        `;
+        item.innerHTML = `<input type="checkbox" id="tax-${impuesto.id}" data-impuesto='${JSON.stringify(impuesto)}'><label for="tax-${impuesto.id}">${impuesto.nombre} (${valorDisplay})</label>`;
         taxesChecklistContainer.appendChild(item);
     });
 }
@@ -94,7 +86,7 @@ function cargarGastoEnFormulario(gasto) {
     addExpenseForm.reset();
     addExpenseForm['expense-description'].value = gasto.descripcion || '';
     addExpenseForm['expense-amount'].value = gasto.monto || 0;
-    addExpenseForm['expense-category'].value = gasto.categoria || '';
+    formCategorySelect.value = gasto.categoria || '';
     addExpenseForm['expense-date'].value = gasto.fecha || '';
     addExpenseForm['expense-company'].value = gasto.empresa || '';
     addExpenseForm['payment-method'].value = gasto.metodoPago || 'Efectivo';
@@ -115,6 +107,8 @@ function cargarGastoEnFormulario(gasto) {
     saveDraftBtn.textContent = 'Actualizar Borrador';
     sendForApprovalBtn.style.display = 'block';
     cancelEditBtn.style.display = 'block';
+    modoEdicion = true;
+    idGastoEditando = gasto.id;
     window.scrollTo(0, 0);
 }
 
@@ -195,7 +189,7 @@ async function guardarGasto(status) {
 function mostrarGastos(gastos) {
     expenseListContainer.innerHTML = '';
     if (gastos.length === 0) {
-        expenseListContainer.innerHTML = '<p>No se encontraron gastos con los filtros seleccionados.</p>';
+        expenseListContainer.innerHTML = '<p>No se encontraron gastos.</p>';
         return;
     }
     gastos.forEach(gasto => {
@@ -221,8 +215,6 @@ function mostrarGastos(gastos) {
     document.querySelectorAll('.btn-edit').forEach(button => {
         button.addEventListener('click', (e) => {
             const gastoId = e.currentTarget.dataset.id;
-            modoEdicion = true;
-            idGastoEditando = gastoId;
             const gastoAEditar = gastos.find(g => g.id === gastoId);
             if (gastoAEditar) {
                 cargarGastoEnFormulario(gastoAEditar);
@@ -232,7 +224,6 @@ function mostrarGastos(gastos) {
 }
 
 function poblarFiltrosYCategorias() {
-    // Poblar filtro de Mes
     monthFilter.innerHTML = '<option value="todos">Todos los meses</option>';
     let fecha = new Date();
     for (let i = 0; i < 12; i++) {
@@ -241,8 +232,6 @@ function poblarFiltrosYCategorias() {
         monthFilter.appendChild(new Option(text, value));
         fecha.setMonth(fecha.getMonth() - 1);
     }
-
-    // Poblar AMBOS selectores de categoría (formulario e historial)
     const categorias = ["Comida", "Transporte", "Oficina", "Marketing", "Otro"];
     let filterOptionsHTML = '<option value="todos">Todas</option>';
     let formOptionsHTML = '<option value="" disabled selected>Selecciona una categoría</option>';
