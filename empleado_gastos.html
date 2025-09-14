@@ -22,15 +22,45 @@
                     <input type="text" id="expense-description" required>
                 </div>
                 <div class="input-group">
+                    <label for="expense-amount">Monto ($)</label>
+                    <input type="number" id="expense-amount" step="0.01" required>
+                </div>
+                <div class="input-group">
+                    <label for="expense-category">Categoría</label>
+                    <select id="expense-category" required></select>
+                </div>
+                <div class="input-group">
+                    <label for="expense-date">Fecha</label>
+                    <input type="date" id="expense-date" required>
+                </div>
+                <div class="input-group">
                     <label for="expense-company">Empresa o Proveedor</label>
                     <input type="text" id="expense-company" list="company-list">
                     <datalist id="company-list"></datalist>
+                </div>
+                <div class="input-group">
+                    <label for="payment-method">Método de Pago</label>
+                    <select id="payment-method">
+                        <option value="Efectivo">Efectivo</option>
+                        <option value="Transferencia">Transferencia</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="expense-comments">Comentarios (Opcional)</label>
+                    <textarea id="expense-comments" rows="3"></textarea>
+                </div>
+                <div class="input-group-checkbox">
+                    <input type="checkbox" id="is-invoice">
+                    <label for="is-invoice">Anexar datos de facturación</label>
+                </div>
+                <div id="invoice-details" style="display: none;">
+                    <div class="input-group"><label for="invoice-rfc">RFC</label><input type="text" id="invoice-rfc"></div>
+                    <div class="input-group"><label for="invoice-folio">Folio Fiscal</label><input type="text" id="invoice-folio"></div>
                 </div>
                 <div class="deductions-section">
                     <h3>Desglose de Impuestos</h3>
                     <div id="taxes-checklist"></div>
                 </div>
-
                 <div class="form-actions">
                     <button type="button" id="save-draft-btn" class="btn btn-secondary">Guardar Borrador</button>
                     <button type="button" id="send-for-approval-btn" class="btn btn-primary">Enviar para Aprobación</button>
@@ -38,7 +68,6 @@
                 </div>
             </form>
         </div>
-
         <div class="list-card">
             <div class="card-header-filters">
                 <h2>Mi Historial de Gastos</h2>
