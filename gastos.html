@@ -8,117 +8,122 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
-
     <header class="main-header">
         <a href="dashboard.html" class="back-button">← Volver</a>
         <h1 class="logo">FINZTONE</h1>
     </header>
 
-    <main class="gastos-container">
+    <div class="container filters-container">
+        <div class="filter-group">
+            <label for="category-filter">Filtrar por Categoría</label>
+            <select id="category-filter">
+                <option value="todos">Todas las categorías</option>
+                <option value="Comida">Comida</option>
+                <option value="Transporte">Transporte</option>
+                <option value="Oficina">Oficina</option>
+                <option value="Marketing">Marketing</option>
+                <option value="Otro">Otro</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label for="month-filter">Filtrar por Mes</label>
+            <select id="month-filter"></select>
+        </div>
+    </div>
+
+    <main class="container">
         <div class="form-card">
             <h2>Registrar un Nuevo Gasto</h2>
             <form id="add-expense-form">
-    <div class="input-group">
-        <label for="expense-description">Concepto del Gasto</label>
-        <input type="text" id="expense-description" required>
-    </div>
-    <div class="input-group">
-        <label for="expense-amount">Monto ($)</label>
-        <input type="number" id="expense-amount" step="0.01" required>
-    </div>
-    <div class="input-group">
-        <label for="expense-category">Categoría</label>
-        <select id="expense-category" required>
-            <option value="" disabled selected>Selecciona una categoría</option>
-            <option value="Comida">Comida</option>
-            <option value="Transporte">Transporte</option>
-            <option value="Oficina">Oficina</option>
-            <option value="Marketing">Marketing</option>
-            <option value="Otro">Otro</option>
-        </select>
-    </div>
-    <div class="input-group">
-        <label for="expense-date">Fecha</label>
-        <input type="date" id="expense-date" required>
-    </div>
-
-    <div class="input-group">
-        <label for="expense-company">Empresa o Proveedor</label>
-        <input type="text" id="expense-company" list="company-list" placeholder="Escribe para buscar o agregar...">
-        <datalist id="company-list"></datalist>
-    </div>
-    <div class="input-group">
-        <label for="payment-method">Método de Pago</label>
-        <select id="payment-method">
-            <option value="Efectivo">Efectivo</option>
-            <option value="Tarjeta de Crédito">Tarjeta de Crédito</option>
-            <option value="Tarjeta de Débito">Tarjeta de Débito</option>
-            <option value="Transferencia">Transferencia</option>
-        </select>
-    </div>
-
-    <div class="input-group">
-        <label for="account-select">Cuenta de Origen (de donde sale el dinero)</label>
-        <select id="account-select" required>
-            <option value="" disabled selected>Selecciona una cuenta</option>
-            </select>
-    </div>
-                
-    <div class="input-group">
-        <label for="expense-comments">Comentarios (Opcional)</label>
-        <textarea id="expense-comments" rows="3"></textarea>
-    </div>
-    <div class="input-group-checkbox">
-        <input type="checkbox" id="is-invoice">
-        <label for="is-invoice">Anexar datos de facturación</label>
-    </div>
-    <div id="invoice-details" style="display: none;">
-        <div class="input-group">
-            <label for="invoice-rfc">RFC</label>
-            <input type="text" id="invoice-rfc">
-        </div>
-        <div class="input-group">
-            <label for="invoice-folio">Folio Fiscal (UUID)</label>
-            <input type="text" id="invoice-folio">
-        </div>
-    </div>
-    
-    <div class="form-actions">
-    <button type="button" id="save-draft-btn" class="btn btn-secondary">Guardar Borrador</button>
-    <button type="button" id="add-approved-btn" class="btn btn-primary">Agregar Gasto Aprobado</button>
-</div>
-</form>
-        </div>
-        <div class="list-card">
-            <div class="card-header-filters">
-                <h2>Historial de Gastos</h2>
-                <div class="filters-container">
-                    <div class="filter-group">
-                         <label for="category-filter">Categoría</label>
-                         <select id="category-filter">
-                             <option value="todos">Todas</option>
-                             <option value="Comida">Comida</option>
-                             <option value="Transporte">Transporte</option>
-                             <option value="Oficina">Oficina</option>
-                             <option value="Marketing">Marketing</option>
-                             <option value="Otro">Otro</option>
-                         </select>
-                     </div>
-                     <div class="filter-group">
-                         <label for="month-filter">Mes</label>
-                         <select id="month-filter"></select>
-                     </div>
-                 </div>
-             </div>
-             <div id="expense-list">
+                <div class="input-group">
+                    <label for="expense-description">Concepto del Gasto</label>
+                    <input type="text" id="expense-description" required>
                 </div>
+                <div class="input-group">
+                    <label for="expense-amount">Monto ($)</label>
+                    <input type="number" id="expense-amount" step="0.01" required>
+                </div>
+                <div class="input-group">
+                    <label for="expense-category">Categoría</label>
+                    <select id="expense-category" required>
+                        <option value="" disabled selected>Selecciona una categoría</option>
+                        <option value="Comida">Comida</option>
+                        <option value="Transporte">Transporte</option>
+                        <option value="Oficina">Oficina</option>
+                        <option value="Marketing">Marketing</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="expense-date">Fecha</label>
+                    <input type="date" id="expense-date" required>
+                </div>
+                <div class="input-group">
+                    <label for="expense-company">Empresa o Proveedor</label>
+                    <input type="text" id="expense-company" list="company-list" placeholder="Escribe para buscar o agregar...">
+                    <datalist id="company-list"></datalist>
+                </div>
+                <div class="input-group">
+                    <label for="payment-method">Método de Pago</label>
+                    <select id="payment-method">
+                        <option value="Efectivo">Efectivo</option>
+                        <option value="Tarjeta de Crédito">Tarjeta de Crédito</option>
+                        <option value="Tarjeta de Débito">Tarjeta de Débito</option>
+                        <option value="Transferencia">Transferencia</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="account-select">Cuenta de Origen</label>
+                    <select id="account-select" required>
+                        <option value="" disabled selected>Selecciona una cuenta</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="expense-comments">Comentarios (Opcional)</label>
+                    <textarea id="expense-comments" rows="3"></textarea>
+                </div>
+                <div class="input-group-checkbox">
+                    <input type="checkbox" id="is-invoice">
+                    <label for="is-invoice">Anexar datos de facturación</label>
+                </div>
+                <div id="invoice-details" style="display: none;">
+                    <div class="input-group">
+                        <label for="invoice-rfc">RFC</label>
+                        <input type="text" id="invoice-rfc">
+                    </div>
+                    <div class="input-group">
+                        <label for="invoice-folio">Folio Fiscal (UUID)</label>
+                        <input type="text" id="invoice-folio">
+                    </div>
+                </div>
+
+                <div class="deductions-section">
+                    <h3>Desglose de Impuestos</h3>
+                    <div id="taxes-checklist"></div>
+                    <div class="input-group-checkbox total-type-selector">
+                        <label>El monto principal es:</label>
+                        <input type="radio" id="total-bruto" name="total-type" value="bruto" checked>
+                        <label for="total-bruto">Bruto (los impuestos se suman)</label>
+                        <input type="radio" id="total-neto" name="total-type" value="neto">
+                        <label for="total-neto">Neto (los impuestos ya están incluidos)</label>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" id="save-draft-btn" class="btn btn-secondary">Guardar Borrador</button>
+                    <button type="button" id="add-approved-btn" class="btn btn-primary">Agregar Gasto Aprobado</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="list-card">
+            <div id="expense-list"></div>
         </div>
     </main>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-    
     <script src="gastos.app.js"></script>
 </body>
 </html>
