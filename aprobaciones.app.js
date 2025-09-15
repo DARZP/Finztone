@@ -36,6 +36,7 @@ auth.onAuthStateChanged((user) => {
     }
 });
 
+// Obtiene y guarda la lista de cuentas disponibles
 async function cargarCuentas() {
     listaDeCuentas = [];
     const snapshot = await db.collection('cuentas').orderBy('nombre').get();
@@ -44,6 +45,7 @@ async function cargarCuentas() {
     });
 }
 
+// Genera el HTML del selector de cuentas para un item
 function generarSelectorDeCuentas(itemId) {
     let optionsHTML = '<option value="" disabled selected>Seleccionar cuenta</option>';
     listaDeCuentas.forEach(cuenta => {
@@ -52,26 +54,43 @@ function generarSelectorDeCuentas(itemId) {
     return `<select class="account-selector" data-item-id="${itemId}">${optionsHTML}</select>`;
 }
 
-function openTab(evt, tabName) { /* ... (Sin cambios) ... */ }
+// Función para manejar las pestañas
+function openTab(evt, tabName) {
+    let i, tabcontent, tablinks;
+    tabcontent = document.getElementsByClassName("tab-content");
+    for (i = 0; i < tabcontent.length; i++) { tabcontent[i].style.display = "none"; }
+    tablinks = document.getElementsByClassName("tab-link");
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+}
 
+// Lógica de APROBACIÓN con Transacción
 async function aprobarDocumento(coleccion, docId, tipo) {
     const itemElement = document.querySelector(`[data-id="${docId}"]`);
     const accountSelector = itemElement.querySelector(`.account-selector`);
     const cuentaId = accountSelector.value;
+
     if (!cuentaId) {
         return alert('Por favor, selecciona una cuenta para aprobar esta transacción.');
     }
     const cuentaNombre = accountSelector.options[accountSelector.selectedIndex].text;
+
     const docRef = db.collection(coleccion).doc(docId);
     const accountRef = db.collection('cuentas').doc(cuentaId);
+
     try {
         await db.runTransaction(async (transaction) => {
             const doc = await transaction.get(docRef);
             const accountDoc = await transaction.get(accountRef);
             if (!doc.exists || !accountDoc.exists) throw "El registro o la cuenta ya no existen.";
+
             const monto = doc.data().monto;
             const saldoActual = accountDoc.data().saldoActual;
             const nuevoSaldo = tipo === 'ingreso' ? saldoActual + monto : saldoActual - monto;
+            
             transaction.update(docRef, { status: 'aprobado', cuentaId: cuentaId, cuentaNombre: cuentaNombre });
             transaction.update(accountRef, { saldoActual: nuevoSaldo });
         });
@@ -83,6 +102,7 @@ async function aprobarDocumento(coleccion, docId, tipo) {
     }
 }
 
+// Lógica de RECHAZO (no necesita transacción)
 function rechazarDocumento(coleccion, id) {
     const motivo = prompt("Introduce el motivo del rechazo:");
     if (motivo) {
@@ -92,9 +112,43 @@ function rechazarDocumento(coleccion, id) {
     }
 }
 
-function poblarFiltros() { /* ... (Sin cambios) ... */ }
-function cargarGastosPendientes() { /* ... (Sin cambios) ... */ }
-function cargarIngresosPendientes() { /* ... (Sin cambios) ... */ }
+function poblarFiltros() {
+    gastosCategoryFilter.innerHTML = `<option value="todos">Todas</option><option>Comida</option><option>Transporte</option><option>Oficina</option><option>Marketing</option><option>Otro</option>`;
+    ingresosCategoryFilter.innerHTML = `<option value="todos">Todas</option><option>Cobro de Factura</option><option>Venta de Producto</option><option>Servicios Profesionales</option><option>Otro</option>`;
+    db.collection('usuarios').where('rol', '==', 'empleado').orderBy('nombre').get().then(snapshot => {
+        let userOptionsHTML = '<option value="todos">Todos</option>';
+        snapshot.forEach(doc => {
+            const user = doc.data();
+            userOptionsHTML += `<option value="${doc.id}">${user.nombre}</option>`;
+        });
+        gastosUserFilter.innerHTML = userOptionsHTML;
+        ingresosUserFilter.innerHTML = userOptionsHTML;
+    });
+}
+
+function cargarGastosPendientes() {
+    let query = db.collection('gastos').where('status', '==', 'pendiente');
+    if (gastosCategoryFilter.value && gastosCategoryFilter.value !== 'todos') {
+        query = query.where('categoria', '==', gastosCategoryFilter.value);
+    }
+    query = query.orderBy('fechaDeCreacion', 'asc');
+    query.onSnapshot(snapshot => {
+        const pendientes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        mostrarGastosPendientes(pendientes);
+    });
+}
+
+function cargarIngresosPendientes() {
+    let query = db.collection('ingresos').where('status', '==', 'pendiente');
+    if (ingresosCategoryFilter.value && ingresosCategoryFilter.value !== 'todos') {
+        query = query.where('categoria', '==', ingresosCategoryFilter.value);
+    }
+    query = query.orderBy('fechaDeCreacion', 'asc');
+    query.onSnapshot(snapshot => {
+        const pendientes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        mostrarIngresosPendientes(pendientes);
+    });
+}
 
 function mostrarGastosPendientes(gastos) {
     pendingGastosContainer.innerHTML = gastos.length === 0 ? '<p>No hay gastos pendientes.</p>' : '';
@@ -134,7 +188,8 @@ function mostrarGastosPendientes(gastos) {
     });
     pendingGastosContainer.querySelectorAll('.btn-approve').forEach(btn => {
         const item = btn.closest('.pending-item');
-        btn.addEventListener('click', () => aprobarDocumento('gastos', item.dataset.id, 'gasto'));
+        const gasto = gastos.find(g => g.id === item.dataset.id);
+        btn.addEventListener('click', () => aprobarDocumento('gastos', item.dataset.id, 'gasto', gasto.monto));
     });
     pendingGastosContainer.querySelectorAll('.btn-reject').forEach(btn => {
         const item = btn.closest('.pending-item');
@@ -180,7 +235,8 @@ function mostrarIngresosPendientes(ingresos) {
     });
     pendingIngresosContainer.querySelectorAll('.btn-approve').forEach(btn => {
         const item = btn.closest('.pending-item');
-        btn.addEventListener('click', () => aprobarDocumento('ingresos', item.dataset.id, 'ingreso'));
+        const ingreso = ingresos.find(i => i.id === item.dataset.id);
+        btn.addEventListener('click', () => aprobarDocumento('ingresos', item.dataset.id, 'ingreso', ingreso.monto));
     });
     pendingIngresosContainer.querySelectorAll('.btn-reject').forEach(btn => {
         const item = btn.closest('.pending-item');
@@ -188,7 +244,22 @@ function mostrarIngresosPendientes(ingresos) {
     });
 }
 
-function setupClickListeners() { /* ... (Sin cambios) ... */ }
+function setupClickListeners() {
+    const listContainers = [pendingGastosContainer, pendingIngresosContainer];
+    listContainers.forEach(container => {
+        container.addEventListener('click', (e) => {
+            if (e.target.classList.contains('btn')) return;
+            const item = e.target.closest('.pending-item');
+            if (item) {
+                const details = item.querySelector('.item-details-view');
+                if (details) {
+                    details.style.display = details.style.display === 'block' ? 'none' : 'block';
+                }
+            }
+        });
+    });
+}
+
 gastosCategoryFilter.addEventListener('change', cargarGastosPendientes);
 gastosUserFilter.addEventListener('change', cargarGastosPendientes);
 ingresosCategoryFilter.addEventListener('change', cargarIngresosPendientes);
