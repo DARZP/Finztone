@@ -12,6 +12,7 @@
         <a href="empleado_dashboard.html" class="back-button">← Volver</a>
         <h1 class="logo">FINZTONE</h1>
     </header>
+
     <main class="container">
         <div class="form-card">
             <h2>Registrar un Nuevo Ingreso</h2>
@@ -22,71 +23,71 @@
                 </div>
                 <div class="input-group">
                     <label for="income-amount">Monto ($)</label>
-                    <input type="number" id="income-amount" placeholder="Ej: 10000.00" step="0.01" required>
+                    <input type="number" id="income-amount" step="0.01" required>
                 </div>
                 <div class="input-group">
                     <label for="income-category">Categoría</label>
-                    <select id="income-category" required>
-                        <option value="" disabled selected>Selecciona una categoría</option>
-                        <option value="Cobro de Factura">Cobro de Factura</option>
-                        <option value="Venta de Producto">Venta de Producto</option>
-                        <option value="Servicios Profesionales">Servicios Profesionales</option>
-                        <option value="Otro">Otro</option>
-                    </select>
-                </div>
+                    <select id="income-category" required></select> </div>
                 <div class="input-group">
                     <label for="income-date">Fecha</label>
                     <input type="date" id="income-date" required>
                 </div>
-
                 <div class="input-group">
                     <label for="income-company">Empresa o Cliente</label>
-                    <input type="text" id="income-company" placeholder="Ej: Cliente Importante S.A. de C.V.">
+                    <input type="text" id="income-company" list="company-list">
+                    <datalist id="company-list"></datalist>
                 </div>
                 <div class="input-group">
                     <label for="payment-method">Método de Cobro</label>
                     <select id="payment-method">
                         <option value="Efectivo">Efectivo</option>
-                        <option value="Tarjeta de Crédito">Tarjeta de Crédito</option>
-                        <option value="Tarjeta de Débito">Tarjeta de Débito</option>
                         <option value="Transferencia">Transferencia</option>
                     </select>
                 </div>
                 <div class="input-group">
-                    <label for="income-comments">Comentarios (Opcional)</label>
+                    <label for="income-comments">Comentarios</label>
                     <textarea id="income-comments" rows="3"></textarea>
                 </div>
                 <div class="input-group-checkbox">
                     <input type="checkbox" id="is-invoice">
                     <label for="is-invoice">Anexar datos de facturación</label>
                 </div>
-
                 <div id="invoice-details" style="display: none;">
-                    <div class="input-group">
-                        <label for="invoice-rfc">RFC</label>
-                        <input type="text" id="invoice-rfc" placeholder="RFC del receptor">
-                    </div>
-                    <div class="input-group">
-                        <label for="invoice-folio">Folio Fiscal (UUID)</label>
-                        <input type="text" id="invoice-folio" placeholder="Folio de la factura emitida">
-                    </div>
+                    <div class="input-group"><label for="invoice-rfc">RFC</label><input type="text" id="invoice-rfc"></div>
+                    <div class="input-group"><label for="invoice-folio">Folio Fiscal</label><input type="text" id="invoice-folio"></div>
                 </div>
-    
+                
+                <div class="deductions-section">
+                    <h3>Desglose de Impuestos</h3>
+                    <div id="taxes-checklist"></div>
+                </div>
+
                 <div class="form-actions">
                     <button type="button" id="save-draft-btn" class="btn btn-secondary">Guardar Borrador</button>
                     <button type="button" id="send-for-approval-btn" class="btn btn-primary">Enviar para Aprobación</button>
-    
                     <button type="button" id="cancel-edit-btn" class="btn btn-cancel" style="display: none;">Cancelar Edición</button>
                 </div>
-            </form> 
-                  
-           
+            </form>
         </div>
+
         <div class="list-card">
-            <h2>Mi Historial de Ingresos</h2>
+            <div class="card-header-filters">
+                <h2>Mi Historial de Ingresos</h2>
+                <div class="filters-container">
+                    <div class="filter-group">
+                        <label>Categoría</label>
+                        <select id="category-filter"></select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Mes</label>
+                        <select id="month-filter"></select>
+                    </div>
+                </div>
+            </div>
             <div id="income-list"></div>
         </div>
     </main>
+    
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
