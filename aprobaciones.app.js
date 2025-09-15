@@ -21,13 +21,12 @@ const ingresosCategoryFilter = document.getElementById('ingresos-category-filter
 const ingresosUserFilter = document.getElementById('ingresos-user-filter');
 
 // --- LÓGICA DE LA PÁGINA ---
-
 auth.onAuthStateChanged((user) => {
     if (user) {
         poblarFiltros();
         cargarGastosPendientes();
         cargarIngresosPendientes();
-        setupClickListeners(); // Preparamos los clics para los desplegables
+        setupClickListeners();
     } else {
         window.location.href = 'index.html';
     }
@@ -45,7 +44,6 @@ function openTab(evt, tabName) {
     evt.currentTarget.className += " active";
 }
 
-// Función simple para aprobar/rechazar (la mejoraremos en el siguiente paso)
 function actualizarDocumento(coleccion, id, nuevoStatus) {
     const docRef = db.collection(coleccion).doc(id);
     let updateData = { status: nuevoStatus };
@@ -59,13 +57,12 @@ function actualizarDocumento(coleccion, id, nuevoStatus) {
 }
 
 function poblarFiltros() {
-    gastosCategoryFilter.innerHTML = `<option value="todos">Todas las Categorías</option><option>Comida</option><option>Transporte</option><option>Oficina</option><option>Marketing</option><option>Otro</option>`;
-    ingresosCategoryFilter.innerHTML = `<option value="todos">Todas las Categorías</option><option>Cobro de Factura</option><option>Venta de Producto</option><option>Servicios Profesionales</option><option>Otro</option>`;
+    gastosCategoryFilter.innerHTML = `<option value="todos">Todas</option><option>Comida</option><option>Transporte</option><option>Oficina</option><option>Marketing</option><option>Otro</option>`;
+    ingresosCategoryFilter.innerHTML = `<option value="todos">Todas</option><option>Cobro de Factura</option><option>Venta de Producto</option><option>Servicios Profesionales</option><option>Otro</option>`;
     db.collection('usuarios').where('rol', '==', 'empleado').orderBy('nombre').get().then(snapshot => {
-        let userOptionsHTML = '<option value="todos">Todos los Colaboradores</option>';
+        let userOptionsHTML = '<option value="todos">Todos</option>';
         snapshot.forEach(doc => {
             const user = doc.data();
-            // Guardamos el UID de Auth (creadoPor) que es lo que necesitamos para filtrar
             userOptionsHTML += `<option value="${user.uid_auth || doc.id}">${user.nombre}</option>`;
         });
         gastosUserFilter.innerHTML = userOptionsHTML;
@@ -78,7 +75,6 @@ function cargarGastosPendientes() {
     if (gastosCategoryFilter.value !== 'todos') {
         query = query.where('categoria', '==', gastosCategoryFilter.value);
     }
-    // El filtro de usuario se implementará con la lógica avanzada de Bruto/Neto
     query = query.orderBy('fechaDeCreacion', 'asc');
     query.onSnapshot(snapshot => {
         const pendientes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
