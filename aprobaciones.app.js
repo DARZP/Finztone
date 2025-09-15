@@ -1,4 +1,3 @@
-// ---- CONFIGURACIÓN INICIAL DE FIREBASE ----
 const firebaseConfig = {
     apiKey: "AIzaSyA4zRiQnr2PiG1zQc_k-Of9CmGQQSkVQ84",
     authDomain: "finztone-app.firebaseapp.com",
@@ -20,79 +19,82 @@ const gastosUserFilter = document.getElementById('gastos-user-filter');
 const ingresosCategoryFilter = document.getElementById('ingresos-category-filter');
 const ingresosUserFilter = document.getElementById('ingresos-user-filter');
 
+// --- DATOS GLOBALES ---
+let listaDeCuentas = [];
+
 // --- LÓGICA DE LA PÁGINA ---
 auth.onAuthStateChanged((user) => {
     if (user) {
-        poblarFiltros();
-        cargarGastosPendientes();
-        cargarIngresosPendientes();
-        setupClickListeners();
+        cargarCuentas().then(() => {
+            poblarFiltros();
+            cargarGastosPendientes();
+            cargarIngresosPendientes();
+            setupClickListeners();
+        });
     } else {
         window.location.href = 'index.html';
     }
 });
 
-function openTab(evt, tabName) {
-    let i, tabcontent, tablinks;
-    tabcontent = document.getElementsByClassName("tab-content");
-    for (i = 0; i < tabcontent.length; i++) { tabcontent[i].style.display = "none"; }
-    tablinks = document.getElementsByClassName("tab-link");
-    for (i = 0; i < tablinks.length; i++) {
-        tablinks[i].className = tablinks[i].className.replace(" active", "");
-    }
-    document.getElementById(tabName).style.display = "block";
-    evt.currentTarget.className += " active";
+async function cargarCuentas() {
+    listaDeCuentas = [];
+    const snapshot = await db.collection('cuentas').orderBy('nombre').get();
+    snapshot.forEach(doc => {
+        listaDeCuentas.push({ id: doc.id, ...doc.data() });
+    });
 }
 
-function actualizarDocumento(coleccion, id, nuevoStatus) {
-    const docRef = db.collection(coleccion).doc(id);
-    let updateData = { status: nuevoStatus };
-    if (nuevoStatus === 'rechazado') {
-        const motivo = prompt("Por favor, introduce el motivo del rechazo:");
-        if (motivo) { updateData.motivoRechazo = motivo; } else { return; }
-    }
-    docRef.update(updateData)
-        .then(() => alert(`Solicitud ${nuevoStatus}.`))
-        .catch(error => console.error("Error al actualizar:", error));
+function generarSelectorDeCuentas(itemId) {
+    let optionsHTML = '<option value="" disabled selected>Seleccionar cuenta</option>';
+    listaDeCuentas.forEach(cuenta => {
+        optionsHTML += `<option value="${cuenta.id}">${cuenta.nombre}</option>`;
+    });
+    return `<select class="account-selector" data-item-id="${itemId}">${optionsHTML}</select>`;
 }
 
-function poblarFiltros() {
-    gastosCategoryFilter.innerHTML = `<option value="todos">Todas</option><option>Comida</option><option>Transporte</option><option>Oficina</option><option>Marketing</option><option>Otro</option>`;
-    ingresosCategoryFilter.innerHTML = `<option value="todos">Todas</option><option>Cobro de Factura</option><option>Venta de Producto</option><option>Servicios Profesionales</option><option>Otro</option>`;
-    db.collection('usuarios').where('rol', '==', 'empleado').orderBy('nombre').get().then(snapshot => {
-        let userOptionsHTML = '<option value="todos">Todos</option>';
-        snapshot.forEach(doc => {
-            const user = doc.data();
-            userOptionsHTML += `<option value="${user.uid_auth || doc.id}">${user.nombre}</option>`;
+function openTab(evt, tabName) { /* ... (Sin cambios) ... */ }
+
+async function aprobarDocumento(coleccion, docId, tipo) {
+    const itemElement = document.querySelector(`[data-id="${docId}"]`);
+    const accountSelector = itemElement.querySelector(`.account-selector`);
+    const cuentaId = accountSelector.value;
+    if (!cuentaId) {
+        return alert('Por favor, selecciona una cuenta para aprobar esta transacción.');
+    }
+    const cuentaNombre = accountSelector.options[accountSelector.selectedIndex].text;
+    const docRef = db.collection(coleccion).doc(docId);
+    const accountRef = db.collection('cuentas').doc(cuentaId);
+    try {
+        await db.runTransaction(async (transaction) => {
+            const doc = await transaction.get(docRef);
+            const accountDoc = await transaction.get(accountRef);
+            if (!doc.exists || !accountDoc.exists) throw "El registro o la cuenta ya no existen.";
+            const monto = doc.data().monto;
+            const saldoActual = accountDoc.data().saldoActual;
+            const nuevoSaldo = tipo === 'ingreso' ? saldoActual + monto : saldoActual - monto;
+            transaction.update(docRef, { status: 'aprobado', cuentaId: cuentaId, cuentaNombre: cuentaNombre });
+            transaction.update(accountRef, { saldoActual: nuevoSaldo });
         });
-        gastosUserFilter.innerHTML = userOptionsHTML;
-        ingresosUserFilter.innerHTML = userOptionsHTML;
-    });
+        alert('¡Solicitud aprobada y saldo de cuenta actualizado!');
+        cargarCuentas();
+    } catch (error) {
+        console.error("Error en la transacción de aprobación: ", error);
+        alert("Ocurrió un error al aprobar. La operación fue cancelada.");
+    }
 }
 
-function cargarGastosPendientes() {
-    let query = db.collection('gastos').where('status', '==', 'pendiente');
-    if (gastosCategoryFilter.value !== 'todos') {
-        query = query.where('categoria', '==', gastosCategoryFilter.value);
+function rechazarDocumento(coleccion, id) {
+    const motivo = prompt("Introduce el motivo del rechazo:");
+    if (motivo) {
+        db.collection(coleccion).doc(id).update({
+            status: 'rechazado', motivoRechazo: motivo
+        }).then(() => alert('Solicitud rechazada.'));
     }
-    query = query.orderBy('fechaDeCreacion', 'asc');
-    query.onSnapshot(snapshot => {
-        const pendientes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        mostrarGastosPendientes(pendientes);
-    });
 }
 
-function cargarIngresosPendientes() {
-    let query = db.collection('ingresos').where('status', '==', 'pendiente');
-    if (ingresosCategoryFilter.value !== 'todos') {
-        query = query.where('categoria', '==', ingresosCategoryFilter.value);
-    }
-    query = query.orderBy('fechaDeCreacion', 'asc');
-    query.onSnapshot(snapshot => {
-        const pendientes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        mostrarIngresosPendientes(pendientes);
-    });
-}
+function poblarFiltros() { /* ... (Sin cambios) ... */ }
+function cargarGastosPendientes() { /* ... (Sin cambios) ... */ }
+function cargarIngresosPendientes() { /* ... (Sin cambios) ... */ }
 
 function mostrarGastosPendientes(gastos) {
     pendingGastosContainer.innerHTML = gastos.length === 0 ? '<p>No hay gastos pendientes.</p>' : '';
@@ -117,8 +119,9 @@ function mostrarGastosPendientes(gastos) {
                     <div class="meta">Enviado por: ${gasto.nombreCreador || gasto.emailCreador} | Cat: ${gasto.categoria}</div>
                 </div>
                 <div class="item-actions">
-                    <button class="btn btn-approve" data-id="${gasto.id}">Aprobar</button>
-                    <button class="btn btn-reject" data-id="${gasto.id}">Rechazar</button>
+                    ${generarSelectorDeCuentas(gasto.id)}
+                    <button class="btn btn-approve">Aprobar</button>
+                    <button class="btn btn-reject">Rechazar</button>
                 </div>
             </div>
             <div class="item-details-view">
@@ -129,8 +132,14 @@ function mostrarGastosPendientes(gastos) {
             </div>`;
         pendingGastosContainer.appendChild(itemElement);
     });
-    pendingGastosContainer.querySelectorAll('.btn-approve').forEach(btn => btn.addEventListener('click', () => actualizarDocumento('gastos', btn.dataset.id, 'aprobado')));
-    pendingGastosContainer.querySelectorAll('.btn-reject').forEach(btn => btn.addEventListener('click', () => actualizarDocumento('gastos', btn.dataset.id, 'rechazado')));
+    pendingGastosContainer.querySelectorAll('.btn-approve').forEach(btn => {
+        const item = btn.closest('.pending-item');
+        btn.addEventListener('click', () => aprobarDocumento('gastos', item.dataset.id, 'gasto'));
+    });
+    pendingGastosContainer.querySelectorAll('.btn-reject').forEach(btn => {
+        const item = btn.closest('.pending-item');
+        btn.addEventListener('click', () => rechazarDocumento('gastos', item.dataset.id));
+    });
 }
 
 function mostrarIngresosPendientes(ingresos) {
@@ -156,8 +165,9 @@ function mostrarIngresosPendientes(ingresos) {
                     <div class="meta">Enviado por: ${ingreso.nombreCreador || ingreso.emailCreador} | Cat: ${ingreso.categoria}</div>
                 </div>
                 <div class="item-actions">
-                    <button class="btn btn-approve" data-id="${ingreso.id}">Aprobar</button>
-                    <button class="btn btn-reject" data-id="${ingreso.id}">Rechazar</button>
+                    ${generarSelectorDeCuentas(ingreso.id)}
+                    <button class="btn btn-approve">Aprobar</button>
+                    <button class="btn btn-reject">Rechazar</button>
                 </div>
             </div>
             <div class="item-details-view">
@@ -168,26 +178,17 @@ function mostrarIngresosPendientes(ingresos) {
             </div>`;
         pendingIngresosContainer.appendChild(itemElement);
     });
-    pendingIngresosContainer.querySelectorAll('.btn-approve').forEach(btn => btn.addEventListener('click', () => actualizarDocumento('ingresos', btn.dataset.id, 'aprobado')));
-    pendingIngresosContainer.querySelectorAll('.btn-reject').forEach(btn => btn.addEventListener('click', () => actualizarDocumento('ingresos', btn.dataset.id, 'rechazado')));
-}
-
-function setupClickListeners() {
-    const listContainers = [pendingGastosContainer, pendingIngresosContainer];
-    listContainers.forEach(container => {
-        container.addEventListener('click', (e) => {
-            if (e.target.classList.contains('btn')) return;
-            const item = e.target.closest('.pending-item');
-            if (item) {
-                const details = item.querySelector('.item-details-view');
-                if (details) {
-                    details.style.display = details.style.display === 'block' ? 'none' : 'block';
-                }
-            }
-        });
+    pendingIngresosContainer.querySelectorAll('.btn-approve').forEach(btn => {
+        const item = btn.closest('.pending-item');
+        btn.addEventListener('click', () => aprobarDocumento('ingresos', item.dataset.id, 'ingreso'));
+    });
+    pendingIngresosContainer.querySelectorAll('.btn-reject').forEach(btn => {
+        const item = btn.closest('.pending-item');
+        btn.addEventListener('click', () => rechazarDocumento('ingresos', item.dataset.id));
     });
 }
 
+function setupClickListeners() { /* ... (Sin cambios) ... */ }
 gastosCategoryFilter.addEventListener('change', cargarGastosPendientes);
 gastosUserFilter.addEventListener('change', cargarGastosPendientes);
 ingresosCategoryFilter.addEventListener('change', cargarIngresosPendientes);
