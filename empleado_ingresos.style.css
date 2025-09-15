@@ -245,3 +245,25 @@ h2 {
 .btn-cancel:hover {
     background-color: #616161;
 }
+
+/* ---- ESTILOS PARA SECCIÓN DE IMPUESTOS EN FORMULARIO ---- */
+.deductions-section {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+#taxes-checklist {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+.tax-item {
+    display: flex;
+    align-items: center;
+    background-color: #f9f9f9;
+    padding: 10px;
+    border-radius: 6px;
+}
+.tax-item input { margin-right: 10px; width: auto; }
+.tax-item label { margin: 0; font-weight: 400; }
