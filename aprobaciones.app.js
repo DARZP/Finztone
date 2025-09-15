@@ -12,7 +12,7 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// ---- ELEMENTOS DEL DOM ----
+// --- ELEMENTOS DEL DOM ---
 const pendingGastosContainer = document.getElementById('pending-gastos-list');
 const pendingIngresosContainer = document.getElementById('pending-ingresos-list');
 const gastosCategoryFilter = document.getElementById('gastos-category-filter');
@@ -20,39 +20,18 @@ const gastosUserFilter = document.getElementById('gastos-user-filter');
 const ingresosCategoryFilter = document.getElementById('ingresos-category-filter');
 const ingresosUserFilter = document.getElementById('ingresos-user-filter');
 
-let listaDeCuentas = []; // Para no consultar la DB repetidamente
-
-// ---- LÓGICA DE LA PÁGINA ----
+// --- LÓGICA DE LA PÁGINA ---
 
 auth.onAuthStateChanged((user) => {
     if (user) {
-        cargarCuentas().then(() => {
-            poblarFiltros();
-            cargarGastosPendientes();
-            cargarIngresosPendientes();
-        });
+        poblarFiltros();
+        cargarGastosPendientes();
+        cargarIngresosPendientes();
+        setupClickListeners(); // Preparamos los clics para los desplegables
     } else {
         window.location.href = 'index.html';
     }
 });
-
-// Función para obtener y guardar la lista de cuentas
-async function cargarCuentas() {
-    listaDeCuentas = [];
-    const snapshot = await db.collection('cuentas').get();
-    snapshot.forEach(doc => {
-        listaDeCuentas.push({ id: doc.id, ...doc.data() });
-    });
-}
-
-// Función para generar el HTML del selector de cuentas
-function generarSelectorDeCuentas(itemId) {
-    let optionsHTML = '<option value="" disabled selected>Seleccionar cuenta</option>';
-    listaDeCuentas.forEach(cuenta => {
-        optionsHTML += `<option value="${cuenta.id}">${cuenta.nombre}</option>`;
-    });
-    return `<select class="account-selector" data-item-id="${itemId}">${optionsHTML}</select>`;
-}
 
 function openTab(evt, tabName) {
     let i, tabcontent, tablinks;
@@ -66,96 +45,96 @@ function openTab(evt, tabName) {
     evt.currentTarget.className += " active";
 }
 
-// Lógica de APROBACIÓN con Transacción
-async function aprobarDocumento(coleccion, docId, monto, tipo) {
-    const accountSelector = document.querySelector(`.account-selector[data-item-id="${docId}"]`);
-    const cuentaId = accountSelector.value;
-
-    if (!cuentaId) {
-        return alert('Por favor, selecciona una cuenta para aprobar esta transacción.');
+// Función simple para aprobar/rechazar (la mejoraremos en el siguiente paso)
+function actualizarDocumento(coleccion, id, nuevoStatus) {
+    const docRef = db.collection(coleccion).doc(id);
+    let updateData = { status: nuevoStatus };
+    if (nuevoStatus === 'rechazado') {
+        const motivo = prompt("Por favor, introduce el motivo del rechazo:");
+        if (motivo) { updateData.motivoRechazo = motivo; } else { return; }
     }
-    const cuentaNombre = accountSelector.options[accountSelector.selectedIndex].text;
-
-    const docRef = db.collection(coleccion).doc(docId);
-    const accountRef = db.collection('cuentas').doc(cuentaId);
-
-    try {
-        await db.runTransaction(async (transaction) => {
-            const accountDoc = await transaction.get(accountRef);
-            if (!accountDoc.exists) throw "La cuenta seleccionada no existe.";
-
-            const saldoActual = accountDoc.data().saldoActual;
-            const nuevoSaldo = tipo === 'ingreso' ? saldoActual + monto : saldoActual - monto;
-            
-            transaction.update(docRef, { status: 'aprobado', cuentaId: cuentaId, cuentaNombre: cuentaNombre });
-            transaction.update(accountRef, { saldoActual: nuevoSaldo });
-        });
-        alert('¡Solicitud aprobada y saldo actualizado!');
-        cargarCuentas();
-    } catch (error) {
-        console.error("Error en la transacción de aprobación: ", error);
-        alert("Ocurrió un error al aprobar. La operación fue cancelada.");
-    }
+    docRef.update(updateData)
+        .then(() => alert(`Solicitud ${nuevoStatus}.`))
+        .catch(error => console.error("Error al actualizar:", error));
 }
 
-function rechazarDocumento(coleccion, id) {
-    const motivo = prompt("Por favor, introduce el motivo del rechazo:");
-    if (motivo) {
-        db.collection(coleccion).doc(id).update({
-            status: 'rechazado',
-            motivoRechazo: motivo
-        }).then(() => alert('Solicitud rechazada.'));
-    }
-}
-
-// Función para poblar los filtros de usuarios y categorías
 function poblarFiltros() {
     gastosCategoryFilter.innerHTML = `<option value="todos">Todas las Categorías</option><option>Comida</option><option>Transporte</option><option>Oficina</option><option>Marketing</option><option>Otro</option>`;
     ingresosCategoryFilter.innerHTML = `<option value="todos">Todas las Categorías</option><option>Cobro de Factura</option><option>Venta de Producto</option><option>Servicios Profesionales</option><option>Otro</option>`;
-
     db.collection('usuarios').where('rol', '==', 'empleado').orderBy('nombre').get().then(snapshot => {
         let userOptionsHTML = '<option value="todos">Todos los Colaboradores</option>';
         snapshot.forEach(doc => {
             const user = doc.data();
-            // Usamos el ID del documento del usuario como valor para el filtro
-            userOptionsHTML += `<option value="${doc.id}">${user.nombre}</option>`;
+            // Guardamos el UID de Auth (creadoPor) que es lo que necesitamos para filtrar
+            userOptionsHTML += `<option value="${user.uid_auth || doc.id}">${user.nombre}</option>`;
         });
         gastosUserFilter.innerHTML = userOptionsHTML;
         ingresosUserFilter.innerHTML = userOptionsHTML;
     });
 }
 
-// Carga dinámica de GASTOS pendientes
 function cargarGastosPendientes() {
     let query = db.collection('gastos').where('status', '==', 'pendiente');
     if (gastosCategoryFilter.value !== 'todos') {
         query = query.where('categoria', '==', gastosCategoryFilter.value);
     }
-    // Para filtrar por usuario, necesitamos buscar por el ID del documento del usuario.
-    // La forma correcta requiere que guardemos el ID del documento del usuario en el gasto.
-    // Vamos a simplificar por ahora. El filtro de usuario lo implementaremos en un siguiente paso de refinamiento.
-
+    // El filtro de usuario se implementará con la lógica avanzada de Bruto/Neto
     query = query.orderBy('fechaDeCreacion', 'asc');
     query.onSnapshot(snapshot => {
-        const pendientes = [];
-        snapshot.forEach(doc => pendientes.push({ id: doc.id, ...doc.data() }));
+        const pendientes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         mostrarGastosPendientes(pendientes);
     });
 }
 
-// Carga dinámica de INGRESOS pendientes
 function cargarIngresosPendientes() {
     let query = db.collection('ingresos').where('status', '==', 'pendiente');
     if (ingresosCategoryFilter.value !== 'todos') {
         query = query.where('categoria', '==', ingresosCategoryFilter.value);
     }
-    // Filtro de usuario pendiente de implementación más avanzada
     query = query.orderBy('fechaDeCreacion', 'asc');
     query.onSnapshot(snapshot => {
-        const pendientes = [];
-        snapshot.forEach(doc => pendientes.push({ id: doc.id, ...doc.data() }));
+        const pendientes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         mostrarIngresosPendientes(pendientes);
     });
+}
+
+function mostrarGastosPendientes(gastos) {
+    pendingGastosContainer.innerHTML = gastos.length === 0 ? '<p>No hay gastos pendientes.</p>' : '';
+    gastos.forEach(gasto => {
+        const itemElement = document.createElement('div');
+        itemElement.classList.add('pending-item');
+        itemElement.dataset.id = gasto.id;
+        const fecha = new Date(gasto.fecha.replace(/-/g, '/')).toLocaleDateString('es-ES');
+        let taxDetailsHTML = '';
+        if (gasto.impuestos && gasto.impuestos.length > 0) {
+            taxDetailsHTML = '<h4>Desglose de Impuestos</h4><div class="tax-breakdown">';
+            gasto.impuestos.forEach(tax => {
+                const valor = tax.tipo === 'porcentaje' ? `${tax.valor}%` : `$${tax.valor}`;
+                taxDetailsHTML += `<div class="tax-line"><span>- ${tax.nombre}</span><span>(${valor})</span></div>`;
+            });
+            taxDetailsHTML += '</div>';
+        }
+        itemElement.innerHTML = `
+            <div class="item-summary">
+                <div class="item-details">
+                    <div><span class="description">${gasto.descripcion}</span><span class="amount">$${gasto.monto.toLocaleString('es-MX')}</span></div>
+                    <div class="meta">Enviado por: ${gasto.nombreCreador || gasto.emailCreador} | Cat: ${gasto.categoria}</div>
+                </div>
+                <div class="item-actions">
+                    <button class="btn btn-approve" data-id="${gasto.id}">Aprobar</button>
+                    <button class="btn btn-reject" data-id="${gasto.id}">Rechazar</button>
+                </div>
+            </div>
+            <div class="item-details-view">
+                <p><strong>Fecha:</strong> ${fecha}</p>
+                <p><strong>Empresa:</strong> ${gasto.empresa || 'N/A'}</p>
+                <p><strong>Comentarios:</strong> ${gasto.comentarios || 'Ninguno'}</p>
+                ${taxDetailsHTML}
+            </div>`;
+        pendingGastosContainer.appendChild(itemElement);
+    });
+    pendingGastosContainer.querySelectorAll('.btn-approve').forEach(btn => btn.addEventListener('click', () => actualizarDocumento('gastos', btn.dataset.id, 'aprobado')));
+    pendingGastosContainer.querySelectorAll('.btn-reject').forEach(btn => btn.addEventListener('click', () => actualizarDocumento('gastos', btn.dataset.id, 'rechazado')));
 }
 
 function mostrarIngresosPendientes(ingresos) {
@@ -163,26 +142,53 @@ function mostrarIngresosPendientes(ingresos) {
     ingresos.forEach(ingreso => {
         const itemElement = document.createElement('div');
         itemElement.classList.add('pending-item');
+        itemElement.dataset.id = ingreso.id;
         const fecha = new Date(ingreso.fecha.replace(/-/g, '/')).toLocaleDateString('es-ES');
+        let taxDetailsHTML = '';
+        if (ingreso.impuestos && ingreso.impuestos.length > 0) {
+            taxDetailsHTML = '<h4>Desglose de Impuestos</h4><div class="tax-breakdown">';
+            ingreso.impuestos.forEach(tax => {
+                const valor = tax.tipo === 'porcentaje' ? `${tax.valor}%` : `$${tax.valor}`;
+                taxDetailsHTML += `<div class="tax-line"><span>- ${tax.nombre}</span><span>(${valor})</span></div>`;
+            });
+            taxDetailsHTML += '</div>';
+        }
         itemElement.innerHTML = `
-            <div class="item-details">
-                <div><span class="description">${ingreso.descripcion}</span><span class="amount">$${ingreso.monto.toFixed(2)}</span></div>
-                <div class="meta">Enviado por: ${ingreso.nombreCreador || ingreso.emailCreador} | Cat: ${ingreso.categoria} | Fecha: ${fecha}</div>
+            <div class="item-summary">
+                <div class="item-details">
+                    <div><span class="description">${ingreso.descripcion}</span><span class="amount">$${ingreso.monto.toLocaleString('es-MX')}</span></div>
+                    <div class="meta">Enviado por: ${ingreso.nombreCreador || ingreso.emailCreador} | Cat: ${ingreso.categoria}</div>
+                </div>
+                <div class="item-actions">
+                    <button class="btn btn-approve" data-id="${ingreso.id}">Aprobar</button>
+                    <button class="btn btn-reject" data-id="${ingreso.id}">Rechazar</button>
+                </div>
             </div>
-            <div class="account-selector-container">
-                ${generarSelectorDeCuentas(ingreso.id)}
-            </div>
-            <div class="item-actions">
-                <button class="btn btn-approve" data-id="${ingreso.id}" data-monto="${ingreso.monto}">Aprobar</button>
-                <button class="btn btn-reject" data-id="${ingreso.id}">Rechazar</button>
+            <div class="item-details-view">
+                <p><strong>Fecha:</strong> ${fecha}</p>
+                <p><strong>Empresa:</strong> ${ingreso.empresa || 'N/A'}</p>
+                <p><strong>Comentarios:</strong> ${ingreso.comentarios || 'Ninguno'}</p>
+                ${taxDetailsHTML}
             </div>`;
         pendingIngresosContainer.appendChild(itemElement);
     });
-    pendingIngresosContainer.querySelectorAll('.btn-approve').forEach(btn => {
-        btn.addEventListener('click', () => aprobarDocumento('ingresos', btn.dataset.id, parseFloat(btn.dataset.monto), 'ingreso'));
-    });
-    pendingIngresosContainer.querySelectorAll('.btn-reject').forEach(btn => {
-        btn.addEventListener('click', () => rechazarDocumento('ingresos', btn.dataset.id));
+    pendingIngresosContainer.querySelectorAll('.btn-approve').forEach(btn => btn.addEventListener('click', () => actualizarDocumento('ingresos', btn.dataset.id, 'aprobado')));
+    pendingIngresosContainer.querySelectorAll('.btn-reject').forEach(btn => btn.addEventListener('click', () => actualizarDocumento('ingresos', btn.dataset.id, 'rechazado')));
+}
+
+function setupClickListeners() {
+    const listContainers = [pendingGastosContainer, pendingIngresosContainer];
+    listContainers.forEach(container => {
+        container.addEventListener('click', (e) => {
+            if (e.target.classList.contains('btn')) return;
+            const item = e.target.closest('.pending-item');
+            if (item) {
+                const details = item.querySelector('.item-details-view');
+                if (details) {
+                    details.style.display = details.style.display === 'block' ? 'none' : 'block';
+                }
+            }
+        });
     });
 }
 
