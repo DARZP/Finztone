@@ -39,57 +39,7 @@ body {
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
 }
 
-.pending-item {
-    display: grid;
-    /* Cambiamos a 3 columnas: detalles | selector | acciones */
-    grid-template-columns: 1fr auto auto; 
-    gap: 20px;
-    padding: 20px;
-    border: 1px solid #eee;
-    border-radius: 8px;
-    margin-bottom: 15px;
-    align-items: center; /* Centramos verticalmente */
-}
-
-.item-details .description {
-    font-size: 1.2em;
-    font-weight: 600;
-}
-.item-details .amount {
-    font-size: 1.2em;
-    font-weight: 600;
-    color: var(--primary-color);
-    margin-left: 10px;
-}
-.item-details .meta {
-    font-size: 0.9em;
-    color: #777;
-    margin-top: 5px;
-}
-
-.item-actions {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 10px;
-}
-
-.btn {
-    padding: 8px 20px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    font-family: 'Poppins', sans-serif;
-    font-weight: 500;
-    color: white;
-    transition: opacity 0.3s ease;
-}
-.btn:hover { opacity: 0.8; }
-.btn-approve { background-color: var(--approve-color); }
-
-.btn-reject { background-color: var(--reject-color); }
-
-/* ---- ESTILOS PARA PESTAÑAS ---- */
+/* ---- ESTILOS PARA PESTAÑAS Y FILTROS (SIN CAMBIOS) ---- */
 .tabs {
     display: flex;
     border-bottom: 1px solid #eee;
@@ -110,37 +60,80 @@ body {
     border-bottom: 3px solid var(--primary-color);
 }
 .tab-content {
-    display: none; /* Oculto por defecto, JS lo mostrará */
+    display: none;
 }
-
 .card-header-filters {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
-    flex-wrap: wrap; /* Para que se ajuste en pantallas pequeñas */
+    flex-wrap: wrap;
 }
-.card-header-filters h2 {
-    margin: 0;
+.card-header-filters h2 { margin: 0; }
+.filters-container { display: flex; gap: 20px; }
+.filter-group { display: flex; align-items: center; gap: 8px; }
+.filter-group label { font-size: 0.9em; font-weight: 500; color: #555; }
+.filter-group select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-family: 'Poppins', sans-serif; background-color: #fff; }
+
+
+/* ---- ESTILOS ACTUALIZADOS Y NUEVOS PARA LA LISTA ---- */
+.pending-item {
+    cursor: pointer;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    transition: background-color 0.2s ease;
 }
-.filters-container {
-    display: flex;
+.pending-item:hover {
+    background-color: #f9f9f9;
+}
+
+.item-summary {
+    display: grid;
+    grid-template-columns: 1fr auto; /* Ajustado para el nuevo layout */
     gap: 20px;
-}
-.filter-group {
-    display: flex;
+    padding: 20px;
     align-items: center;
-    gap: 8px;
 }
-.filter-group label {
+
+.item-details .description { font-size: 1.2em; font-weight: 600; }
+.item-details .amount { font-size: 1.2em; font-weight: 600; color: var(--primary-color); margin-left: 10px; }
+.item-details .meta { font-size: 0.9em; color: #777; margin-top: 5px; }
+
+.item-details-view {
+    display: none; /* Oculto por defecto */
+    padding: 0 20px 20px 20px;
+    border-top: 1px dashed #ddd;
+}
+.item-details-view h4 {
+    margin-top: 15px;
+    margin-bottom: 10px;
+}
+.tax-breakdown {
     font-size: 0.9em;
-    font-weight: 500;
     color: #555;
 }
-.filter-group select {
-    padding: 8px 12px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-family: 'Poppins', sans-serif;
-    background-color: #fff;
+.tax-line {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
 }
+
+.item-actions {
+    display: flex;
+    align-items: center; /* Alinea los botones verticalmente */
+    gap: 10px;
+}
+.btn {
+    padding: 8px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 500;
+    color: white;
+    transition: opacity 0.3s ease;
+}
+.btn:hover { opacity: 0.8; }
+.btn-approve { background-color: var(--approve-color); }
+.btn-reject { background-color: var(--reject-color); }
