@@ -121,8 +121,10 @@ body {
 
 .item-actions {
     display: flex;
-    align-items: center; /* Alinea los botones verticalmente */
+    align-items: center; /* Alinea verticalmente */
+    justify-content: flex-end; /* Alinea a la derecha */
     gap: 10px;
+}
 }
 .btn {
     padding: 8px 20px;
@@ -137,3 +139,4 @@ body {
 .btn:hover { opacity: 0.8; }
 .btn-approve { background-color: var(--approve-color); }
 .btn-reject { background-color: var(--reject-color); }
+
