@@ -24,6 +24,8 @@ const taxesChecklistContainer = document.getElementById('taxes-checklist');
 const saveDraftBtn = document.getElementById('save-draft-btn');
 const addApprovedBtn = document.getElementById('add-approved-btn');
 const formCategorySelect = document.getElementById('income-category');
+const addTaxesCheckbox = document.getElementById('add-taxes-checkbox');
+const taxesDetailsContainer = document.getElementById('taxes-details-container');
 
 // --- LÓGICA DE LA PÁGINA ---
 auth.onAuthStateChanged((user) => {
@@ -39,6 +41,10 @@ auth.onAuthStateChanged((user) => {
 });
 
 // --- FUNCIONES DEL FORMULARIO ---
+
+addTaxesCheckbox.addEventListener('change', () => {
+    taxesDetailsContainer.style.display = addTaxesCheckbox.checked ? 'block' : 'none';
+});
 
 isInvoiceCheckbox.addEventListener('change', () => {
     invoiceDetailsContainer.style.display = isInvoiceCheckbox.checked ? 'block' : 'none';
@@ -85,42 +91,84 @@ async function cargarImpuestosParaSeleccion() {
     });
 }
 
+const firebaseConfig = {
+    // ... Tu config de Firebase aquí ...
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// --- ELEMENTOS DEL DOM ---
+const addIncomeForm = document.getElementById('add-income-form');
+const incomeListContainer = document.getElementById('income-list');
+const isInvoiceCheckbox = document.getElementById('is-invoice');
+const invoiceDetailsContainer = document.getElementById('invoice-details');
+const companyDataList = document.getElementById('company-list');
+const categoryFilter = document.getElementById('category-filter');
+const monthFilter = document.getElementById('month-filter');
+const accountSelect = document.getElementById('account-select');
+const taxesChecklistContainer = document.getElementById('taxes-checklist');
+const saveDraftBtn = document.getElementById('save-draft-btn');
+const addApprovedBtn = document.getElementById('add-approved-btn');
+const formCategorySelect = document.getElementById('income-category');
+const addTaxesCheckbox = document.getElementById('add-taxes-checkbox');
+const taxesDetailsContainer = document.getElementById('taxes-details-container');
+
+auth.onAuthStateChanged((user) => { /* ... (Sin cambios) ... */ });
+
+addTaxesCheckbox.addEventListener('change', () => {
+    taxesDetailsContainer.style.display = addTaxesCheckbox.checked ? 'block' : 'none';
+});
+
+isInvoiceCheckbox.addEventListener('change', () => { /* ... (Sin cambios) ... */ });
+function cargarEmpresas() { /* ... (Sin cambios) ... */ }
+function generarFolio(userId) { /* ... (Sin cambios) ... */ }
+function cargarCuentasEnSelector() { /* ... (Sin cambios) ... */ }
+async function cargarImpuestosParaSeleccion() { /* ... (Sin cambios) ... */ }
+
 async function guardarIngresoAdmin(status) {
     const user = auth.currentUser;
     if (!user) return;
+    
     const cuentaId = accountSelect.value;
     if (status === 'aprobado' && !cuentaId) {
         return alert('Por favor, selecciona una cuenta de destino.');
     }
+
     const montoInput = parseFloat(addIncomeForm['income-amount'].value);
     if (isNaN(montoInput) || montoInput <= 0) {
         return alert('Por favor, introduce un monto válido.');
     }
-    const tipoDeTotal = document.querySelector('input[name="total-type"]:checked').value;
-    const impuestosSeleccionados = [];
-    document.querySelectorAll('#taxes-checklist input[type="checkbox"]:checked').forEach(checkbox => {
-        impuestosSeleccionados.push(JSON.parse(checkbox.dataset.impuesto));
-    });
 
-    let montoBruto, montoNeto, totalImpuestos = 0;
-    if (tipoDeTotal === 'bruto') {
-        montoBruto = montoInput;
-        impuestosSeleccionados.forEach(imp => {
-            totalImpuestos += imp.tipo === 'porcentaje' ? (montoBruto * imp.valor) / 100 : imp.valor;
+    let montoBruto = montoInput;
+    let montoNeto = montoInput;
+    const impuestosSeleccionados = [];
+    let tipoDeTotal = null;
+
+    if (addTaxesCheckbox.checked) {
+        tipoDeTotal = document.querySelector('input[name="total-type"]:checked').value;
+        document.querySelectorAll('#taxes-checklist input[type="checkbox"]:checked').forEach(checkbox => {
+            impuestosSeleccionados.push(JSON.parse(checkbox.dataset.impuesto));
         });
-        montoNeto = montoBruto - totalImpuestos;
-    } else {
-        montoNeto = montoInput;
-        montoBruto = montoNeto; // Simplificación
+        let totalImpuestos = 0;
+        if (tipoDeTotal === 'bruto') {
+            montoBruto = montoInput;
+            impuestosSeleccionados.forEach(imp => {
+                totalImpuestos += imp.tipo === 'porcentaje' ? (montoBruto * imp.valor) / 100 : imp.valor;
+            });
+            montoNeto = montoBruto - totalImpuestos;
+        } else {
+            montoNeto = montoInput;
+        }
     }
     
     const companyName = addIncomeForm['income-company'].value.trim();
-    const newIncomeRef = db.collection('ingresos').doc();
+    
     const incomeData = {
         descripcion: addIncomeForm['income-description'].value,
         monto: montoBruto,
         totalConImpuestos: montoNeto,
-        impuestos: impuestosSeleccionados,
+        impuestos: impuestosSeleccionados, // Será un array vacío si no se marcaron
         tipoTotal: tipoDeTotal,
         categoria: formCategorySelect.value,
         fecha: addIncomeForm['income-date'].value,
