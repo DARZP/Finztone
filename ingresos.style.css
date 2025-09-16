@@ -11,7 +11,6 @@ body {
     margin: 0;
     font-family: 'Poppins', sans-serif;
     background-color: var(--background-color);
-    color: var(--text-color);
 }
 
 .main-header {
@@ -24,19 +23,8 @@ body {
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
-.back-button {
-    text-decoration: none;
-    color: var(--primary-color);
-    font-weight: 500;
-    font-size: 1em;
-}
-
-.logo {
-    font-size: 1.8em;
-    font-weight: 600;
-    color: var(--primary-color);
-    margin: 0;
-}
+.back-button { text-decoration: none; color: var(--primary-color); font-weight: 500; }
+.logo { font-size: 1.8em; font-weight: 600; color: var(--primary-color); margin: 0; }
 
 .container {
     padding: 40px;
@@ -52,22 +40,11 @@ body {
     margin-bottom: 30px;
 }
 
-h2 {
-    font-weight: 500;
-    margin-top: 0;
-}
+h2 { font-weight: 500; margin-top: 0; }
 
-.input-group {
-    margin-bottom: 20px;
-}
-
-.input-group label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 500;
-}
-
-.input-group input, .input-group select {
+.input-group { margin-bottom: 20px; }
+.input-group label { display: block; margin-bottom: 8px; font-weight: 500; }
+.input-group input, .input-group select, .input-group textarea {
     width: 100%;
     padding: 12px;
     border: 1px solid var(--input-border-color);
@@ -76,133 +53,43 @@ h2 {
     font-size: 1em;
     font-family: 'Poppins', sans-serif;
 }
+.input-group-checkbox { display: flex; align-items: center; margin-bottom: 20px; }
+.input-group-checkbox input { margin-right: 10px; }
 
-.btn-primary {
-    width: 100%;
-    padding: 14px;
-    background-color: var(--primary-color);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 1.1em;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
+/* ---- ESTILOS PARA BOTONES DE FORMULARIO ---- */
+.form-actions { display: flex; gap: 15px; margin-top: 20px; }
+.btn { flex: 1; padding: 14px; border: none; border-radius: 8px; font-size: 1.1em; font-weight: 500; cursor: pointer; transition: background-color 0.3s ease; }
+.btn-primary { background-color: var(--primary-color); color: white; }
+.btn-primary:hover { background-color: var(--primary-hover-color); }
+.btn-secondary { background-color: #e0e0e0; color: #333; }
+.btn-secondary:hover { background-color: #bdbdbd; }
 
-.btn-primary:hover {
-    background-color: var(--primary-hover-color);
-}
+/* ---- ESTILOS PARA FILTROS ---- */
+.card-header-filters { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
+.card-header-filters h2 { margin: 0; }
+.filters-container { display: flex; gap: 20px; }
+.filter-group { display: flex; align-items: center; gap: 8px; }
+.filter-group label { font-size: 0.9em; font-weight: 500; color: #555; margin: 0; }
+.filter-group select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; font-family: 'Poppins', sans-serif; background-color: #fff; }
 
-/* ---- ESTILOS PARA LA LISTA DE GASTOS ---- */
-.expense-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px;
-    border-bottom: 1px solid #eee;
-}
+/* ---- ESTILOS PARA LISTA DE GASTOS Y DETALLES ---- */
+.expense-item { cursor: pointer; border-top: 1px solid #eee; padding: 15px 5px; transition: background-color 0.2s ease; }
+.expense-item:hover { background-color: #f9f9f9; }
+.item-summary { display: flex; justify-content: space-between; align-items: center; }
+.expense-info .expense-description { font-weight: 500; }
+.expense-info .expense-details { font-size: 0.9em; color: #777; }
+.expense-amount { font-weight: 600; font-size: 1.1em; color: var(--primary-color); }
 
-.expense-item:last-child {
-    border-bottom: none;
-}
+.item-details { display: none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ddd; font-size: 0.9em; color: #555; }
+.item-details p { margin: 5px 0; }
+.item-details a { color: var(--primary-color); font-weight: 500; text-decoration: none; }
+.item-details a:hover { text-decoration: underline; }
 
-.expense-info {
-    display: flex;
-    flex-direction: column;
-}
-
-.expense-description {
-    font-weight: 500;
-    font-size: 1.1em;
-}
-
-.expense-details {
-    font-size: 0.9em;
-    color: #777;
-}
-
-.expense-amount {
-    font-size: 1.2em;
-    font-weight: 600;
-    color: var(--primary-color);
-}
-
-/* ---- ESTILOS PARA DETALLES DESPLEGABLES ---- */
-
-/* Hacemos que el contenedor principal del item sea clickeable */
-.expense-item {
-    cursor: pointer;
-    border: 1px solid #eee;
-    border-radius: 8px;
-    margin-bottom: 10px;
-    padding: 15px;
-    transition: background-color 0.2s ease;
-}
-
-.expense-item:hover {
-    background-color: #f9f9f9;
-}
-
-/* El resumen que se ve siempre */
-.item-summary {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-/* La sección de detalles, oculta por defecto */
-.item-details {
-    display: none; /* JS se encargará de mostrarlo */
-    margin-top: 15px;
-    padding-top: 15px;
-    border-top: 1px dashed #ddd;
-    font-size: 0.9em;
-    color: #555;
-}
-
-.item-details p {
-    margin: 5px 0;
-}
-
-.item-details a {
-    color: var(--primary-color);
-    font-weight: 500;
-    text-decoration: none;
-}
-.item-details a:hover {
-    text-decoration: underline;
-}
-
-/* ---- ESTILOS PARA FILTROS (CORREGIDOS) ---- */
-.card-header-filters {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    flex-wrap: wrap; /* Para que se ajuste en pantallas pequeñas */
-}
-.card-header-filters h2 {
-    margin: 0;
-}
-.filters-container {
-    display: flex;
-    gap: 20px;
-}
-.filter-group {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-.filter-group label {
-    font-size: 0.9em;
-    font-weight: 500;
-    color: #555;
-}
-.filter-group select {
-    padding: 8px 12px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-family: 'Poppins', sans-serif;
-    background-color: #fff;
-}
+/* ---- ESTILOS PARA SECCIÓN DE IMPUESTOS EN FORMULARIO ---- */
+.deductions-section { margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; }
+#taxes-checklist { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+.tax-item { display: flex; align-items: center; background-color: #f9f9f9; padding: 10px; border-radius: 6px; }
+.tax-item input { margin-right: 10px; width: auto; }
+.tax-item label { margin: 0; font-weight: 400; }
+.total-type-selector { margin-top: 15px; display: flex; align-items: center; gap: 10px; }
+.total-type-selector label { font-weight: 400; margin: 0; }
