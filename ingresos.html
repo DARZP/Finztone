@@ -8,82 +8,75 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
-
     <header class="main-header">
         <a href="dashboard.html" class="back-button">← Volver</a>
         <h1 class="logo">FINZTONE</h1>
     </header>
-    
 
     <main class="container">
         <div class="form-card">
             <h2>Registrar un Nuevo Ingreso</h2>
             <form id="add-income-form">
-    <div class="input-group">
-        <label for="income-description">Concepto del Ingreso</label>
-        <input type="text" id="income-description" required>
-    </div>
-    <div class="input-group">
-        <label for="income-amount">Monto ($)</label>
-        <input type="number" id="income-amount" step="0.01" required>
-    </div>
-    <div class="input-group">
-        <label for="income-category">Categoría</label>
-        <select id="income-category" required>
-            <option value="" disabled selected>Selecciona una categoría</option>
-            <option value="Cobro de Factura">Cobro de Factura</option>
-            <option value="Venta de Producto">Venta de Producto</option>
-            <option value="Servicios Profesionales">Servicios Profesionales</option>
-            <option value="Otro">Otro</option>
-        </select>
-    </div>
-    <div class="input-group">
-        <label for="income-date">Fecha</label>
-        <input type="date" id="income-date" required>
-    </div>
-
-    <div class="input-group">
-        <label for="income-company">Empresa o Cliente</label>
-        <input type="text" id="income-company" list="company-list" placeholder="Escribe para buscar o agregar...">
-        <datalist id="company-list"></datalist>
-    </div>
-    <div class="input-group">
-        <label for="payment-method">Método de Cobro</label>
-        <select id="payment-method">
-            <option value="Efectivo">Efectivo</option>
-            <option value="Transferencia">Transferencia</option>
-            <option value="Tarjeta de Crédito">Tarjeta de Crédito</option>
-        </select>
-    </div>
-
-    <div class="input-group">
-        <label for="account-select">Cuenta de Destino (donde entra el dinero)</label>
-        <select id="account-select" required>
-            <option value="" disabled selected>Selecciona una cuenta</option>
-            </select>
-    </div>
-                
-    <div class="input-group">
-        <label for="income-comments">Comentarios (Opcional)</label>
-        <textarea id="income-comments" rows="3"></textarea>
-    </div>
-    <div class="input-group-checkbox">
-        <input type="checkbox" id="is-invoice">
-        <label for="is-invoice">Anexar datos de facturación</label>
-    </div>
-    <div id="invoice-details" style="display: none;">
-        <div class="input-group">
-            <label for="invoice-rfc">RFC</label>
-            <input type="text" id="invoice-rfc">
-        </div>
-        <div class="input-group">
-            <label for="invoice-folio">Folio Fiscal (UUID)</label>
-            <input type="text" id="invoice-folio">
-        </div>
-    </div>
-    
-    <button type="submit" class="btn-primary">Agregar Ingreso Aprobado</button>
-</form>       
+                <div class="input-group">
+                    <label for="income-description">Concepto del Ingreso</label>
+                    <input type="text" id="income-description" required>
+                </div>
+                <div class="input-group">
+                    <label for="income-amount">Monto ($)</label>
+                    <input type="number" id="income-amount" step="0.01" required>
+                </div>
+                <div class="input-group">
+                    <label for="income-category">Categoría</label>
+                    <select id="income-category" required></select>
+                </div>
+                <div class="input-group">
+                    <label for="income-date">Fecha</label>
+                    <input type="date" id="income-date" required>
+                </div>
+                <div class="input-group">
+                    <label for="income-company">Empresa o Cliente</label>
+                    <input type="text" id="income-company" list="company-list" placeholder="Escribe para buscar o agregar...">
+                    <datalist id="company-list"></datalist>
+                </div>
+                <div class="input-group">
+                    <label for="payment-method">Método de Cobro</label>
+                    <select id="payment-method">
+                        <option value="Transferencia">Transferencia</option>
+                        <option value="Efectivo">Efectivo</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="account-select">Cuenta de Destino</label>
+                    <select id="account-select" required></select>
+                </div>
+                <div class="input-group">
+                    <label for="income-comments">Comentarios (Opcional)</label>
+                    <textarea id="income-comments" rows="3"></textarea>
+                </div>
+                <div class="input-group-checkbox">
+                    <input type="checkbox" id="is-invoice">
+                    <label for="is-invoice">Anexar datos de facturación</label>
+                </div>
+                <div id="invoice-details" style="display: none;">
+                    <div class="input-group"><label for="invoice-rfc">RFC</label><input type="text" id="invoice-rfc"></div>
+                    <div class="input-group"><label for="invoice-folio">Folio Fiscal</label><input type="text" id="invoice-folio"></div>
+                </div>
+                <div class="deductions-section">
+                    <h3>Impuestos y Retenciones</h3>
+                    <div id="taxes-checklist"></div>
+                    <div class="input-group-checkbox total-type-selector">
+                        <label>El monto principal es:</label>
+                        <input type="radio" id="total-bruto" name="total-type" value="bruto" checked>
+                        <label for="total-bruto">Bruto (los impuestos se retienen)</label>
+                        <input type="radio" id="total-neto" name="total-type" value="neto">
+                        <label for="total-neto">Neto (los impuestos ya están incluidos)</label>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="save-draft-btn" class="btn btn-secondary">Guardar Borrador</button>
+                    <button type="button" id="add-approved-btn" class="btn btn-primary">Agregar Ingreso Aprobado</button>
+                </div>
+            </form>
         </div>
 
         <div class="list-card">
@@ -91,30 +84,22 @@
                 <h2>Historial de Ingresos</h2>
                 <div class="filters-container">
                     <div class="filter-group">
-                        <label for="category-filter">Categoría</label>
-                        <select id="category-filter">
-                            <option value="todos">Todas</option>
-                            <option value="Cobro de Factura">Cobro de Factura</option>
-                            <option value="Venta de Producto">Venta de Producto</option>
-                            <option value="Servicios Profesionales">Servicios Profesionales</option>
-                            <option value="Otro">Otro</option>
-                        </select>
+                        <label>Categoría</label>
+                        <select id="category-filter"></select>
                     </div>
                     <div class="filter-group">
-                        <label for="month-filter">Mes</label>
+                        <label>Mes</label>
                         <select id="month-filter"></select>
                     </div>
                 </div>
             </div>
-            <div id="income-list">
-                </div>
+            <div id="income-list"></div>
         </div>
     </main>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-    
     <script src="ingresos.app.js"></script>
 </body>
 </html>
