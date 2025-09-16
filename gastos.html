@@ -80,14 +80,21 @@
                 </div>
 
                 <div class="deductions-section">
-                    <h3>Desglose de Impuestos</h3>
-                    <div id="taxes-checklist"></div>
-                    <div class="input-group-checkbox total-type-selector">
-                        <label>El monto principal es:</label>
-                        <input type="radio" id="total-bruto" name="total-type" value="bruto" checked>
-                        <label for="total-bruto">Bruto (los impuestos se suman)</label>
-                        <input type="radio" id="total-neto" name="total-type" value="neto">
-                        <label for="total-neto">Neto (los impuestos ya están incluidos)</label>
+                    <div class="input-group-checkbox">   
+                        <input type="checkbox" id="add-taxes-checkbox">
+                        <label for="add-taxes-checkbox">Añadir Impuestos/Retenciones</label>
+                    </div>
+                    <div id="taxes-details-container" style="display: none;"> 
+                        <h3>Desglose de Impuestos</h3> 
+                        <div id="taxes-checklist">     
+                        </div>
+                        <div class="input-group-checkbox total-type-selector">     
+                            <label>El monto principal es:</label>      
+                            <input type="radio" id="total-bruto" name="total-type" value="bruto" checked> 
+                            <label for="total-bruto">Bruto (los impuestos se suman)</label>
+                            <input type="radio" id="total-neto" name="total-type" value="neto">
+                            <label for="total-neto">Neto (los impuestos ya están incluidos)</label>
+                        </div>
                     </div>
                 </div>
 
