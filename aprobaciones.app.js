@@ -67,14 +67,14 @@ function openTab(evt, tabName) {
     evt.currentTarget.className += " active";
 }
 
-// Lógica de APROBACIÓN con Transacción
+// En aprobaciones.app.js, reemplaza esta función
 async function aprobarDocumento(coleccion, docId, tipo) {
     const itemElement = document.querySelector(`[data-id="${docId}"]`);
     const accountSelector = itemElement.querySelector(`.account-selector`);
     const cuentaId = accountSelector.value;
 
     if (!cuentaId) {
-        return alert('Por favor, selecciona una cuenta para aprobar esta transacción.');
+        return alert('Por favor, selecciona una cuenta para aprobar.');
     }
     const cuentaNombre = accountSelector.options[accountSelector.selectedIndex].text;
 
@@ -93,30 +93,27 @@ async function aprobarDocumento(coleccion, docId, tipo) {
             const impuestos = data.impuestos || [];
             const saldoActual = accountDoc.data().saldoActual;
             
-            // Para el admin, al aprobar, él decide si el monto a afectar es bruto o neto
-            // Esta lógica la añadiremos después. Por ahora, afectamos el total.
             const nuevoSaldo = tipo === 'ingreso' ? saldoActual + montoTotal : saldoActual - montoTotal;
 
-            if (nuevoSaldo < 0 && tipo === 'gasto') throw "Saldo insuficiente en la cuenta seleccionada.";
+            if (nuevoSaldo < 0 && tipo === 'gasto') throw "Saldo insuficiente en la cuenta.";
 
-            // 1. Actualizamos el documento (gasto/ingreso)
             transaction.update(docRef, { status: 'aprobado', cuentaId: cuentaId, cuentaNombre: cuentaNombre });
-            
-            // 2. Actualizamos el saldo de la cuenta
             transaction.update(accountRef, { saldoActual: nuevoSaldo });
 
-            // 3. Creamos los registros de impuestos
             impuestos.forEach(imp => {
                 const montoImpuesto = imp.tipo === 'porcentaje' ? (montoPrincipal * imp.valor) / 100 : imp.valor;
                 const taxMovRef = db.collection('movimientos_impuestos').doc();
-                const estadoImpuesto = tipo === 'gasto' ? 'pagado' : 'pendiente de pago';
+                
+                // --- ¡AQUÍ ESTÁ LA CORRECCIÓN! ---
+                // Si es un gasto, el impuesto se paga. Si es un ingreso, se retiene.
+                const estadoImpuesto = tipo === 'gasto' ? 'pagado' : 'pagado (retenido)';
                 
                 transaction.set(taxMovRef, {
                     origen: `${tipo.charAt(0).toUpperCase() + tipo.slice(1)} - ${data.descripcion}`,
                     tipoImpuesto: imp.nombre,
                     monto: montoImpuesto,
                     fecha: new Date(),
-                    status: estadoImpuesto
+                    status: estadoImpuesto // Usamos el estado correcto
                 });
             });
         });
