@@ -91,7 +91,7 @@ async function cargarImpuestosParaSeleccion() {
     });
 }
 
-// En ingresos.app.js, reemplaza esta función
+// CORREGIDO: Función central para guardar ingresos
 async function guardarIngresoAdmin(status) {
     const user = auth.currentUser;
     if (!user) return;
@@ -103,14 +103,18 @@ async function guardarIngresoAdmin(status) {
     if (isNaN(montoInput) || montoInput <= 0) {
         return alert('Por favor, introduce un monto válido.');
     }
-    const tipoDeTotal = document.querySelector('input[name="total-type"]:checked').value;
-    const impuestosSeleccionados = [];
-    document.querySelectorAll('#taxes-checklist input[type="checkbox"]:checked').forEach(checkbox => {
-        impuestosSeleccionados.push(JSON.parse(checkbox.dataset.impuesto));
-    });
 
-    let montoBruto, montoNeto, totalImpuestos = 0;
+    let montoBruto = montoInput;
+    let montoNeto = montoInput;
+    const impuestosSeleccionados = [];
+    let tipoDeTotal = null;
+
     if (addTaxesCheckbox.checked) {
+        tipoDeTotal = document.querySelector('input[name="total-type"]:checked').value;
+        document.querySelectorAll('#taxes-checklist input[type="checkbox"]:checked').forEach(checkbox => {
+            impuestosSeleccionados.push(JSON.parse(checkbox.dataset.impuesto));
+        });
+        let totalImpuestos = 0;
         if (tipoDeTotal === 'bruto') {
             montoBruto = montoInput;
             impuestosSeleccionados.forEach(imp => {
@@ -119,16 +123,39 @@ async function guardarIngresoAdmin(status) {
             montoNeto = montoBruto - totalImpuestos;
         } else {
             montoNeto = montoInput;
-            montoBruto = montoNeto; // Simplificación
         }
-    } else {
-        montoBruto = montoInput;
-        montoNeto = montoInput;
     }
     
     const companyName = addIncomeForm['income-company'].value.trim();
-    const newIncomeRef = db.collection('ingresos').doc();
-    const incomeData = { /* ... (Tus datos de ingreso se quedan igual) ... */ };
+    
+    // ESTE BLOQUE ESTABA INCOMPLETO EN TU VERSIÓN ANTERIOR
+    const incomeData = {
+        descripcion: addIncomeForm['income-description'].value,
+        monto: montoBruto,
+        totalConImpuestos: montoNeto,
+        impuestos: impuestosSeleccionados,
+        tipoTotal: tipoDeTotal,
+        categoria: formCategorySelect.value,
+        fecha: addIncomeForm['income-date'].value,
+        empresa: companyName,
+        metodoPago: addIncomeForm['payment-method'].value,
+        comentarios: addIncomeForm['income-comments'].value,
+        folio: generarFolio(user.uid),
+        creadoPor: user.uid,
+        emailCreador: user.email,
+        nombreCreador: "Administrador",
+        fechaDeCreacion: new Date(),
+        status: status,
+        cuentaId: cuentaId,
+        cuentaNombre: cuentaId ? accountSelect.options[accountSelect.selectedIndex].text.split(' (')[0] : ''
+    };
+
+    if (isInvoiceCheckbox.checked) {
+        incomeData.datosFactura = {
+            rfc: document.getElementById('invoice-rfc').value,
+            folioFiscal: document.getElementById('invoice-folio').value
+        };
+    }
 
     if (status === 'borrador') {
         return db.collection('ingresos').add(incomeData).then(() => {
@@ -138,6 +165,7 @@ async function guardarIngresoAdmin(status) {
     }
 
     const cuentaRef = db.collection('cuentas').doc(cuentaId);
+    const newIncomeRef = db.collection('ingresos').doc();
     try {
         await db.runTransaction(async (transaction) => {
             const cuentaDoc = await transaction.get(cuentaRef);
@@ -148,8 +176,6 @@ async function guardarIngresoAdmin(status) {
             transaction.set(newIncomeRef, incomeData);
             transaction.update(cuentaRef, { saldoActual: nuevoSaldo });
 
-            // ¡ESTE ES EL BLOQUE QUE FALTABA!
-            // Generamos un movimiento por cada impuesto seleccionado
             impuestosSeleccionados.forEach(imp => {
                 const montoImpuesto = imp.tipo === 'porcentaje' ? (montoBruto * imp.valor) / 100 : imp.valor;
                 const taxMovRef = db.collection('movimientos_impuestos').doc();
@@ -158,7 +184,7 @@ async function guardarIngresoAdmin(status) {
                     tipoImpuesto: imp.nombre,
                     monto: montoImpuesto,
                     fecha: new Date(),
-                    status: 'pendiente de pago' // Los impuestos de un ingreso siempre están pendientes de pago al fisco
+                    status: 'pendiente de pago'
                 });
             });
         });
@@ -173,7 +199,7 @@ async function guardarIngresoAdmin(status) {
         alert("Error: " + error);
     }
 }
-    
+
 saveDraftBtn.addEventListener('click', () => guardarIngresoAdmin('borrador'));
 addApprovedBtn.addEventListener('click', () => guardarIngresoAdmin('aprobado'));
 
