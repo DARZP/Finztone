@@ -28,21 +28,31 @@
     </div>
 
     <div class="deductions-section">
-        <div class="input-group-checkbox">
-            <input type="checkbox" id="add-taxes-checkbox">
-            <label for="add-taxes-checkbox">Desglosar Monto</label>
-        </div>
-        <div id="taxes-details-container" style="display: none;">
-            <div id="taxes-checklist"></div>
-            <div class="input-group-checkbox total-type-selector">
-                <label>Descontar de la cuenta el monto:</label>
-                <input type="radio" id="total-bruto" name="total-type" value="bruto" checked>
-                <label for="total-bruto">Bruto (sin impuestos)</label>
-                <input type="radio" id="total-neto" name="total-type" value="neto">
-                <label for="total-neto">Neto (con impuestos)</label>
+    <div class="input-group-checkbox">
+        <input type="checkbox" id="add-taxes-checkbox">
+        <label for="add-taxes-checkbox">Desglosar Monto (con Impuestos/Retenciones)</label>
+    </div>
+
+    <div id="taxes-details-container" style="display: none;">
+        <div id="taxes-checklist">
+            </div>
+        <hr>
+        <div class="totals-summary">
+            <div class="summary-line">
+                <span>Monto Bruto:</span>
+                <span id="summary-bruto">$0.00</span>
+            </div>
+            <div class="summary-line">
+                <span>Total Impuestos:</span>
+                <span id="summary-impuestos">$0.00</span>
+            </div>
+            <div class="summary-line net-total">
+                <span>Monto Neto (Total a Descontar):</span>
+                <span id="summary-neto">$0.00</span>
             </div>
         </div>
     </div>
+</div>
     
     <div class="input-group">
         <label for="expense-category">Categoría</label>
