@@ -24,34 +24,48 @@ const categoryFilter = document.getElementById('category-filter');
 const monthFilter = document.getElementById('month-filter');
 const taxesChecklistContainer = document.getElementById('taxes-checklist');
 const formCategorySelect = document.getElementById('income-category');
+const formPaymentMethodSelect = document.getElementById('payment-method'); // Añadido
+const addTaxesCheckbox = document.getElementById('add-taxes-checkbox');
+const taxesDetailsContainer = document.getElementById('taxes-details-container');
+const montoInput = document.getElementById('income-amount');
+const summaryBruto = document.getElementById('summary-bruto');
+const summaryImpuestos = document.getElementById('summary-impuestos');
+const summaryNeto = document.getElementById('summary-neto');
 
 // --- VARIABLES DE ESTADO ---
 let modoEdicion = false;
 let idIngresoEditando = null;
-let impuestosDefinidos = [];
 
 // --- LÓGICA DE LA PÁGINA ---
-
 auth.onAuthStateChanged((user) => {
     if (user) {
         cargarEmpresas();
         poblarFiltrosYCategorias();
         cargarIngresos();
         cargarImpuestosParaSeleccion();
+        recalcularTotales();
     } else {
         window.location.href = 'index.html';
     }
 });
 
+// --- LISTENERS ---
+addTaxesCheckbox.addEventListener('change', () => {
+    taxesDetailsContainer.style.display = addTaxesCheckbox.checked ? 'block' : 'none';
+    recalcularTotales();
+});
 isInvoiceCheckbox.addEventListener('change', () => {
     invoiceDetailsContainer.style.display = isInvoiceCheckbox.checked ? 'block' : 'none';
 });
-
+montoInput.addEventListener('input', recalcularTotales);
+taxesChecklistContainer.addEventListener('change', recalcularTotales);
 cancelEditBtn.addEventListener('click', salirModoEdicion);
 saveDraftBtn.addEventListener('click', () => guardarIngreso('borrador'));
 sendForApprovalBtn.addEventListener('click', () => guardarIngreso('pendiente'));
 categoryFilter.addEventListener('change', cargarIngresos);
 monthFilter.addEventListener('change', cargarIngresos);
+
+// --- FUNCIONES ---
 
 function generarFolio(userId) {
     const date = new Date();
@@ -71,20 +85,37 @@ function cargarEmpresas() {
 
 async function cargarImpuestosParaSeleccion() {
     const snapshot = await db.collection('impuestos_definiciones').get();
-    impuestosDefinidos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    
     taxesChecklistContainer.innerHTML = '';
-    if (impuestosDefinidos.length === 0) {
+    if (snapshot.empty) {
         taxesChecklistContainer.innerHTML = '<p style="font-size: 0.9em; color: #777;">No hay impuestos definidos.</p>';
         return;
     }
-    impuestosDefinidos.forEach(impuesto => {
+    snapshot.forEach(doc => {
+        const impuesto = { id: doc.id, ...doc.data() };
         const valorDisplay = impuesto.tipo === 'porcentaje' ? `${impuesto.valor}%` : `$${impuesto.valor}`;
         const item = document.createElement('div');
         item.classList.add('tax-item');
-        item.innerHTML = `<input type="checkbox" id="tax-${impuesto.id}" data-impuesto='${JSON.stringify(impuesto)}'><label for="tax-${impuesto.id}">${impuesto.nombre} (${valorDisplay})</label>`;
+        item.innerHTML = `<label><input type="checkbox" data-impuesto='${JSON.stringify(impuesto)}'> ${impuesto.nombre} (${valorDisplay})</label><span class="calculated-amount"></span>`;
         taxesChecklistContainer.appendChild(item);
     });
+}
+
+function recalcularTotales() {
+    const montoBruto = parseFloat(montoInput.value) || 0;
+    let totalImpuestos = 0;
+    document.querySelectorAll('#taxes-checklist input[type="checkbox"]:checked').forEach(checkbox => {
+        const impuesto = JSON.parse(checkbox.dataset.impuesto);
+        const montoCalculado = impuesto.tipo === 'porcentaje' ? (montoBruto * impuesto.valor) / 100 : impuesto.valor;
+        totalImpuestos += montoCalculado;
+        checkbox.closest('.tax-item').querySelector('.calculated-amount').textContent = `-$${montoCalculado.toLocaleString('es-MX')}`;
+    });
+    document.querySelectorAll('#taxes-checklist input[type="checkbox"]:not(:checked)').forEach(checkbox => {
+        checkbox.closest('.tax-item').querySelector('.calculated-amount').textContent = '';
+    });
+    const montoNeto = montoBruto - totalImpuestos;
+    summaryBruto.textContent = `$${montoBruto.toLocaleString('es-MX')}`;
+    summaryImpuestos.textContent = `-$${totalImpuestos.toLocaleString('es-MX')}`;
+    summaryNeto.textContent = `$${montoNeto.toLocaleString('es-MX')}`;
 }
 
 function cargarIngresoEnFormulario(ingreso) {
@@ -94,7 +125,7 @@ function cargarIngresoEnFormulario(ingreso) {
     formCategorySelect.value = ingreso.categoria || '';
     addIncomeForm['income-date'].value = ingreso.fecha || '';
     addIncomeForm['income-company'].value = ingreso.empresa || '';
-    addIncomeForm['payment-method'].value = ingreso.metodoPago || 'Efectivo';
+    formPaymentMethodSelect.value = ingreso.metodoPago || 'Efectivo';
     addIncomeForm['income-comments'].value = ingreso.comentarios || '';
     if (ingreso.datosFactura) {
         isInvoiceCheckbox.checked = true;
@@ -105,10 +136,18 @@ function cargarIngresoEnFormulario(ingreso) {
         isInvoiceCheckbox.checked = false;
         invoiceDetailsContainer.style.display = 'none';
     }
-    document.querySelectorAll('#taxes-checklist input[type="checkbox"]').forEach(checkbox => {
-        const impuestoId = checkbox.id.replace('tax-', '');
-        checkbox.checked = ingreso.impuestos?.some(tax => tax.id === impuestoId) || false;
-    });
+    if (ingreso.impuestos && ingreso.impuestos.length > 0) {
+        addTaxesCheckbox.checked = true;
+        taxesDetailsContainer.style.display = 'block';
+        document.querySelectorAll('#taxes-checklist input[type="checkbox"]').forEach(checkbox => {
+            const impuestoData = JSON.parse(checkbox.dataset.impuesto);
+            checkbox.checked = ingreso.impuestos.some(tax => tax.id === impuestoData.id);
+        });
+    } else {
+        addTaxesCheckbox.checked = false;
+        taxesDetailsContainer.style.display = 'none';
+    }
+    recalcularTotales();
     saveDraftBtn.textContent = 'Actualizar Borrador';
     sendForApprovalBtn.style.display = 'block';
     cancelEditBtn.style.display = 'block';
@@ -121,7 +160,9 @@ function salirModoEdicion() {
     addIncomeForm.reset();
     isInvoiceCheckbox.checked = false;
     invoiceDetailsContainer.style.display = 'none';
-    document.querySelectorAll('#taxes-checklist input[type="checkbox"]').forEach(checkbox => checkbox.checked = false);
+    addTaxesCheckbox.checked = false;
+    taxesDetailsContainer.style.display = 'none';
+    recalcularTotales();
     saveDraftBtn.textContent = 'Guardar Borrador';
     sendForApprovalBtn.style.display = 'block';
     cancelEditBtn.style.display = 'none';
@@ -132,44 +173,39 @@ function salirModoEdicion() {
 async function guardarIngreso(status) {
     const user = auth.currentUser;
     if (!user) return;
-    const description = addIncomeForm['income-description'].value;
-    const amount = addIncomeForm['income-amount'].value;
-    const date = addIncomeForm['income-date'].value;
-    if (!description || !amount || !date) {
-        return alert('Por favor, completa al menos el concepto, monto y fecha.');
+    const montoBruto = parseFloat(addIncomeForm['income-amount'].value) || 0;
+    if (montoBruto <= 0) return alert('Por favor, introduce un monto válido.');
+    
+    let montoNeto = montoBruto;
+    const impuestosSeleccionados = [];
+    if (addTaxesCheckbox.checked) {
+        let totalImpuestos = 0;
+        document.querySelectorAll('#taxes-checklist input[type="checkbox"]:checked').forEach(checkbox => {
+            impuestosSeleccionados.push(JSON.parse(checkbox.dataset.impuesto));
+        });
+        impuestosSeleccionados.forEach(imp => {
+            totalImpuestos += imp.tipo === 'porcentaje' ? (montoBruto * imp.valor) / 100 : imp.valor;
+        });
+        montoNeto = montoBruto - totalImpuestos;
     }
-    const companyName = addIncomeForm['income-company'].value.trim();
-    if (companyName) {
-        const companiesRef = db.collection('empresas');
-        const existingCompany = await companiesRef.where('nombre', '==', companyName).get();
-        if (existingCompany.empty) {
-            await companiesRef.add({ nombre: companyName });
-            cargarEmpresas();
-        }
-    }
+
     const userProfile = await db.collection('usuarios').doc(user.uid).get();
     const userName = userProfile.exists ? userProfile.data().nombre : user.email;
-    const impuestosSeleccionados = [];
-    document.querySelectorAll('#taxes-checklist input[type="checkbox"]:checked').forEach(checkbox => {
-        impuestosSeleccionados.push(JSON.parse(checkbox.dataset.impuesto));
-    });
+
     const incomeData = {
-        descripcion: description,
-        monto: parseFloat(amount),
+        descripcion: addIncomeForm['income-description'].value,
+        monto: montoBruto,
+        totalConImpuestos: montoNeto,
+        impuestos: impuestosSeleccionados,
         categoria: formCategorySelect.value,
-        fecha: date,
-        empresa: companyName,
-        metodoPago: addIncomeForm['payment-method'].value,
+        fecha: addIncomeForm['income-date'].value,
+        empresa: addIncomeForm['income-company'].value.trim(),
+        metodoPago: formPaymentMethodSelect.value,
         comentarios: addIncomeForm['income-comments'].value,
-        nombreCreador: userName,
-        impuestos: impuestosSeleccionados
+        nombreCreador: userName
     };
-    if (isInvoiceCheckbox.checked) {
-        incomeData.datosFactura = {
-            rfc: document.getElementById('invoice-rfc').value,
-            folioFiscal: document.getElementById('invoice-folio').value
-        };
-    }
+    if (isInvoiceCheckbox.checked) { /* ... */ }
+
     if (modoEdicion) {
         db.collection('ingresos').doc(idIngresoEditando).update({ ...incomeData, status: status })
             .then(() => {
@@ -210,11 +246,10 @@ function mostrarIngresos(ingresos) {
                     <span class="expense-details">${ingreso.categoria} - ${fechaFormateada}</span>
                 </div>
                 <div class="status-display status-${ingreso.status}">${ingreso.status}</div>
-                <span class="expense-amount">$${ingreso.monto.toLocaleString('es-MX')}</span>
+                <span class="expense-amount">$${(ingreso.totalConImpuestos || ingreso.monto).toLocaleString('es-MX')}</span>
                 ${botonEditarHTML}
             </div>
-            <div class="item-details" style="display: none;"></div>
-        `;
+            <div class="item-details" style="display: none;"></div>`;
         incomeListContainer.appendChild(itemContainer);
     });
     document.querySelectorAll('.btn-edit').forEach(button => {
@@ -240,12 +275,20 @@ function poblarFiltrosYCategorias() {
     const categorias = ["Cobro de Factura", "Venta de Producto", "Servicios Profesionales", "Otro"];
     let filterOptionsHTML = '<option value="todos">Todas</option>';
     let formOptionsHTML = '<option value="" disabled selected>Selecciona una categoría</option>';
+    let paymentOptionsHTML = '';
+    const metodosPago = ["Transferencia", "Efectivo", "Tarjeta de Crédito"];
+
     categorias.forEach(cat => {
         filterOptionsHTML += `<option value="${cat}">${cat}</option>`;
         formOptionsHTML += `<option value="${cat}">${cat}</option>`;
     });
+    metodosPago.forEach(met => {
+        paymentOptionsHTML += `<option value="${met}">${met}</option>`;
+    });
+
     categoryFilter.innerHTML = filterOptionsHTML;
     formCategorySelect.innerHTML = formOptionsHTML;
+    formPaymentMethodSelect.innerHTML = paymentOptionsHTML;
 }
 
 function cargarIngresos() {
