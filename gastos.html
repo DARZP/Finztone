@@ -16,93 +16,74 @@
     <main class="container">
         <div class="form-card">
             <h2>Registrar un Nuevo Gasto</h2>
+
             <form id="add-expense-form">
-                <div class="input-group">
-                    <label for="expense-description">Concepto del Gasto</label>
-                    <input type="text" id="expense-description" required>
-                </div>
-                <div class="input-group">
-                    <label for="expense-amount">Monto ($)</label>
-                    <input type="number" id="expense-amount" step="0.01" required>
-                </div>
-                <div class="input-group">
-                    <label for="expense-category">Categoría</label>
-                    <select id="expense-category" required>
-                        <option value="" disabled selected>Selecciona una categoría</option>
-                        <option value="Comida">Comida</option>
-                        <option value="Transporte">Transporte</option>
-                        <option value="Oficina">Oficina</option>
-                        <option value="Marketing">Marketing</option>
-                        <option value="Otro">Otro</option>
-                    </select>
-                </div>
-                <div class="input-group">
-                    <label for="expense-date">Fecha</label>
-                    <input type="date" id="expense-date" required>
-                </div>
-                <div class="input-group">
-                    <label for="expense-company">Empresa o Proveedor</label>
-                    <input type="text" id="expense-company" list="company-list" placeholder="Escribe para buscar o agregar...">
-                    <datalist id="company-list"></datalist>
-                </div>
-                <div class="input-group">
-                    <label for="payment-method">Método de Pago</label>
-                    <select id="payment-method">
-                        <option value="Efectivo">Efectivo</option>
-                        <option value="Tarjeta de Crédito">Tarjeta de Crédito</option>
-                        <option value="Tarjeta de Débito">Tarjeta de Débito</option>
-                        <option value="Transferencia">Transferencia</option>
-                    </select>
-                </div>
-                <div class="input-group">
-                    <label for="account-select">Cuenta de Origen</label>
-                    <select id="account-select" required>
-                        <option value="" disabled selected>Selecciona una cuenta</option>
-                    </select>
-                </div>
-                <div class="input-group">
-                    <label for="expense-comments">Comentarios (Opcional)</label>
-                    <textarea id="expense-comments" rows="3"></textarea>
-                </div>
-                <div class="input-group-checkbox">
-                    <input type="checkbox" id="is-invoice">
-                    <label for="is-invoice">Anexar datos de facturación</label>
-                </div>
-                <div id="invoice-details" style="display: none;">
-                    <div class="input-group">
-                        <label for="invoice-rfc">RFC</label>
-                        <input type="text" id="invoice-rfc">
-                    </div>
-                    <div class="input-group">
-                        <label for="invoice-folio">Folio Fiscal (UUID)</label>
-                        <input type="text" id="invoice-folio">
-                    </div>
-                </div>
+    <div class="input-group">
+        <label for="expense-description">Concepto del Gasto</label>
+        <input type="text" id="expense-description" required>
+    </div>
+    <div class="input-group">
+        <label for="expense-amount">Monto ($)</label>
+        <input type="number" id="expense-amount" step="0.01" required>
+    </div>
 
-                <div class="deductions-section">
-                    <div class="input-group-checkbox">   
-                        <input type="checkbox" id="add-taxes-checkbox">
-                        <label for="add-taxes-checkbox">Añadir Impuestos/Retenciones</label>
-                    </div>
-                    <div id="taxes-details-container" style="display: none;"> 
-                        <h3>Desglose de Impuestos</h3> 
-                        <div id="taxes-checklist">     
-                        </div>
-                        <div class="input-group-checkbox total-type-selector">     
-                            <label>El monto principal es:</label>      
-                            <input type="radio" id="total-bruto" name="total-type" value="bruto" checked> 
-                            <label for="total-bruto">Bruto (los impuestos se suman)</label>
-                            <input type="radio" id="total-neto" name="total-type" value="neto">
-                            <label for="total-neto">Neto (los impuestos ya están incluidos)</label>
-                        </div>
-                    </div>
-                </div>
+    <div class="deductions-section">
+        <div class="input-group-checkbox">
+            <input type="checkbox" id="add-taxes-checkbox">
+            <label for="add-taxes-checkbox">Desglosar Monto</label>
+        </div>
+        <div id="taxes-details-container" style="display: none;">
+            <div id="taxes-checklist"></div>
+            <div class="input-group-checkbox total-type-selector">
+                <label>Descontar de la cuenta el monto:</label>
+                <input type="radio" id="total-bruto" name="total-type" value="bruto" checked>
+                <label for="total-bruto">Bruto (sin impuestos)</label>
+                <input type="radio" id="total-neto" name="total-type" value="neto">
+                <label for="total-neto">Neto (con impuestos)</label>
+            </div>
+        </div>
+    </div>
+    
+    <div class="input-group">
+        <label for="expense-category">Categoría</label>
+        <select id="expense-category" required></select>
+    </div>
+    <div class="input-group">
+        <label for="expense-date">Fecha</label>
+        <input type="date" id="expense-date" required>
+    </div>
+    <div class="input-group">
+        <label for="expense-company">Empresa o Proveedor</label>
+        <input type="text" id="expense-company" list="company-list">
+        <datalist id="company-list"></datalist>
+    </div>
+    <div class="input-group">
+        <label for="payment-method">Método de Pago</label>
+        <select id="payment-method"></select>
+    </div>
+    <div class="input-group">
+        <label for="account-select">Cuenta de Origen</label>
+        <select id="account-select" required></select>
+    </div>
+    <div class="input-group">
+        <label for="expense-comments">Comentarios</label>
+        <textarea id="expense-comments" rows="3"></textarea>
+    </div>
+    <div class="input-group-checkbox">
+        <input type="checkbox" id="is-invoice">
+        <label for="is-invoice">Anexar datos de facturación</label>
+    </div>
+    <div id="invoice-details" style="display: none;">
+        </div>
+    
+    <div class="form-actions">
+        <button type="button" id="save-draft-btn" class="btn btn-secondary">Guardar Borrador</button>
+        <button type="button" id="add-approved-btn" class="btn btn-primary">Agregar Gasto Aprobado</button>
+    </div>
+</form>
 
-                <div class="form-actions">
-                    <button type="button" id="save-draft-btn" class="btn btn-secondary">Guardar Borrador</button>
-                    <button type="button" id="add-approved-btn" class="btn btn-primary">Agregar Gasto Aprobado</button>
-                </div>
-            </form>
+
+            
         </div>
 
         <div class="list-card">
