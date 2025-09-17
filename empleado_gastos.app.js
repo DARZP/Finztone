@@ -34,7 +34,6 @@ const summaryNeto = document.getElementById('summary-neto');
 // --- VARIABLES DE ESTADO ---
 let modoEdicion = false;
 let idGastoEditando = null;
-let impuestosDefinidos = [];
 
 // --- LÓGICA DE LA PÁGINA ---
 auth.onAuthStateChanged((user) => {
@@ -82,13 +81,13 @@ function cargarEmpresas() {
 
 async function cargarImpuestosParaSeleccion() {
     const snapshot = await db.collection('impuestos_definiciones').get();
-    impuestosDefinidos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     taxesChecklistContainer.innerHTML = '';
-    if (impuestosDefinidos.length === 0) {
+    if (snapshot.empty) {
         taxesChecklistContainer.innerHTML = '<p style="font-size: 0.9em; color: #777;">No hay impuestos definidos.</p>';
         return;
     }
-    impuestosDefinidos.forEach(impuesto => {
+    snapshot.forEach(doc => {
+        const impuesto = { id: doc.id, ...doc.data() };
         const valorDisplay = impuesto.tipo === 'porcentaje' ? `${impuesto.valor}%` : `$${impuesto.valor}`;
         const item = document.createElement('div');
         item.classList.add('tax-item');
@@ -253,7 +252,7 @@ function mostrarGastos(gastos) {
                     <span class="expense-details">${gasto.categoria} - ${fechaFormateada}</span>
                 </div>
                 <div class="status-display status-${gasto.status}">${gasto.status}</div>
-                <span class="expense-amount">$${gasto.monto.toLocaleString('es-MX')}</span>
+                <span class="expense-amount">$${(gasto.totalConImpuestos || gasto.monto).toLocaleString('es-MX')}</span>
                 ${botonEditarHTML}
             </div>
             <div class="item-details" style="display: none;"></div>
