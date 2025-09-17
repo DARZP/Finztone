@@ -87,22 +87,49 @@ async function aprobarDocumento(coleccion, docId, tipo) {
             const accountDoc = await transaction.get(accountRef);
             if (!doc.exists || !accountDoc.exists) throw "El registro o la cuenta ya no existen.";
 
-            const monto = doc.data().monto;
+            const data = doc.data();
+            const montoPrincipal = data.monto;
+            const montoTotal = data.totalConImpuestos || data.monto;
+            const impuestos = data.impuestos || [];
             const saldoActual = accountDoc.data().saldoActual;
-            const nuevoSaldo = tipo === 'ingreso' ? saldoActual + monto : saldoActual - monto;
             
+            // Para el admin, al aprobar, él decide si el monto a afectar es bruto o neto
+            // Esta lógica la añadiremos después. Por ahora, afectamos el total.
+            const nuevoSaldo = tipo === 'ingreso' ? saldoActual + montoTotal : saldoActual - montoTotal;
+
+            if (nuevoSaldo < 0 && tipo === 'gasto') throw "Saldo insuficiente en la cuenta seleccionada.";
+
+            // 1. Actualizamos el documento (gasto/ingreso)
             transaction.update(docRef, { status: 'aprobado', cuentaId: cuentaId, cuentaNombre: cuentaNombre });
+            
+            // 2. Actualizamos el saldo de la cuenta
             transaction.update(accountRef, { saldoActual: nuevoSaldo });
+
+            // 3. Creamos los registros de impuestos
+            impuestos.forEach(imp => {
+                const montoImpuesto = imp.tipo === 'porcentaje' ? (montoPrincipal * imp.valor) / 100 : imp.valor;
+                const taxMovRef = db.collection('movimientos_impuestos').doc();
+                const estadoImpuesto = tipo === 'gasto' ? 'pagado' : 'pendiente de pago';
+                
+                transaction.set(taxMovRef, {
+                    origen: `${tipo.charAt(0).toUpperCase() + tipo.slice(1)} - ${data.descripcion}`,
+                    tipoImpuesto: imp.nombre,
+                    monto: montoImpuesto,
+                    fecha: new Date(),
+                    status: estadoImpuesto
+                });
+            });
         });
-        alert('¡Solicitud aprobada y saldo de cuenta actualizado!');
+        alert('¡Solicitud aprobada, saldo actualizado e impuestos registrados!');
         cargarCuentas();
     } catch (error) {
         console.error("Error en la transacción de aprobación: ", error);
-        alert("Ocurrió un error al aprobar. La operación fue cancelada.");
+        alert("Ocurrió un error al aprobar: " + error);
     }
 }
 
-// Lógica de RECHAZO (no necesita transacción)
+
+// Lógica de RECHAZO
 function rechazarDocumento(coleccion, id) {
     const motivo = prompt("Introduce el motivo del rechazo:");
     if (motivo) {
@@ -131,6 +158,7 @@ function cargarGastosPendientes() {
     if (gastosCategoryFilter.value && gastosCategoryFilter.value !== 'todos') {
         query = query.where('categoria', '==', gastosCategoryFilter.value);
     }
+    // El filtro de usuario se puede añadir aquí si se guarda el ID de usuario en los gastos
     query = query.orderBy('fechaDeCreacion', 'asc');
     query.onSnapshot(snapshot => {
         const pendientes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -169,7 +197,7 @@ function mostrarGastosPendientes(gastos) {
         itemElement.innerHTML = `
             <div class="item-summary">
                 <div class="item-details">
-                    <div><span class="description">${gasto.descripcion}</span><span class="amount">$${gasto.monto.toLocaleString('es-MX')}</span></div>
+                    <div><span class="description">${gasto.descripcion}</span><span class="amount">$${(gasto.totalConImpuestos || gasto.monto).toLocaleString('es-MX')}</span></div>
                     <div class="meta">Enviado por: ${gasto.nombreCreador || gasto.emailCreador} | Cat: ${gasto.categoria}</div>
                 </div>
                 <div class="item-actions">
@@ -188,8 +216,7 @@ function mostrarGastosPendientes(gastos) {
     });
     pendingGastosContainer.querySelectorAll('.btn-approve').forEach(btn => {
         const item = btn.closest('.pending-item');
-        const gasto = gastos.find(g => g.id === item.dataset.id);
-        btn.addEventListener('click', () => aprobarDocumento('gastos', item.dataset.id, 'gasto', gasto.monto));
+        btn.addEventListener('click', () => aprobarDocumento('gastos', item.dataset.id, 'gasto'));
     });
     pendingGastosContainer.querySelectorAll('.btn-reject').forEach(btn => {
         const item = btn.closest('.pending-item');
@@ -216,7 +243,7 @@ function mostrarIngresosPendientes(ingresos) {
         itemElement.innerHTML = `
             <div class="item-summary">
                 <div class="item-details">
-                    <div><span class="description">${ingreso.descripcion}</span><span class="amount">$${ingreso.monto.toLocaleString('es-MX')}</span></div>
+                    <div><span class="description">${ingreso.descripcion}</span><span class="amount">$${(ingreso.totalConImpuestos || ingreso.monto).toLocaleString('es-MX')}</span></div>
                     <div class="meta">Enviado por: ${ingreso.nombreCreador || ingreso.emailCreador} | Cat: ${ingreso.categoria}</div>
                 </div>
                 <div class="item-actions">
@@ -235,8 +262,7 @@ function mostrarIngresosPendientes(ingresos) {
     });
     pendingIngresosContainer.querySelectorAll('.btn-approve').forEach(btn => {
         const item = btn.closest('.pending-item');
-        const ingreso = ingresos.find(i => i.id === item.dataset.id);
-        btn.addEventListener('click', () => aprobarDocumento('ingresos', item.dataset.id, 'ingreso', ingreso.monto));
+        btn.addEventListener('click', () => aprobarDocumento('ingresos', item.dataset.id, 'ingreso'));
     });
     pendingIngresosContainer.querySelectorAll('.btn-reject').forEach(btn => {
         const item = btn.closest('.pending-item');
@@ -248,7 +274,7 @@ function setupClickListeners() {
     const listContainers = [pendingGastosContainer, pendingIngresosContainer];
     listContainers.forEach(container => {
         container.addEventListener('click', (e) => {
-            if (e.target.classList.contains('btn')) return;
+            if (e.target.classList.contains('btn') || e.target.tagName === 'SELECT') return;
             const item = e.target.closest('.pending-item');
             if (item) {
                 const details = item.querySelector('.item-details-view');
