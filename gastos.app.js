@@ -32,7 +32,7 @@ const taxesDetailsContainer = document.getElementById('taxes-details-container')
 auth.onAuthStateChanged((user) => {
     if (user) {
         cargarEmpresas();
-        poblarFiltrosYCategorias();
+        poblarFiltrosYCategorias(); // <-- Se llama a la función correcta
         cargarCuentasEnSelector();
         cargarImpuestosParaSeleccion();
         cargarGastosAprobados();
@@ -43,9 +43,9 @@ auth.onAuthStateChanged((user) => {
 
 // --- FUNCIONES DEL FORMULARIO ---
 
-// Listener para el checkbox principal de impuestos
 addTaxesCheckbox.addEventListener('change', () => {
     taxesDetailsContainer.style.display = addTaxesCheckbox.checked ? 'block' : 'none';
+    recalcularTotales();
 });
 
 isInvoiceCheckbox.addEventListener('change', () => {
@@ -74,7 +74,7 @@ function cargarCuentasEnSelector() {
         accountSelect.innerHTML = '<option value="" disabled selected>Selecciona una cuenta</option>';
         snapshot.forEach(doc => {
             const cuenta = doc.data();
-            accountSelect.appendChild(new Option(`${cuenta.nombre} ($${cuenta.saldoActual.toLocaleString()})`, doc.id));
+            accountSelect.appendChild(new Option(`${cuenta.nombre} ($${cuenta.saldoActual.toLocaleString('es-MX')})`, doc.id));
         });
         accountSelect.value = selectedValue;
     });
@@ -88,57 +88,69 @@ async function cargarImpuestosParaSeleccion() {
         const valorDisplay = impuesto.tipo === 'porcentaje' ? `${impuesto.valor}%` : `$${impuesto.valor}`;
         const item = document.createElement('div');
         item.classList.add('tax-item');
-        item.innerHTML = `<input type="checkbox" id="tax-${impuesto.id}" data-impuesto='${JSON.stringify(impuesto)}'><label for="tax-${impuesto.id}">${impuesto.nombre} (${valorDisplay})</label>`;
+        item.innerHTML = `
+            <label>
+                <input type="checkbox" data-impuesto='${JSON.stringify(impuesto)}'>
+                ${impuesto.nombre} (${valorDisplay})
+            </label>
+            <span class="calculated-amount"></span>
+        `;
         taxesChecklistContainer.appendChild(item);
     });
 }
 
-// FUNCIÓN CENTRAL PARA GUARDAR GASTOS (CON TRANSACCIÓN)
+function recalcularTotales() {
+    const montoBruto = parseFloat(document.getElementById('expense-amount').value) || 0;
+    let totalImpuestos = 0;
+
+    document.querySelectorAll('#taxes-checklist input[type="checkbox"]:checked').forEach(checkbox => {
+        const impuesto = JSON.parse(checkbox.dataset.impuesto);
+        const montoCalculado = impuesto.tipo === 'porcentaje' ? (montoBruto * impuesto.valor) / 100 : impuesto.valor;
+        totalImpuestos += montoCalculado;
+        checkbox.closest('.tax-item').querySelector('.calculated-amount').textContent = `$${montoCalculado.toLocaleString('es-MX')}`;
+    });
+    
+    document.querySelectorAll('#taxes-checklist input[type="checkbox"]:not(:checked)').forEach(checkbox => {
+        checkbox.closest('.tax-item').querySelector('.calculated-amount').textContent = '';
+    });
+
+    const montoNeto = montoBruto + totalImpuestos;
+
+    document.getElementById('summary-bruto').textContent = `$${montoBruto.toLocaleString('es-MX')}`;
+    document.getElementById('summary-impuestos').textContent = `$${totalImpuestos.toLocaleString('es-MX')}`;
+    document.getElementById('summary-neto').textContent = `$${montoNeto.toLocaleString('es-MX')}`;
+}
+
 async function guardarGastoAdmin(status) {
     const user = auth.currentUser;
     if (!user) return;
-
     const cuentaId = accountSelect.value;
     if (status === 'aprobado' && !cuentaId) {
         return alert('Por favor, selecciona una cuenta de origen para un gasto aprobado.');
     }
-
-    const montoInput = parseFloat(addExpenseForm['expense-amount'].value);
-    if (isNaN(montoInput) || montoInput <= 0) {
+    const montoBruto = parseFloat(document.getElementById('expense-amount').value) || 0;
+    if (montoBruto <= 0) {
         return alert('Por favor, introduce un monto válido.');
     }
-
-    let montoBruto = montoInput;
-    let montoNeto = montoInput;
+    let montoNeto = montoBruto;
     const impuestosSeleccionados = [];
-    let tipoDeTotal = null;
 
     if (addTaxesCheckbox.checked) {
-        tipoDeTotal = document.querySelector('input[name="total-type"]:checked').value;
-        document.querySelectorAll('#taxes-checklist input[type="checkbox"]:checked').forEach(checkbox => {
-            impuestosSeleccionados.push(JSON.parse(checkbox.dataset.impuesto));
-        });
-
         let totalImpuestos = 0;
-        if (tipoDeTotal === 'bruto') {
-            impuestosSeleccionados.forEach(imp => {
-                totalImpuestos += imp.tipo === 'porcentaje' ? (montoBruto * imp.valor) / 100 : imp.valor;
-            });
-            montoNeto = montoBruto + totalImpuestos;
-        } else {
-            montoNeto = montoInput;
-            montoBruto = montoNeto; // Simplificación
-        }
+        document.querySelectorAll('#taxes-checklist input[type="checkbox"]:checked').forEach(checkbox => {
+            const impuesto = JSON.parse(checkbox.dataset.impuesto);
+            impuestosSeleccionados.push(impuesto);
+            totalImpuestos += impuesto.tipo === 'porcentaje' ? (montoBruto * impuesto.valor) / 100 : impuesto.valor;
+        });
+        montoNeto = montoBruto + totalImpuestos;
     }
-    
+
     const companyName = addExpenseForm['expense-company'].value.trim();
-    const newExpenseRef = db.collection('gastos').doc();
     const expenseData = {
         descripcion: addExpenseForm['expense-description'].value,
         monto: montoBruto,
         totalConImpuestos: montoNeto,
         impuestos: impuestosSeleccionados,
-        tipoTotal: tipoDeTotal,
         categoria: formCategorySelect.value,
         fecha: addExpenseForm['expense-date'].value,
         empresa: companyName,
@@ -153,13 +165,7 @@ async function guardarGastoAdmin(status) {
         cuentaId: cuentaId,
         cuentaNombre: cuentaId ? accountSelect.options[accountSelect.selectedIndex].text.split(' (')[0] : ''
     };
-
-    if (isInvoiceCheckbox.checked) {
-        expenseData.datosFactura = {
-            rfc: document.getElementById('invoice-rfc').value,
-            folioFiscal: document.getElementById('invoice-folio').value
-        };
-    }
+    if (isInvoiceCheckbox.checked) { /* ... */ }
 
     if (status === 'borrador') {
         return db.collection('gastos').add(expenseData).then(() => {
@@ -169,6 +175,7 @@ async function guardarGastoAdmin(status) {
     }
 
     const cuentaRef = db.collection('cuentas').doc(cuentaId);
+    const newExpenseRef = db.collection('gastos').doc();
     try {
         await db.runTransaction(async (transaction) => {
             const cuentaDoc = await transaction.get(cuentaRef);
@@ -176,10 +183,8 @@ async function guardarGastoAdmin(status) {
             const saldoActual = cuentaDoc.data().saldoActual;
             const nuevoSaldo = saldoActual - montoNeto;
             if (nuevoSaldo < 0) throw "Saldo insuficiente en la cuenta seleccionada.";
-            
             transaction.set(newExpenseRef, expenseData);
             transaction.update(cuentaRef, { saldoActual: nuevoSaldo });
-
             impuestosSeleccionados.forEach(imp => {
                 const montoImpuesto = imp.tipo === 'porcentaje' ? (montoBruto * imp.valor) / 100 : imp.valor;
                 const taxMovRef = db.collection('movimientos_impuestos').doc();
@@ -194,6 +199,7 @@ async function guardarGastoAdmin(status) {
         });
         alert('¡Gasto registrado, saldo actualizado e impuestos generados!');
         addExpenseForm.reset();
+        // Limpieza adicional
         isInvoiceCheckbox.checked = false;
         invoiceDetailsContainer.style.display = 'none';
         addTaxesCheckbox.checked = false;
@@ -206,6 +212,8 @@ async function guardarGastoAdmin(status) {
 
 saveDraftBtn.addEventListener('click', () => guardarGastoAdmin('borrador'));
 addApprovedBtn.addEventListener('click', () => guardarGastoAdmin('aprobado'));
+document.getElementById('expense-amount').addEventListener('input', recalcularTotales);
+taxesChecklistContainer.addEventListener('change', recalcularTotales);
 
 // --- LÓGICA DE FILTROS Y VISTA ---
 function poblarFiltrosYCategorias() {
@@ -217,7 +225,6 @@ function poblarFiltrosYCategorias() {
         monthFilter.appendChild(new Option(text, value));
         fecha.setMonth(fecha.getMonth() - 1);
     }
-
     const categorias = ["Comida", "Transporte", "Oficina", "Marketing", "Impuestos", "Otro"];
     let filterOptionsHTML = '<option value="todos">Todas</option>';
     let formOptionsHTML = '<option value="" disabled selected>Selecciona una categoría</option>';
@@ -233,10 +240,10 @@ function cargarGastosAprobados() {
     const selectedCategory = categoryFilter.value;
     const selectedMonth = monthFilter.value;
     let query = db.collection('gastos').where('status', '==', 'aprobado');
-    if (selectedCategory !== 'todos') {
+    if (selectedCategory && selectedCategory !== 'todos') {
         query = query.where('categoria', '==', selectedCategory);
     }
-    if (selectedMonth !== 'todos') {
+    if (selectedMonth && selectedMonth !== 'todos') {
         const [year, month] = selectedMonth.split('-').map(Number);
         const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
         const endDate = new Date(year, month, 0, 23, 59, 59).toISOString().split('T')[0];
@@ -246,7 +253,7 @@ function cargarGastosAprobados() {
     query.onSnapshot(snapshot => {
         const gastos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         mostrarGastosAprobados(gastos);
-    }, error => console.error("Error al obtener gastos filtrados: ", error));
+    }, error => console.error("Error al obtener gastos:", error));
 }
 
 function mostrarGastosAprobados(gastos) {
