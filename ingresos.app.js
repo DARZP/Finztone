@@ -122,6 +122,7 @@ function recalcularTotales() {
     summaryNeto.textContent = `$${montoNeto.toLocaleString('es-MX')}`;
 }
 
+// En ingresos.app.js, reemplaza esta función
 async function guardarIngresoAdmin(status) {
     const user = auth.currentUser;
     if (!user) return;
@@ -129,49 +130,36 @@ async function guardarIngresoAdmin(status) {
     if (status === 'aprobado' && !cuentaId) {
         return alert('Por favor, selecciona una cuenta de destino.');
     }
-    const montoBruto = parseFloat(montoInput.value) || 0;
-    if (montoBruto <= 0) {
+    const montoInput = parseFloat(addIncomeForm['income-amount'].value);
+    if (isNaN(montoInput) || montoInput <= 0) {
         return alert('Por favor, introduce un monto válido.');
     }
 
-    let montoNeto = montoBruto;
+    let montoBruto = montoInput;
+    let montoNeto = montoInput;
     const impuestosSeleccionados = [];
+    let tipoDeTotal = null;
+
     if (addTaxesCheckbox.checked) {
-        let totalImpuestos = 0;
+        tipoDeTotal = document.querySelector('input[name="total-type"]:checked').value;
         document.querySelectorAll('#taxes-checklist input[type="checkbox"]:checked').forEach(checkbox => {
-            const impuesto = JSON.parse(checkbox.dataset.impuesto);
-            impuestosSeleccionados.push(impuesto);
-            totalImpuestos += impuesto.tipo === 'porcentaje' ? (montoBruto * impuesto.valor) / 100 : impuesto.valor;
+            impuestosSeleccionados.push(JSON.parse(checkbox.dataset.impuesto));
         });
-        montoNeto = montoBruto - totalImpuestos;
+        let totalImpuestos = 0;
+        if (tipoDeTotal === 'bruto') {
+            montoBruto = montoInput;
+            impuestosSeleccionados.forEach(imp => {
+                totalImpuestos += imp.tipo === 'porcentaje' ? (montoBruto * imp.valor) / 100 : imp.valor;
+            });
+            montoNeto = montoBruto - totalImpuestos;
+        } else {
+            montoNeto = montoInput;
+        }
     }
     
     const companyName = addIncomeForm['income-company'].value.trim();
-    const incomeData = {
-        descripcion: addIncomeForm['income-description'].value,
-        monto: montoBruto,
-        totalConImpuestos: montoNeto,
-        impuestos: impuestosSeleccionados,
-        categoria: formCategorySelect.value,
-        fecha: addIncomeForm['income-date'].value,
-        empresa: companyName,
-        metodoPago: addIncomeForm['payment-method'].value,
-        comentarios: addIncomeForm['income-comments'].value,
-        folio: generarFolio(user.uid),
-        creadoPor: user.uid,
-        emailCreador: user.email,
-        nombreCreador: "Administrador",
-        fechaDeCreacion: new Date(),
-        status: status,
-        cuentaId: cuentaId,
-        cuentaNombre: cuentaId ? accountSelect.options[accountSelect.selectedIndex].text.split(' (')[0] : ''
-    };
-    if (isInvoiceCheckbox.checked) {
-        incomeData.datosFactura = {
-            rfc: document.getElementById('invoice-rfc').value,
-            folioFiscal: document.getElementById('invoice-folio').value
-        };
-    }
+    const newIncomeRef = db.collection('ingresos').doc();
+    const incomeData = { /* ... (Tus datos de ingreso se quedan igual) ... */ };
 
     if (status === 'borrador') {
         return db.collection('ingresos').add(incomeData).then(() => {
@@ -181,38 +169,39 @@ async function guardarIngresoAdmin(status) {
     }
 
     const cuentaRef = db.collection('cuentas').doc(cuentaId);
-    const newIncomeRef = db.collection('ingresos').doc();
     try {
         await db.runTransaction(async (transaction) => {
             const cuentaDoc = await transaction.get(cuentaRef);
             if (!cuentaDoc.exists) throw "La cuenta no existe.";
             const saldoActual = cuentaDoc.data().saldoActual;
             const nuevoSaldo = saldoActual + montoNeto;
+            
             transaction.set(newIncomeRef, incomeData);
             transaction.update(cuentaRef, { saldoActual: nuevoSaldo });
+
             impuestosSeleccionados.forEach(imp => {
                 const montoImpuesto = imp.tipo === 'porcentaje' ? (montoBruto * imp.valor) / 100 : imp.valor;
                 const taxMovRef = db.collection('movimientos_impuestos').doc();
+                
+                // --- ¡AQUÍ ESTÁ LA CORRECCIÓN! ---
                 transaction.set(taxMovRef, {
                     origen: `Ingreso Admin - ${incomeData.descripcion}`,
                     tipoImpuesto: imp.nombre,
                     monto: montoImpuesto,
                     fecha: new Date(),
-                    status: 'pendiente de pago'
+                    status: 'pagado (retenido)' // Cambiado de 'pendiente de pago'
                 });
             });
         });
         alert('¡Ingreso registrado, saldo actualizado e impuestos generados!');
         addIncomeForm.reset();
-        isInvoiceCheckbox.checked = false;
-        invoiceDetailsContainer.style.display = 'none';
-        addTaxesCheckbox.checked = false;
-        taxesDetailsContainer.style.display = 'none';
+        // ... (resto de la limpieza del formulario)
     } catch (error) {
         console.error("Error en la transacción: ", error);
         alert("Error: " + error);
     }
 }
+
 
 saveDraftBtn.addEventListener('click', () => guardarIngresoAdmin('borrador'));
 addApprovedBtn.addEventListener('click', () => guardarIngresoAdmin('aprobado'));
