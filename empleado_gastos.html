@@ -12,7 +12,6 @@
         <a href="empleado_dashboard.html" class="back-button">← Volver</a>
         <h1 class="logo">FINZTONE</h1>
     </header>
-
     <main class="container">
         <div class="form-card">
             <h2>Registrar un Nuevo Gasto</h2>
@@ -24,6 +23,21 @@
                 <div class="input-group">
                     <label for="expense-amount">Monto ($)</label>
                     <input type="number" id="expense-amount" step="0.01" required>
+                </div>
+                <div class="deductions-section">
+                    <div class="input-group-checkbox">
+                        <input type="checkbox" id="add-taxes-checkbox">
+                        <label for="add-taxes-checkbox">Desglosar Monto (con Impuestos)</label>
+                    </div>
+                    <div id="taxes-details-container" style="display: none;">
+                        <div id="taxes-checklist"></div>
+                        <hr>
+                        <div class="totals-summary">
+                            <div class="summary-line"><span>Monto Base:</span><span id="summary-bruto">$0.00</span></div>
+                            <div class="summary-line"><span>Total Impuestos:</span><span id="summary-impuestos">$0.00</span></div>
+                            <div class="summary-line net-total"><span>Monto Total:</span><span id="summary-neto">$0.00</span></div>
+                        </div>
+                    </div>
                 </div>
                 <div class="input-group">
                     <label for="expense-category">Categoría</label>
@@ -40,13 +54,10 @@
                 </div>
                 <div class="input-group">
                     <label for="payment-method">Método de Pago</label>
-                    <select id="payment-method">
-                        <option value="Efectivo">Efectivo</option>
-                        <option value="Transferencia">Transferencia</option>
-                    </select>
+                    <select id="payment-method"></select>
                 </div>
                 <div class="input-group">
-                    <label for="expense-comments">Comentarios (Opcional)</label>
+                    <label for="expense-comments">Comentarios</label>
                     <textarea id="expense-comments" rows="3"></textarea>
                 </div>
                 <div class="input-group-checkbox">
@@ -57,10 +68,6 @@
                     <div class="input-group"><label for="invoice-rfc">RFC</label><input type="text" id="invoice-rfc"></div>
                     <div class="input-group"><label for="invoice-folio">Folio Fiscal</label><input type="text" id="invoice-folio"></div>
                 </div>
-                <div class="deductions-section">
-                    <h3>Desglose de Impuestos</h3>
-                    <div id="taxes-checklist"></div>
-                </div>
                 <div class="form-actions">
                     <button type="button" id="save-draft-btn" class="btn btn-secondary">Guardar Borrador</button>
                     <button type="button" id="send-for-approval-btn" class="btn btn-primary">Enviar para Aprobación</button>
@@ -69,23 +76,8 @@
             </form>
         </div>
         <div class="list-card">
-            <div class="card-header-filters">
-                <h2>Mi Historial de Gastos</h2>
-                <div class="filters-container">
-                    <div class="filter-group">
-                        <label>Categoría</label>
-                        <select id="category-filter"></select>
-                    </div>
-                    <div class="filter-group">
-                        <label>Mes</label>
-                        <select id="month-filter"></select>
-                    </div>
-                </div>
             </div>
-            <div id="expense-list"></div>
-        </div>
     </main>
-    
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
