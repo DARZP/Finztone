@@ -8,156 +8,147 @@ const firebaseConfig = {
   appId: "1:95145879307:web:e10017a75edf32f1fde40e",
   measurementId: "G-T8KMJXNSTP"
 };
+
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// --- ELEMENTOS DEL DOM ---
-const generateBtn = document.getElementById('generate-spreadsheet-btn');
-const userFilter = document.getElementById('user-filter');
-const accountFilter = document.getElementById('account-filter');
+// --- LÓGICA DE LA PÁGINA DE PERFIL ---
 
-// --- LÓGICA DE LA PÁGINA ---
+const urlParams = new URLSearchParams(window.location.search);
+const userId = urlParams.get('id');
 
-auth.onAuthStateChanged(user => {
+// Elementos del DOM
+const profileName = document.getElementById('profile-name');
+const profileEmail = document.getElementById('profile-email');
+const profilePosition = document.getElementById('profile-position');
+const profileSalary = document.getElementById('profile-salary');
+const profilePhone = document.getElementById('profile-phone');
+const profileClabe = document.getElementById('profile-clabe');
+const profileRfc = document.getElementById('profile-rfc');
+const activityFeed = document.getElementById('activity-feed');
+const editProfileBtn = document.getElementById('edit-profile-btn');
+const profileDeductionsList = document.getElementById('profile-deductions-list');
+const profileNetSalary = document.getElementById('profile-net-salary');
+
+let currentUserData = null; // Guardaremos los datos del usuario aquí
+
+if (userId) {
+    editProfileBtn.href = `editar_perfil.html?id=${userId}`;
+}
+
+// Carga los datos del perfil y LUEGO la actividad
+async function cargarDatosPerfil() {
+    if (!userId) {
+        profileName.textContent = "ID de usuario no proporcionado.";
+        return;
+    }
+    
+    try {
+        const userDoc = await db.collection('usuarios').doc(userId).get();
+        if (userDoc.exists) {
+            currentUserData = userDoc.data();
+            
+            profileName.textContent = currentUserData.nombre;
+            profileEmail.textContent = currentUserData.email;
+            profilePosition.textContent = currentUserData.cargo;
+            profileSalary.textContent = `$${currentUserData.sueldoBruto.toLocaleString('es-MX')}`;
+            profilePhone.textContent = currentUserData.telefono || 'No registrado';
+            profileClabe.textContent = currentUserData.clabe || 'No registrada';
+            profileRfc.textContent = currentUserData.rfc || 'No registrado';
+
+            const sueldoBruto = currentUserData.sueldoBruto || 0;
+            const deducciones = currentUserData.deducciones || [];
+            let totalDeducciones = 0;
+            let deduccionesHTML = '';
+
+            deducciones.forEach(ded => {
+                let montoDeducido = ded.tipo === 'porcentaje' ? (sueldoBruto * ded.valor) / 100 : ded.valor;
+                totalDeducciones += montoDeducido;
+                deduccionesHTML += `<div class="deduction-line"><span class="name">(-) ${ded.nombre}</span><span class="amount">-$${montoDeducido.toLocaleString('es-MX')}</span></div>`;
+            });
+
+            const sueldoNeto = sueldoBruto - totalDeducciones;
+            profileDeductionsList.innerHTML = deduccionesHTML;
+            profileNetSalary.textContent = `$${sueldoNeto.toLocaleString('es-MX')}`;
+
+            // Una vez que tenemos los datos del perfil (sobre todo el email), cargamos la actividad
+            cargarActividad(currentUserData.email);
+
+        } else {
+            profileName.textContent = "Usuario no encontrado";
+        }
+    } catch (error) {
+        console.error("Error obteniendo datos del perfil:", error);
+    }
+}
+
+
+// REESCRITO: Función para cargar TODA la actividad del empleado
+async function cargarActividad(userEmail) {
+    if (!userId || !userEmail) return;
+
+    // 1. Creamos las tres consultas
+    const gastosPromise = db.collection('gastos').where('emailCreador', '==', userEmail).get();
+    const ingresosPromise = db.collection('ingresos').where('emailCreador', '==', userEmail).get();
+    const nominaPromise = db.collection('pagos_nomina').where('userId', '==', userId).get();
+
+    try {
+        const [gastosSnapshot, ingresosSnapshot, nominaSnapshot] = await Promise.all([
+            gastosPromise, ingresosPromise, nominaPromise
+        ]);
+
+        let todosLosMovimientos = [];
+
+        // 2. Añadimos cada tipo de movimiento a un solo array
+        gastosSnapshot.forEach(doc => todosLosMovimientos.push({ tipo: 'Gasto', ...doc.data() }));
+        ingresosSnapshot.forEach(doc => todosLosMovimientos.push({ tipo: 'Ingreso', ...doc.data() }));
+        nominaSnapshot.forEach(doc => todosLosMovimientos.push({ tipo: 'Nómina', ...doc.data() }));
+
+        // 3. Ordenamos el array combinado por la fecha más reciente
+        todosLosMovimientos.sort((a, b) => {
+            const dateA = a.fechaDePago?.toDate() || a.fechaDeCreacion?.toDate() || 0;
+            const dateB = b.fechaDePago?.toDate() || b.fechaDeCreacion?.toDate() || 0;
+            return dateB - dateA;
+        });
+
+        // 4. Mostramos los resultados
+        activityFeed.innerHTML = '';
+        if (todosLosMovimientos.length === 0) {
+            activityFeed.innerHTML = '<p>Este empleado no tiene actividad reciente.</p>';
+            return;
+        }
+
+        todosLosMovimientos.slice(0, 15).forEach(mov => { // Mostramos hasta 15 movimientos
+            const fecha = (mov.fechaDePago || mov.fechaDeCreacion).toDate().toLocaleDateString('es-ES');
+            const monto = mov.montoNeto || mov.montoDescontado || mov.totalConImpuestos || mov.monto;
+            const descripcion = mov.descripcion || `Pago de nómina (${mov.periodo})`;
+            
+            const itemElement = document.createElement('div');
+            itemElement.classList.add('activity-feed-item');
+            const signo = mov.tipo === 'Gasto' ? '-' : '+';
+            
+            itemElement.innerHTML = `
+                <div class="item-info">
+                    <span class="item-description">${descripcion} (${mov.tipo})</span>
+                    <span class="item-details">${fecha} - Estado: ${mov.status || 'Pagado'}</span>
+                </div>
+                <span class="item-amount">${signo}$${monto.toLocaleString('es-MX')}</span>
+            `;
+            activityFeed.appendChild(itemElement);
+        });
+
+    } catch (error) {
+        console.error("Error al cargar la actividad del empleado:", error);
+        activityFeed.innerHTML = '<p>Ocurrió un error al cargar la actividad.</p>';
+    }
+}
+
+// Protección de la ruta y carga de datos
+auth.onAuthStateChanged((user) => {
     if (user) {
-        poblarFiltroUsuarios();
-        poblarFiltroCuentas();
+        cargarDatosPerfil();
     } else {
         window.location.href = 'index.html';
     }
 });
-
-function poblarFiltroUsuarios() {
-    db.collection('usuarios').where('rol', '==', 'empleado').orderBy('nombre').get()
-        .then(snapshot => {
-            snapshot.forEach(doc => {
-                const user = doc.data();
-                const option = new Option(user.nombre, doc.id);
-                userFilter.appendChild(option);
-            });
-        });
-}
-
-function poblarFiltroCuentas() {
-    db.collection('cuentas').orderBy('nombre').get()
-        .then(snapshot => {
-            snapshot.forEach(doc => {
-                const cuenta = doc.data();
-                const option = new Option(cuenta.nombre, doc.id);
-                accountFilter.appendChild(option);
-            });
-        });
-}
-
-generateBtn.addEventListener('click', async () => {
-    // 1. Recopilar todas las selecciones del formulario
-    const startDate = new Date(document.getElementById('start-date').value + 'T00:00:00');
-    const endDate = new Date(document.getElementById('end-date').value + 'T23:59:59');
-    const includeIngresos = document.getElementById('include-ingresos').checked;
-    const includeGastos = document.getElementById('include-gastos').checked;
-    const includeNomina = document.getElementById('include-nomina').checked;
-    const includeImpuestos = document.getElementById('include-impuestos').checked;
-    const selectedUserId = userFilter.value;
-    const selectedAccountId = accountFilter.value;
-
-    if (!document.getElementById('start-date').value || !document.getElementById('end-date').value) {
-        return alert('Por favor, selecciona una fecha de inicio y de fin.');
-    }
-
-    alert('Generando reporte... Esto puede tardar un momento.');
-
-    try {
-        let reportData = [];
-        const queries = [];
-
-        // 2. Construir las consultas a la base de datos según lo seleccionado
-        if (includeIngresos) {
-            let q = db.collection('ingresos').where('status', '==', 'aprobado').where('fechaDeCreacion', '>=', startDate).where('fechaDeCreacion', '<=', endDate);
-            queries.push(q.get());
-        }
-        if (includeGastos) {
-            let q = db.collection('gastos').where('status', '==', 'aprobado').where('fechaDeCreacion', '>=', startDate).where('fechaDeCreacion', '<=', endDate);
-            queries.push(q.get());
-        }
-        if (includeNomina) {
-            let q = db.collection('pagos_nomina').where('fechaDePago', '>=', startDate).where('fechaDePago', '<=', endDate);
-            queries.push(q.get());
-        }
-        if (includeImpuestos) {
-            let q = db.collection('movimientos_impuestos').where('fecha', '>=', startDate).where('fecha', '<=', endDate);
-            queries.push(q.get());
-        }
-
-        // 3. Ejecutar todas las consultas
-        const results = await Promise.all(queries);
-        
-        // 4. Procesar y unificar los resultados
-        results.forEach(snapshot => {
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                // Filtramos por colaborador y cuenta aquí, en el cliente
-                if (selectedUserId !== 'todos' && (data.creadoPor !== selectedUserId && data.userId !== selectedUserId)) return;
-                if (selectedAccountId !== 'todas' && data.cuentaId !== selectedAccountId) return;
-
-                // Formateamos cada tipo de registro a una estructura común
-                let row = {
-                    Fecha: (data.fechaDeCreacion || data.fechaDePago || data.fecha).toDate().toLocaleDateString('es-ES'),
-                    Tipo: data.tipoImpuesto ? 'Impuesto' : (data.userName ? 'Nómina' : (data.totalConImpuestos > 0 ? 'Ingreso/Gasto' : 'N/A')),
-                    Concepto: data.descripcion || data.origen || `Nómina ${data.userName}`,
-                    Monto: data.montoTotal || data.monto,
-                    Colaborador: data.nombreCreador || data.userName || 'N/A',
-                    Cuenta: data.cuentaNombre || 'N/A'
-                };
-                reportData.push(row);
-            });
-        });
-
-        if (reportData.length === 0) {
-            return alert('No se encontraron registros con los criterios seleccionados.');
-        }
-
-        // 5. Ordenar y exportar a CSV
-        reportData.sort((a, b) => new Date(a.Fecha.split('/').reverse().join('-')) - new Date(b.Fecha.split('/').reverse().join('-')));
-        exportToCSV(reportData);
-
-    } catch (error) {
-        console.error("Error al generar el reporte: ", error);
-        alert("Ocurrió un error al generar el reporte.");
-    }
-});
-
-// Función auxiliar para convertir los datos a un archivo CSV y descargarlo
-function exportToCSV(data) {
-    const headers = Object.keys(data[0]);
-    const csvRows = [
-        headers.join(','), // Encabezado
-        ...data.map(row => 
-            headers.map(fieldName => 
-                JSON.stringify(row[fieldName], (key, value) => value === null ? '' : value)
-            ).join(',')
-        )
-    ];
-
-    const csvString = csvRows.join('\n');
-    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-
-    const link = document.createElement('a');
-    if (link.download !== undefined) {
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', 'Reporte-Finztone.csv');
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-}
-
-
-
-
-
-
-
-          
