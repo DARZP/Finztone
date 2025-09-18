@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reportes - FINZTONE</title>
+    <title>Generador de Reportes - FINZTONE</title>
     <link rel="stylesheet" href="reportes.style.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <header class="main-header">
@@ -15,50 +14,57 @@
     </header>
 
     <main class="container">
-        <div class="card filter-card">
-            <h2>Generar Reporte</h2>
-            <div class="date-filters">
-                <div class="input-group">
-                    <label for="start-date">Fecha de Inicio</label>
-                    <input type="date" id="start-date">
+        <div class="card report-generator-card">
+            <h2>Generar Hoja de Cálculo</h2>
+            <p>Selecciona los criterios para tu reporte personalizado.</p>
+            
+            <div class="report-form-grid">
+                <div class="form-section">
+                    <h4>1. Selecciona el Período</h4>
+                    <div class="input-group">
+                        <label for="start-date">Fecha de Inicio</label>
+                        <input type="date" id="start-date">
+                    </div>
+                    <div class="input-group">
+                        <label for="end-date">Fecha de Fin</label>
+                        <input type="date" id="end-date">
+                    </div>
                 </div>
-                <div class="input-group">
-                    <label for="end-date">Fecha de Fin</label>
-                    <input type="date" id="end-date">
+
+                <div class="form-section">
+                    <h4>2. ¿Qué registros quieres incluir?</h4>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="include-ingresos" value="ingresos"><label for="include-ingresos">Ingresos</label>
+                        <input type="checkbox" id="include-gastos" value="gastos"><label for="include-gastos">Gastos</label>
+                        <input type="checkbox" id="include-nomina" value="nomina"><label for="include-nomina">Nómina</label>
+                        <input type="checkbox" id="include-impuestos" value="impuestos"><label for="include-impuestos">Impuestos</label>
+                    </div>
                 </div>
-                <button id="generate-report-btn" class="btn-primary">Generar</button>
-            </div>
-        </div>
 
-        <div class="kpi-grid">
-            <div class="card kpi-card">
-                <h3>Total Ingresos</h3>
-                <p id="total-income">$0.00</p>
+                <div class="form-section">
+                    <h4>3. Filtros Adicionales</h4>
+                    <div class="input-group">
+                        <label for="user-filter">Colaborador</label>
+                        <select id="user-filter">
+                            <option value="todos">Todos los colaboradores</option>
+                            </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="account-filter">Cuenta</label>
+                        <select id="account-filter">
+                            <option value="todas">Todas las cuentas</option>
+                            </select>
+                    </div>
+                </div>
             </div>
-            <div class="card kpi-card">
-                <h3>Total Gastos</h3>
-                <p id="total-expenses">$0.00</p>
-            </div>
-            <div class="card kpi-card">
-                <h3>Nómina Pagada</h3>
-                <p id="total-payroll">$0.00</p>
-            </div>
-            <div class="card kpi-card balance">
-                <h3>Balance General</h3>
-                <p id="balance">$0.00</p>
-            </div>
-        </div>
 
-        <div class="card chart-card">
-            <h2>Gastos por Categoría</h2>
-            <canvas id="expenses-chart"></canvas>
+            <button id="generate-spreadsheet-btn" class="btn-primary">Generar Hoja de Cálculo</button>
         </div>
     </main>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-    
     <script src="reportes.app.js"></script>
 </body>
 </html>
