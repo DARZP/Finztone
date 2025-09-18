@@ -8,92 +8,79 @@ const firebaseConfig = {
   appId: "1:95145879307:web:e10017a75edf32f1fde40e",
   measurementId: "G-T8KMJXNSTP"
 };
-
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// ---- LÓGICA DE LA PÁGINA DE REPORTES ----
+// --- ELEMENTOS DEL DOM ---
+const generateBtn = document.getElementById('generate-spreadsheet-btn');
+const userFilter = document.getElementById('user-filter');
+const accountFilter = document.getElementById('account-filter');
 
-// Elementos del DOM
-const startDateInput = document.getElementById('start-date');
-const endDateInput = document.getElementById('end-date');
-const generateBtn = document.getElementById('generate-report-btn');
-const totalIncomeEl = document.getElementById('total-income');
-const totalExpensesEl = document.getElementById('total-expenses');
-const totalPayrollEl = document.getElementById('total-payroll');
-const balanceEl = document.getElementById('balance');
-const chartCanvas = document.getElementById('expenses-chart');
-let expensesChart = null; // Variable para guardar la instancia del gráfico
+// --- LÓGICA DE LA PÁGINA ---
 
-// Verificación de autenticación
-auth.onAuthStateChanged((user) => {
-    if (!user) {
+auth.onAuthStateChanged(user => {
+    if (user) {
+        // Al cargar la página, llenamos los menús desplegables
+        poblarFiltroUsuarios();
+        poblarFiltroCuentas();
+    } else {
         window.location.href = 'index.html';
     }
 });
 
-// Event listener para el botón de generar reporte
-generateBtn.addEventListener('click', async () => {
-    const startDate = new Date(startDateInput.value);
-    const endDate = new Date(endDateInput.value);
-    endDate.setHours(23, 59, 59, 999); // Ajustar para incluir todo el día de fin
+// Función para poblar el filtro de colaboradores
+function poblarFiltroUsuarios() {
+    db.collection('usuarios').where('rol', '==', 'empleado').orderBy('nombre').get()
+        .then(snapshot => {
+            snapshot.forEach(doc => {
+                const user = doc.data();
+                const option = new Option(user.nombre, doc.id); // Texto: Nombre, Valor: ID
+                userFilter.appendChild(option);
+            });
+        });
+}
 
-    if (!startDateInput.value || !endDateInput.value) {
-        alert('Por favor, selecciona una fecha de inicio y de fin.');
-        return;
+// Función para poblar el filtro de cuentas
+function poblarFiltroCuentas() {
+    db.collection('cuentas').orderBy('nombre').get()
+        .then(snapshot => {
+            snapshot.forEach(doc => {
+                const cuenta = doc.data();
+                const option = new Option(cuenta.nombre, doc.id); // Texto: Nombre, Valor: ID
+                accountFilter.appendChild(option);
+            });
+        });
+}
+
+
+// Listener para el botón principal (por ahora, solo mostrará lo que se seleccionó)
+generateBtn.addEventListener('click', () => {
+    const startDate = document.getElementById('start-date').value;
+    const endDate = document.getElementById('end-date').value;
+    const includeIngresos = document.getElementById('include-ingresos').checked;
+    const includeGastos = document.getElementById('include-gastos').checked;
+    const includeNomina = document.getElementById('include-nomina').checked;
+    const includeImpuestos = document.getElementById('include-impuestos').checked;
+    const selectedUserId = userFilter.value;
+    const selectedAccountId = accountFilter.value;
+
+    if (!startDate || !endDate) {
+        return alert('Por favor, selecciona una fecha de inicio y de fin.');
     }
 
-    // 1. Obtener datos de Firestore
-    const incomePromise = db.collection('ingresos').where('fecha', '>=', startDateInput.value).where('fecha', '<=', endDateInput.value).get();
-    const expensesPromise = db.collection('gastos').where('fecha', '>=', startDateInput.value).where('fecha', '<=', endDateInput.value).get();
-    const payrollPromise = db.collection('pagos_nomina').where('fechaDePago', '>=', startDate).where('fechaDePago', '<=', endDate).get();
-
-    const [incomeSnapshot, expensesSnapshot, payrollSnapshot] = await Promise.all([incomePromise, expensesPromise, payrollPromise]);
-
-    // 2. Calcular totales
-    const totalIncome = incomeSnapshot.docs.reduce((sum, doc) => sum + doc.data().monto, 0);
-    const totalExpenses = expensesSnapshot.docs.reduce((sum, doc) => sum + doc.data().monto, 0);
-    const totalPayroll = payrollSnapshot.docs.reduce((sum, doc) => sum + doc.data().monto, 0);
-    const balance = totalIncome - (totalExpenses + totalPayroll);
-
-    // 3. Actualizar las tarjetas KPI
-    totalIncomeEl.textContent = `$${totalIncome.toFixed(2)}`;
-    totalExpensesEl.textContent = `$${totalExpenses.toFixed(2)}`;
-    totalPayrollEl.textContent = `$${totalPayroll.toFixed(2)}`;
-    balanceEl.textContent = `$${balance.toFixed(2)}`;
-    balanceEl.className = balance >= 0 ? 'positive' : 'negative';
-
-    // 4. Preparar datos y crear el gráfico
-    const expensesByCategory = {};
-    expensesSnapshot.docs.forEach(doc => {
-        const expense = doc.data();
-        if (expensesByCategory[expense.categoria]) {
-            expensesByCategory[expense.categoria] += expense.monto;
-        } else {
-            expensesByCategory[expense.categoria] = expense.monto;
-        }
-    });
-
-    // Destruir el gráfico anterior si existe, para evitar errores
-    if (expensesChart) {
-        expensesChart.destroy();
-    }
-
-    // Crear el nuevo gráfico de pastel
-    expensesChart = new Chart(chartCanvas, {
-        type: 'pie',
-        data: {
-            labels: Object.keys(expensesByCategory),
-            datasets: [{
-                label: 'Gastos por Categoría',
-                data: Object.values(expensesByCategory),
-                backgroundColor: ['#00A99D', '#FFC107', '#FF5722', '#3F51B5', '#E91E63', '#4CAF50'],
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-        }
-    });
+    // Alerta de prueba para verificar que estamos leyendo los datos
+    alert(`
+        REPORTE SOLICITADO:
+        --------------------
+        Período: ${startDate} a ${endDate}
+        Incluir Ingresos: ${includeIngresos}
+        Incluir Gastos: ${includeGastos}
+        Incluir Nómina: ${includeNomina}
+        Incluir Impuestos: ${includeImpuestos}
+        Colaborador ID: ${selectedUserId}
+        Cuenta ID: ${selectedAccountId}
+        
+        En el siguiente paso, usaremos estos datos para generar la hoja de cálculo.
+    `);
 });
