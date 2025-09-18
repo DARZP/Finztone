@@ -21,7 +21,6 @@ const accountFilter = document.getElementById('account-filter');
 
 auth.onAuthStateChanged(user => {
     if (user) {
-        // Al cargar la página, llenamos los menús desplegables
         poblarFiltroUsuarios();
         poblarFiltroCuentas();
     } else {
@@ -29,32 +28,28 @@ auth.onAuthStateChanged(user => {
     }
 });
 
-// Función para poblar el filtro de colaboradores
 function poblarFiltroUsuarios() {
     db.collection('usuarios').where('rol', '==', 'empleado').orderBy('nombre').get()
         .then(snapshot => {
             snapshot.forEach(doc => {
                 const user = doc.data();
-                const option = new Option(user.nombre, doc.id); // Texto: Nombre, Valor: ID
+                const option = new Option(user.nombre, doc.id);
                 userFilter.appendChild(option);
             });
         });
 }
 
-// Función para poblar el filtro de cuentas
 function poblarFiltroCuentas() {
     db.collection('cuentas').orderBy('nombre').get()
         .then(snapshot => {
             snapshot.forEach(doc => {
                 const cuenta = doc.data();
-                const option = new Option(cuenta.nombre, doc.id); // Texto: Nombre, Valor: ID
+                const option = new Option(cuenta.nombre, doc.id);
                 accountFilter.appendChild(option);
             });
         });
 }
 
-
-// Listener para el botón principal (por ahora, solo mostrará lo que se seleccionó)
 generateBtn.addEventListener('click', () => {
     const startDate = document.getElementById('start-date').value;
     const endDate = document.getElementById('end-date').value;
@@ -69,17 +64,11 @@ generateBtn.addEventListener('click', () => {
         return alert('Por favor, selecciona una fecha de inicio y de fin.');
     }
 
-    // Alerta de prueba para verificar que estamos leyendo los datos
     alert(`
         REPORTE SOLICITADO:
-        --------------------
         Período: ${startDate} a ${endDate}
         Incluir Ingresos: ${includeIngresos}
         Incluir Gastos: ${includeGastos}
-        Incluir Nómina: ${includeNomina}
-        Incluir Impuestos: ${includeImpuestos}
-        Colaborador ID: ${selectedUserId}
-        Cuenta ID: ${selectedAccountId}
         
         En el siguiente paso, usaremos estos datos para generar la hoja de cálculo.
     `);
