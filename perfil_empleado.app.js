@@ -15,11 +15,9 @@ const db = firebase.firestore();
 
 // --- LÓGICA DE LA PÁGINA DE PERFIL ---
 
-// 1. Obtenemos el ID del empleado de la URL
 const urlParams = new URLSearchParams(window.location.search);
 const userId = urlParams.get('id');
 
-// Elementos del DOM donde mostraremos la info
 const profileName = document.getElementById('profile-name');
 const profileEmail = document.getElementById('profile-email');
 const profilePosition = document.getElementById('profile-position');
@@ -32,7 +30,6 @@ const editProfileBtn = document.getElementById('edit-profile-btn');
 const profileDeductionsList = document.getElementById('profile-deductions-list');
 const profileNetSalary = document.getElementById('profile-net-salary');
 
-// Hacemos que el botón "Editar" apunte a la página de edición correcta
 if (userId) {
     editProfileBtn.href = `editar_perfil.html?id=${userId}`;
 }
@@ -47,7 +44,6 @@ function cargarDatosPerfil() {
         if (doc.exists) {
             const userData = doc.data();
             
-            // Llenamos los datos básicos (sin cambios)
             profileName.textContent = userData.nombre;
             profileEmail.textContent = userData.email;
             profilePosition.textContent = userData.cargo;
@@ -56,7 +52,6 @@ function cargarDatosPerfil() {
             profileClabe.textContent = userData.clabe || 'No registrada';
             profileRfc.textContent = userData.rfc || 'No registrado';
 
-            // --- LÓGICA DE CÁLCULO DE DEDUCCIONES Y SUELDO NETO ---
             const sueldoBruto = userData.sueldoBruto || 0;
             const deducciones = userData.deducciones || [];
             let totalDeducciones = 0;
@@ -66,11 +61,10 @@ function cargarDatosPerfil() {
                 let montoDeducido = 0;
                 if (ded.tipo === 'porcentaje') {
                     montoDeducido = (sueldoBruto * ded.valor) / 100;
-                } else { // Es 'fijo'
+                } else {
                     montoDeducido = ded.valor;
                 }
                 totalDeducciones += montoDeducido;
-
                 deduccionesHTML += `
                     <div class="deduction-line">
                         <span class="name">(-) ${ded.nombre}</span>
@@ -80,8 +74,6 @@ function cargarDatosPerfil() {
             });
 
             const sueldoNeto = sueldoBruto - totalDeducciones;
-
-            // Mostramos los resultados en el HTML
             profileDeductionsList.innerHTML = deduccionesHTML;
             profileNetSalary.textContent = `$${sueldoNeto.toLocaleString('es-MX')}`;
 
@@ -94,36 +86,67 @@ function cargarDatosPerfil() {
 }
 
 
-// 3. Función para cargar la actividad (gastos) del empleado
-function cargarActividad() {
+// REESCRITO: Función para cargar TODA la actividad del empleado
+async function cargarActividad() {
     if (!userId) return;
 
-    db.collection('gastos')
-      .where('creadoPor', '==', userId)
-      .orderBy('fechaDeCreacion', 'desc')
-      .limit(10)
-      .onSnapshot(querySnapshot => {
-            activityFeed.innerHTML = '';
-            if (querySnapshot.empty) {
-                activityFeed.innerHTML = '<p>Este empleado no tiene actividad reciente.</p>';
-                return;
-            }
-            querySnapshot.forEach(doc => {
-                const gasto = doc.data();
-                const fecha = new Date(gasto.fecha).toLocaleDateString('es-ES');
-                const itemElement = document.createElement('div');
-                itemElement.classList.add('activity-feed-item');
-                itemElement.innerHTML = `
-                    <div class="item-info">
-                        <span class="item-description">${gasto.descripcion} (Gasto)</span>
-                        <span class="item-details">${fecha} - Estado: ${gasto.status}</span>
-                    </div>
-                    <span class="item-amount">-$${gasto.monto.toFixed(2)}</span>
-                `;
-                activityFeed.appendChild(itemElement);
-            });
+    // 1. Creamos las tres consultas a la base de datos
+    const gastosPromise = db.collection('gastos').where('creadoPor', '==', userId).get();
+    const ingresosPromise = db.collection('ingresos').where('creadoPor', '==', userId).get();
+    const nominaPromise = db.collection('pagos_nomina').where('userId', '==', userId).get();
+
+    try {
+        // 2. Ejecutamos todas las consultas al mismo tiempo y esperamos los resultados
+        const [gastosSnapshot, ingresosSnapshot, nominaSnapshot] = await Promise.all([
+            gastosPromise,
+            ingresosPromise,
+            nominaPromise
+        ]);
+
+        let todosLosMovimientos = [];
+
+        // 3. Añadimos cada tipo de movimiento a un solo array
+        gastosSnapshot.forEach(doc => todosLosMovimientos.push({ tipo: 'Gasto', ...doc.data() }));
+        ingresosSnapshot.forEach(doc => todosLosMovimientos.push({ tipo: 'Ingreso', ...doc.data() }));
+        nominaSnapshot.forEach(doc => todosLosMovimientos.push({ tipo: 'Nómina', ...doc.data() }));
+
+        // 4. Ordenamos el array combinado por la fecha más reciente
+        todosLosMovimientos.sort((a, b) => {
+            const dateA = a.fechaDePago?.toDate() || a.fechaDeCreacion?.toDate() || 0;
+            const dateB = b.fechaDePago?.toDate() || b.fechaDeCreacion?.toDate() || 0;
+            return dateB - dateA;
         });
+
+        // 5. Mostramos los resultados
+        activityFeed.innerHTML = '';
+        if (todosLosMovimientos.length === 0) {
+            activityFeed.innerHTML = '<p>Este empleado no tiene actividad reciente.</p>';
+            return;
+        }
+
+        todosLosMovimientos.slice(0, 10).forEach(mov => { // Mostramos solo los 10 más recientes
+            const fecha = (mov.fechaDePago || mov.fechaDeCreacion).toDate().toLocaleDateString('es-ES');
+            const monto = mov.montoNeto || mov.montoDescontado || mov.monto;
+            const descripcion = mov.descripcion || `Pago de nómina (${mov.periodo})`;
+            
+            const itemElement = document.createElement('div');
+            itemElement.classList.add('activity-feed-item');
+            itemElement.innerHTML = `
+                <div class="item-info">
+                    <span class="item-description">${descripcion} (${mov.tipo})</span>
+                    <span class="item-details">${fecha} - Estado: ${mov.status || 'Pagado'}</span>
+                </div>
+                <span class="item-amount">${mov.tipo === 'Ingreso' || mov.tipo === 'Nómina' ? '+' : '-'}$${monto.toLocaleString('es-MX')}</span>
+            `;
+            activityFeed.appendChild(itemElement);
+        });
+
+    } catch (error) {
+        console.error("Error al cargar la actividad del empleado:", error);
+        activityFeed.innerHTML = '<p>Ocurrió un error al cargar la actividad.</p>';
+    }
 }
+
 
 // Protección de la ruta y carga de datos
 auth.onAuthStateChanged((user) => {
@@ -133,4 +156,4 @@ auth.onAuthStateChanged((user) => {
     } else {
         window.location.href = 'index.html';
     }
-}); 
+});
