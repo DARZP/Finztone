@@ -93,3 +93,8 @@ h2 { font-weight: 500; margin-top: 0; }
 .tax-item label { margin: 0; font-weight: 400; }
 .total-type-selector { margin-top: 15px; display: flex; align-items: center; gap: 10px; }
 .total-type-selector label { font-weight: 400; margin: 0; }
+
+.logo-header {
+    height: 35px; /* Ajusta esta altura como prefieras */
+    width: auto;
+}
