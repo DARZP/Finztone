@@ -111,3 +111,8 @@ body {
 .chart-card {
     padding: 40px;
 }
+
+.logo-header {
+    height: 35px; /* Ajusta esta altura como prefieras */
+    width: auto;
+}
