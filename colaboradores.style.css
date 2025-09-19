@@ -127,3 +127,8 @@ a.user-item {
 a.user-item:hover {
     background-color: #f9f9f9;
 }
+
+.logo-header {
+    height: 35px; /* Ajusta esta altura como prefieras */
+    width: auto;
+}
