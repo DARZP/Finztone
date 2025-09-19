@@ -11,7 +11,6 @@
 body {
     margin: 0;
     font-family: 'Poppins', sans-serif;
-    background-color: var(--box-background);
 }
 
 .main-container {
@@ -19,28 +18,23 @@ body {
     min-height: 100vh;
 }
 
+/* Panel Izquierdo (Branding - AHORA CLARO) */
 .left-pane {
     flex-basis: 50%;
-    background-color: var(--secondary-color);
-    color: var(--text-color-light);
     display: flex;
     justify-content: center;
     align-items: center;
     padding: 60px;
     box-sizing: border-box;
+    background-color: var(--background-light); /* Fondo claro */
+    color: var(--secondary-color); /* Texto oscuro */
 }
-.branding {
-    max-width: 450px;
-    text-align: center;
-}
-.logo-main {
-    max-width: 180px;
-    height: auto;
-    margin-bottom: 20px;
-}
+.branding { max-width: 450px; text-align: center; }
+.logo-main { max-width: 180px; height: auto; margin-bottom: 20px; }
 .branding h2 { font-size: 2em; font-weight: 600; margin-top: 10px; }
-.branding p { font-size: 1.1em; line-height: 1.6; opacity: 0.8; }
+.branding p { font-size: 1.1em; line-height: 1.6; color: #555; }
 
+/* Panel Derecho (Login - AHORA OSCURO) */
 .right-pane {
     flex-basis: 50%;
     display: flex;
@@ -48,7 +42,7 @@ body {
     align-items: center;
     padding: 40px;
     box-sizing: border-box;
-    background-color: var(--background-light);
+    background-color: var(--secondary-color);
 }
 .login-box {
     width: 100%;
@@ -56,49 +50,39 @@ body {
     background-color: var(--box-background);
     padding: 40px;
     border-radius: 16px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-    text-align: center;
 }
-.logo-header-login {
-    height: 40px;
-    width: auto;
-    margin-bottom: 30px;
-}
+.logo-header-login { height: 40px; width: auto; margin-bottom: 30px; }
 .tabs { display: flex; border-bottom: 1px solid var(--input-border); }
-.tab-link { flex: 1; padding: 15px; border: none; background: none; cursor: pointer; font-size: 1em; font-family: 'Poppins', sans-serif; color: #999; border-bottom: 3px solid transparent; transition: all 0.3s ease; }
+.tab-link { flex: 1; padding: 15px; border: none; background: none; cursor: pointer; font-size: 1em; font-family: 'Poppins', sans-serif; color: #999; border-bottom: 3px solid transparent; }
 .tab-link:hover { color: var(--primary-color); }
 .tab-link.active { color: var(--primary-color); border-bottom-color: var(--primary-color); font-weight: 600; }
 .tab-content { display: none; margin-top: 30px; }
 .input-group { margin-bottom: 20px; }
 .input-group input { width: 100%; padding: 14px; border: 1px solid var(--input-border); border-radius: 8px; box-sizing: border-box; font-size: 1em; }
 .btn-primary { width: 100%; padding: 14px; background-color: var(--primary-color); color: white; border: none; border-radius: 8px; font-size: 1.1em; cursor: pointer; }
-.forgot-password, .signup-link { display: block; text-align: center; margin-top: 15px; text-decoration: none; color: #555; font-size: 0.9em; }
+.forgot-password, .signup-link { display: block; text-align: center; margin-top: 15px; text-decoration: none; color: #555; }
 
-.features-section {
-    padding: 100px 40px;
-    text-align: center;
-    background-color: var(--box-background);
-}
+/* Sección de Herramientas */
+.features-section { padding: 100px 40px; text-align: center; }
 .features-section h2 { font-size: 2.5em; color: var(--secondary-color); }
-.features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px; margin-top: 40px; max-width: 1200px; margin-left: auto; margin-right: auto; }
-.feature-card { background: var(--background-light); padding: 30px; border-radius: 16px; font-size: 1.2em; font-weight: 500; display: flex; flex-direction: column; align-items: center; gap: 15px; }
+.features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 30px; margin-top: 40px; max-width: 1200px; margin-left: auto; margin-right: auto; }
+.feature-card { background: var(--box-background); padding: 30px; border-radius: 16px; box-shadow: 0 8px 20px rgba(0,0,0,0.07); font-size: 1.2em; font-weight: 500; display: flex; flex-direction: column; align-items: center; gap: 15px; }
 .feature-card span { font-size: 2.5em; }
 
+/* Sección de WhatsApp */
 .whatsapp-section {
     display: flex;
     align-items: center;
     padding: 100px 60px;
-    background-color: var(--secondary-color);
-    color: var(--text-color-light);
-    gap: 50px;
+    background-color: var(--background-light);
 }
 .whatsapp-content { flex: 1; max-width: 500px; }
-.whatsapp-content h2 { font-size: 2.5em; }
+.whatsapp-content h2 { font-size: 2.5em; color: var(--secondary-color); }
 .whatsapp-image { flex: 1; text-align: center; }
 
 @media (max-width: 900px) {
-    .main-container { flex-direction: column; }
-    .left-pane { display: none; } /* Ocultamos el panel de branding en móvil para dar prioridad al login */
-    .right-pane { min-height: 100vh; }
+    .main-container { flex-direction: column-reverse; } /* El login aparece primero en móvil */
+    .left-pane { padding: 60px 20px; }
+    .right-pane { min-height: auto; } /* Altura automática en móvil */
     .whatsapp-section { flex-direction: column-reverse; padding: 60px 30px; }
 }
