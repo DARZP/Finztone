@@ -133,3 +133,7 @@ h2 { font-weight: 500; margin-top: 0; }
     font-weight: 600;
     margin-top: 10px;
 }
+.logo-header {
+    height: 35px; /* Ajusta esta altura como prefieras */
+    width: auto;
+}
