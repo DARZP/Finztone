@@ -35,10 +35,9 @@ body {
     text-align: center;
 }
 .logo-main {
-    font-size: 4em;
-    font-weight: 700;
-    color: var(--primary-color);
-    margin: 0;
+    max-width: 180px; /* Puedes ajustar este tamaño */
+    height: auto;
+    margin-bottom: 20px;
 }
 .branding h2 {
     font-size: 2em;
@@ -104,3 +103,4 @@ body {
     .left-pane { padding: 40px 20px; text-align: center; }
     .whatsapp-section { flex-direction: column-reverse; padding: 60px 30px; }
 }
+
