@@ -305,3 +305,8 @@ h2 {
 .payment-section { margin-top: 30px; }
 .payment-controls { display: flex; align-items: flex-end; gap: 20px; }
 .btn-pay { background-color: var(--approve-color, #2e7d32); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 1em; }
+
+.logo-header {
+    height: 35px; /* Ajusta esta altura como prefieras */
+    width: auto;
+}
