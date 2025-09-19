@@ -44,7 +44,7 @@ body { margin: 0; font-family: 'Poppins', sans-serif; }
     border-radius: 16px;
     text-align: center;
 }
-.logo-header-login { height: 40px; width: auto; margin-bottom: 30px; }
+.logo-header-login { height: 300px; width: auto; margin-bottom: 30px; }
 .tabs { display: flex; border-bottom: 1px solid var(--input-border); }
 .tab-link { flex: 1; padding: 15px; border: none; background: none; cursor: pointer; font-size: 1em; font-family: 'Poppins', sans-serif; color: #999; border-bottom: 3px solid transparent; }
 .tab-link:hover { color: var(--primary-color); }
@@ -77,3 +77,4 @@ body { margin: 0; font-family: 'Poppins', sans-serif; }
     .right-pane { padding: 60px 20px; } /* Añadimos padding para evitar la franja blanca */
     .whatsapp-section { flex-direction: column-reverse; padding: 60px 30px; }
 }
+
