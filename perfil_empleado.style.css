@@ -104,3 +104,8 @@ body {
     font-size: 1.2em !important;
     font-weight: 600;
 }
+
+.logo-header {
+    height: 35px; /* Ajusta esta altura como prefieras */
+    width: auto;
+}
