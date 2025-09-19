@@ -10,9 +10,11 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
+const storage = firebase.storage(); 
 
 // --- ELEMENTOS DEL DOM ---
 const addExpenseForm = document.getElementById('add-expense-form');
+const receiptFileInput = document.getElementById('receipt-file');
 const expenseListContainer = document.getElementById('expense-list');
 const isInvoiceCheckbox = document.getElementById('is-invoice');
 const invoiceDetailsContainer = document.getElementById('invoice-details');
@@ -175,10 +177,41 @@ function salirModoEdicion() {
 async function guardarGasto(status) {
     const user = auth.currentUser;
     if (!user) return;
+
     const montoBruto = parseFloat(addExpenseForm['expense-amount'].value) || 0;
     if (montoBruto <= 0) {
         return alert('Por favor, introduce un monto válido.');
     }
+
+    const file = receiptFileInput.files[0];
+
+    // Desactivamos los botones para evitar envíos duplicados mientras se sube el archivo
+    saveDraftBtn.disabled = true;
+    sendForApprovalBtn.disabled = true;
+
+    try {
+        let comprobanteURL = '';
+        // 1. Si el usuario seleccionó un archivo, lo subimos PRIMERO
+        if (file) {
+            alert('Subiendo archivo, por favor espera...');
+            const filePath = `comprobantes/${user.uid}/${Date.now()}-${file.name}`;
+            const fileRef = storage.ref(filePath);
+            
+            // Subimos el archivo y esperamos a que termine
+            await fileRef.put(file);
+            // Obtenemos el enlace de descarga público
+            comprobanteURL = await fileRef.getDownloadURL();
+            console.log('Archivo subido exitosamente:', comprobanteURL);
+        }
+
+        const userProfileSnapshot = await db.collection('usuarios').where('email', '==', user.email).limit(1).get();
+        if (userProfileSnapshot.empty) {
+            throw "No se pudo encontrar el perfil del usuario.";
+        }
+        const userProfileDoc = userProfileSnapshot.docs[0];
+        const userProfileId = userProfileDoc.id;
+        const userName = userProfileDoc.data().nombre;
+
     let montoNeto = montoBruto;
     const impuestosSeleccionados = [];
     if (addTaxesCheckbox.checked) {
@@ -191,45 +224,55 @@ async function guardarGasto(status) {
         });
         montoNeto = montoBruto + totalImpuestos;
     }
+    
     const companyName = addExpenseForm['expense-company'].value.trim();
-    const userProfile = await db.collection('usuarios').doc(user.uid).get();
-    const userName = userProfile.exists ? userProfile.data().nombre : user.email;
+
     const expenseData = {
-        descripcion: addExpenseForm['expense-description'].value,
-        monto: montoBruto,
-        totalConImpuestos: montoNeto,
-        impuestos: impuestosSeleccionados,
-        categoria: formCategorySelect.value,
-        fecha: addExpenseForm['expense-date'].value,
-        empresa: companyName,
-        metodoPago: addExpenseForm['payment-method'].value,
-        comentarios: addExpenseForm['expense-comments'].value,
-        nombreCreador: userName
-    };
+            descripcion: addExpenseForm['expense-description'].value,
+            monto: montoBruto,
+            totalConImpuestos: montoNeto,
+            impuestos: impuestosSeleccionados,
+            categoria: formCategorySelect.value,
+            fecha: addExpenseForm['expense-date'].value,
+            empresa: addExpenseForm['expense-company'].value.trim(),
+            metodoPago: formPaymentMethodSelect.value,
+            comentarios: addExpenseForm['expense-comments'].value,
+            nombreCreador: userName,
+            creadorId: userProfileId,
+            comprobanteURL: comprobanteURL // <-- ¡NUEVO CAMPO CON EL ENLACE!
+        };
+        
     if (isInvoiceCheckbox.checked) {
         expenseData.datosFactura = {
             rfc: document.getElementById('invoice-rfc').value,
             folioFiscal: document.getElementById('invoice-folio').value
         };
     }
+
     if (modoEdicion) {
-        db.collection('gastos').doc(idGastoEditando).update({ ...expenseData, status: status })
-            .then(() => {
-                alert(status === 'borrador' ? '¡Borrador actualizado!' : '¡Gasto enviado!');
-                salirModoEdicion();
-            }).catch(error => console.error("Error al actualizar:", error));
-    } else {
-        db.collection('gastos').add({
-            ...expenseData,
-            folio: generarFolio(user.uid),
-            creadoPor: user.uid,
-            emailCreador: user.email,
-            fechaDeCreacion: new Date(),
-            status: status
-        }).then(() => {
+            await db.collection('gastos').doc(idGastoEditando).update({ ...expenseData, status: status, comprobanteURL: comprobanteURL });
+            alert(status === 'borrador' ? '¡Borrador actualizado!' : '¡Gasto enviado!');
+        } else {
+            await db.collection('gastos').add({
+                ...expenseData,
+                folio: generarFolio(user.uid),
+                creadoPor: user.uid,
+                emailCreador: user.email,
+                fechaDeCreacion: new Date(),
+                status: status
+            });
             alert(status === 'borrador' ? '¡Borrador guardado!' : '¡Gasto enviado!');
-            salirModoEdicion();
-        }).catch(error => console.error("Error al guardar:", error));
+        }
+        
+        salirModoEdicion();
+
+    } catch (error) {
+        console.error("Error al guardar gasto o subir archivo: ", error);
+        alert("Ocurrió un error. Inténtalo de nuevo.");
+    } finally {
+        // 4. Reactivamos los botones, independientemente del resultado
+        saveDraftBtn.disabled = false;
+        sendForApprovalBtn.disabled = false;
     }
 }
 
@@ -308,3 +351,4 @@ function cargarGastos() {
         mostrarGastos(gastos);
     }, error => console.error("Error al obtener gastos:", error));
 }
+
