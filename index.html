@@ -5,21 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bienvenido a FINZTONE</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-
     <div class="main-container">
-        <div class="left-pane">
+        <div class="left-pane light-bg">
             <div class="branding">
                 <img src="images/logo.png" alt="Logo de FINZTONE" class="logo-main">
-                <h2>Bienvenido al Futuro de tus Finanzas</h2>
-                <p>Potencia tu precisión, optimiza tu tiempo y transforma la gestión de tu empresa o finanzas personales.</p>
+                <h2>El Futuro de tus Finanzas, Hoy.</h2>
+                <p>Transforma la gestión de tu empresa o finanzas personales con herramientas inteligentes y un diseño intuitivo.</p>
             </div>
         </div>
-        <div class="right-pane">
+        <div class="right-pane dark-bg">
             <div class="login-box">
                 <img src="images/nombre.png" alt="FINZTONE" class="logo-header-login">
                 <div class="tabs">
@@ -27,61 +24,27 @@
                     <button class="tab-link" onclick="openTab(event, 'Employee')">Empleado</button>
                     <button class="tab-link" onclick="openTab(event, 'Personal')">Cuenta Personal</button>
                 </div>
-
-                <div id="Admin" class="tab-content">
-                    <form id="admin-login-form">
-                        <div class="input-group"><input type="email" id="admin-email" placeholder="Correo de Administrador" required></div>
-                        <div class="input-group"><input type="password" id="admin-password" placeholder="Contraseña" required></div>
-                        <button type="submit" class="btn-primary">Acceder</button>
-                        <a href="#" class="forgot-password">¿Olvidaste tu contraseña?</a>
-                    </form>
                 </div>
-                <div id="Employee" class="tab-content">
-                    <form id="employee-login-form">
-                         <div class="input-group"><input type="email" id="employee-email" placeholder="Correo de Empleado" required></div>
-                         <div class="input-group"><input type="password" id="employee-password" placeholder="Contraseña" required></div>
-                         <button type="submit" class="btn-primary">Acceder</button>
-                         <a href="#" class="forgot-password">¿Olvidaste tu contraseña?</a>
-                    </form>
-                </div>
-                <div id="Personal" class="tab-content">
-                     <form id="personal-login-form">
-                        <div class="input-group"><input type="email" id="personal-email" placeholder="Tu Correo" required></div>
-                        <div class="input-group"><input type="password" id="personal-password" placeholder="Contraseña" required></div>
-                        <button type="submit" class="btn-primary">Acceder</button>
-                        <a href="registro.html" class="signup-link">¿No tienes una cuenta? Regístrate aquí</a>
-                    </form>
-                </div>
-            </div>
         </div>
     </div>
 
     <section class="features-section">
         <h2>Un Ecosistema de Herramientas a tu Medida</h2>
         <div class="features-grid">
-            <div class="feature-card"><span>💸</span> Control de Gastos</div>
-            <div class="feature-card"><span>💰</span> Control de Ingresos</div>
+            <div class="feature-card"><span>💸</span> Gastos</div>
+            <div class="feature-card"><span>💰</span> Ingresos</div>
             <div class="feature-card"><span>👥</span> Colaboradores</div>
             <div class="feature-card"><span>🧾</span> Nómina</div>
-            <div class="feature-card"><span>🏦</span> Cuentas Bancarias</div>
-            <div class="feature-card"><span>⚖️</span> Gestión de Impuestos</div>
-            <div class="feature-card"><span>📊</span> Reportes y Análisis</div>
+            <div class="feature-card"><span>🏦</span> Cuentas</div>
+            <div class="feature-card"><span>⚖️</span> Impuestos</div>
             <div class="feature-card"><span>✅</span> Aprobaciones</div>
+            <div class="feature-card"><span>📊</span> Reportes</div>
         </div>
     </section>
 
     <section class="whatsapp-section">
-        <div class="whatsapp-content">
-            <h2>Tu Asistente Financiero en WhatsApp</h2>
-            <p>Próximamente podrás registrar tus gastos, consultar saldos y generar reportes con un simple mensaje. La gestión financiera nunca fue tan fácil.</p>
-        </div>
-        <div class="whatsapp-image">
-            </div>
-    </section>
+        </section>
 
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
