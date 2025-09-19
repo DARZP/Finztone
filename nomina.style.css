@@ -179,3 +179,8 @@ h2 {
     text-decoration: none;
     color: inherit;
 }
+
+.logo-header {
+    height: 35px; /* Ajusta esta altura como prefieras */
+    width: auto;
+}
