@@ -7,6 +7,11 @@
     --input-border-color: #dddddd;
 }
 
+.logo-header {
+    height: 26px;
+    width: auto;
+}
+
 body {
     margin: 0;
     font-family: 'Poppins', sans-serif;
@@ -177,8 +182,4 @@ h2 {
 .user-info-link {
     text-decoration: none;
     color: inherit;
-}
-.logo-header {
-    height: 26px;
-    width: auto;
 }
