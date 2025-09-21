@@ -74,7 +74,7 @@ body {
 
 .tool-card {
     background-color: var(--box-background-color);
-    border-radius: 100px;
+    border-radius: 30px;
     padding: 20px;
     text-align: center;
     text-decoration: none;
