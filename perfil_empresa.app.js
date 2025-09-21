@@ -50,8 +50,7 @@ async function cargarDatosDeEmpresa(id) {
         companyRfcEl.textContent = data.rfc || 'No disponible';
         contactNameEl.textContent = data.contactoNombre || 'No disponible';
         contactEmailEl.textContent = data.contactoEmail || 'No disponible';
-        // Haremos la página de editar en el siguiente paso
-        // editCompanyBtn.href = `editar_empresa.html?id=${id}`;
+        editCompanyBtn.href = `editar_empresa.html?id=${id}`;
     } else {
         alert("Empresa no encontrada.");
     }
