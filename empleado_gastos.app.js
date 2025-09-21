@@ -32,6 +32,52 @@ const montoInput = document.getElementById('expense-amount');
 const summaryBruto = document.getElementById('summary-bruto');
 const summaryImpuestos = document.getElementById('summary-impuestos');
 const summaryNeto = document.getElementById('summary-neto');
+const companyInput = document.getElementById('expense-company');
+const projectSelect = document.getElementById('project-select');
+
+async function cargarProyectos(empresaNombre) {
+    projectSelect.innerHTML = '<option value="">Cargando...</option>';
+    projectSelect.disabled = true;
+
+    if (!empresaNombre) {
+        projectSelect.innerHTML = '<option value="">Primero selecciona una empresa</option>';
+        return;
+    }
+
+    try {
+        const empresaQuery = await db.collection('empresas').where('nombre', '==', empresaNombre).limit(1).get();
+
+        if (empresaQuery.empty) {
+            projectSelect.innerHTML = '<option value="">Empresa no encontrada</option>';
+            return;
+        }
+        const empresaId = empresaQuery.docs[0].id;
+
+        const proyectosQuery = await db.collection('proyectos')
+            .where('empresaId', '==', empresaId)
+            .where('status', '==', 'activo')
+            .get();
+
+        if (proyectosQuery.empty) {
+            projectSelect.innerHTML = '<option value="">No hay proyectos activos</option>';
+        } else {
+            projectSelect.innerHTML = '<option value="">Selecciona un proyecto</option>';
+            proyectosQuery.forEach(doc => {
+                const proyecto = doc.data();
+                const option = new Option(proyecto.nombre, doc.id);
+                projectSelect.appendChild(option);
+            });
+            projectSelect.disabled = false;
+        }
+    } catch (error) {
+        console.error("Error al cargar proyectos:", error);
+        projectSelect.innerHTML = '<option value="">Error al cargar</option>';
+    }
+}
+
+companyInput.addEventListener('change', () => {
+    cargarProyectos(companyInput.value);
+});
 
 // --- VARIABLES DE ESTADO ---
 let modoEdicion = false;
@@ -239,7 +285,9 @@ async function guardarGasto(status) {
             comentarios: addExpenseForm['expense-comments'].value,
             nombreCreador: userName,
             creadorId: userProfileId,
-            comprobanteURL: comprobanteURL // <-- ¡NUEVO CAMPO CON EL ENLACE!
+            comprobanteURL: comprobanteURL,
+            proyectoId: projectSelect.value,
+            proyectoNombre: projectSelect.value ? projectSelect.options[projectSelect.selectedIndex].text : ''
         };
         
     if (isInvoiceCheckbox.checked) {
@@ -351,4 +399,5 @@ function cargarGastos() {
         mostrarGastos(gastos);
     }, error => console.error("Error al obtener gastos:", error));
 }
+
 
