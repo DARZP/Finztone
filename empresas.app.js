@@ -75,7 +75,7 @@ function mostrarEmpresas(empresas) {
     empresas.forEach(empresa => {
         const empresaElement = document.createElement('a');
         // Por ahora, el enlace no llevará a ningún lado. En el siguiente paso lo activaremos.
-        empresaElement.href = `#`; // Próximamente: perfil_empresa.html?id=${empresa.id}
+        empresaElement.href = `perfil_empresa.html?id=${empresa.id}`;
         empresaElement.classList.add('user-item'); // Reutilizamos la clase de CSS
         
         empresaElement.innerHTML = `
