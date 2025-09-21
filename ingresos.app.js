@@ -30,6 +30,8 @@ const montoInput = document.getElementById('income-amount');
 const summaryBruto = document.getElementById('summary-bruto');
 const summaryImpuestos = document.getElementById('summary-impuestos');
 const summaryNeto = document.getElementById('summary-neto');
+const companyInput = document.getElementById('income-company');
+const projectSelect = document.getElementById('project-select');
 
 // --- LÓGICA DE LA PÁGINA ---
 auth.onAuthStateChanged((user) => {
@@ -122,6 +124,54 @@ function recalcularTotales() {
     summaryNeto.textContent = `$${montoNeto.toLocaleString('es-MX')}`;
 }
 
+async function cargarProyectos(empresaNombre) {
+    // Limpiamos y deshabilitamos el selector de proyectos
+    projectSelect.innerHTML = '<option value="">Cargando...</option>';
+    projectSelect.disabled = true;
+
+    if (!empresaNombre) {
+        projectSelect.innerHTML = '<option value="">Primero selecciona una empresa</option>';
+        return;
+    }
+
+    try {
+        // 1. Buscamos el ID de la empresa a partir de su nombre
+        const empresaQuery = await db.collection('empresas').where('nombre', '==', empresaNombre).limit(1).get();
+
+        if (empresaQuery.empty) {
+            projectSelect.innerHTML = '<option value="">Empresa no encontrada</option>';
+            return;
+        }
+        const empresaId = empresaQuery.docs[0].id;
+
+        // 2. Buscamos los proyectos activos de esa empresa
+        const proyectosQuery = await db.collection('proyectos')
+            .where('empresaId', '==', empresaId)
+            .where('status', '==', 'activo')
+            .get();
+
+        if (proyectosQuery.empty) {
+            projectSelect.innerHTML = '<option value="">No hay proyectos activos</option>';
+        } else {
+            projectSelect.innerHTML = '<option value="">Selecciona un proyecto</option>';
+            proyectosQuery.forEach(doc => {
+                const proyecto = doc.data();
+                const option = new Option(proyecto.nombre, doc.id);
+                projectSelect.appendChild(option);
+            });
+            projectSelect.disabled = false; // Habilitamos el selector
+        }
+    } catch (error) {
+        console.error("Error al cargar proyectos:", error);
+        projectSelect.innerHTML = '<option value="">Error al cargar</option>';
+    }
+}
+
+// Cuando el usuario escriba un nombre de empresa y salga del campo, cargamos sus proyectos
+companyInput.addEventListener('change', () => {
+    cargarProyectos(companyInput.value);
+});
+
 async function guardarIngresoAdmin(status) {
     const user = auth.currentUser;
     if (!user) return;
@@ -164,7 +214,9 @@ async function guardarIngresoAdmin(status) {
         fechaDeCreacion: new Date(),
         status: status,
         cuentaId: cuentaId,
-        cuentaNombre: cuentaId ? accountSelect.options[accountSelect.selectedIndex].text.split(' (')[0] : ''
+        cuentaNombre: cuentaId ? accountSelect.options[accountSelect.selectedIndex].text.split(' (')[0] : '',
+        proyectoId: projectSelect.value,
+        proyectoNombre: projectSelect.value ? projectSelect.options[projectSelect.selectedIndex].text : ''
     };
     if (isInvoiceCheckbox.checked) {
         incomeData.datosFactura = {
