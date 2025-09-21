@@ -90,4 +90,19 @@ body { margin: 0; font-family: 'Poppins', sans-serif; }
     .whatsapp-section { flex-direction: column-reverse; padding: 60px 30px; }
 }
 
+.main-footer {
+    padding: 20px;
+    text-align: center;
+    background-color: var(--background-light); /* Usa el mismo color que el panel izquierdo */
+    font-size: 0.9em;
+}
+
+.main-footer a {
+    color: #888;
+    text-decoration: none;
+}
+
+.main-footer a:hover {
+    text-decoration: underline;
+}
 
