@@ -27,6 +27,13 @@ const addApprovedBtn = document.getElementById('add-approved-btn');
 const formCategorySelect = document.getElementById('expense-category');
 const addTaxesCheckbox = document.getElementById('add-taxes-checkbox');
 const taxesDetailsContainer = document.getElementById('taxes-details-container');
+const companyInput = document.getElementById('expense-company');
+const projectSelect = document.getElementById('project-select');
+
+companyInput.addEventListener('change', () => {
+    cargarProyectos(companyInput.value);
+});
+
 
 // --- LÓGICA DE LA PÁGINA ---
 auth.onAuthStateChanged((user) => {
@@ -121,6 +128,49 @@ function recalcularTotales() {
     document.getElementById('summary-neto').textContent = `$${montoNeto.toLocaleString('es-MX')}`;
 }
 
+async function cargarProyectos(empresaNombre) {
+    // Limpiamos y deshabilitamos el selector de proyectos
+    projectSelect.innerHTML = '<option value="">Cargando...</option>';
+    projectSelect.disabled = true;
+
+    if (!empresaNombre) {
+        projectSelect.innerHTML = '<option value="">Primero selecciona una empresa</option>';
+        return;
+    }
+
+    try {
+        // 1. Buscamos el ID de la empresa a partir de su nombre
+        const empresaQuery = await db.collection('empresas').where('nombre', '==', empresaNombre).limit(1).get();
+
+        if (empresaQuery.empty) {
+            projectSelect.innerHTML = '<option value="">Empresa no encontrada</option>';
+            return;
+        }
+        const empresaId = empresaQuery.docs[0].id;
+
+        // 2. Buscamos los proyectos activos de esa empresa
+        const proyectosQuery = await db.collection('proyectos')
+            .where('empresaId', '==', empresaId)
+            .where('status', '==', 'activo')
+            .get();
+
+        if (proyectosQuery.empty) {
+            projectSelect.innerHTML = '<option value="">No hay proyectos activos</option>';
+        } else {
+            projectSelect.innerHTML = '<option value="">Selecciona un proyecto</option>';
+            proyectosQuery.forEach(doc => {
+                const proyecto = doc.data();
+                const option = new Option(proyecto.nombre, doc.id);
+                projectSelect.appendChild(option);
+            });
+            projectSelect.disabled = false; // Habilitamos el selector
+        }
+    } catch (error) {
+        console.error("Error al cargar proyectos:", error);
+        projectSelect.innerHTML = '<option value="">Error al cargar</option>';
+    }
+}
+
 async function guardarGastoAdmin(status) {
     const user = auth.currentUser;
     if (!user) return;
@@ -163,7 +213,9 @@ async function guardarGastoAdmin(status) {
         fechaDeCreacion: new Date(),
         status: status,
         cuentaId: cuentaId,
-        cuentaNombre: cuentaId ? accountSelect.options[accountSelect.selectedIndex].text.split(' (')[0] : ''
+        cuentaNombre: cuentaId ? accountSelect.options[accountSelect.selectedIndex].text.split(' (')[0] : '',
+        proyectoId: projectSelect.value,
+        proyectoNombre: projectSelect.value ? projectSelect.options[projectSelect.selectedIndex].text : ''
     };
     if (isInvoiceCheckbox.checked) { /* ... */ }
 
