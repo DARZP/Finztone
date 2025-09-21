@@ -34,6 +34,7 @@ const summaryImpuestos = document.getElementById('summary-impuestos');
 const summaryNeto = document.getElementById('summary-neto');
 const companyInput = document.getElementById('expense-company');
 const projectSelect = document.getElementById('project-select');
+const formPaymentMethodSelect = document.getElementById('payment-method');
 
 async function cargarProyectos(empresaNombre) {
     projectSelect.innerHTML = '<option value="">Cargando...</option>';
@@ -281,7 +282,7 @@ async function guardarGasto(status) {
             categoria: formCategorySelect.value,
             fecha: addExpenseForm['expense-date'].value,
             empresa: addExpenseForm['expense-company'].value.trim(),
-            metodoPago: formPaymentMethodSelect.value,
+            metodoPago: addExpenseForm['payment-method'].value,
             comentarios: addExpenseForm['expense-comments'].value,
             nombreCreador: userName,
             creadorId: userProfileId,
@@ -399,5 +400,6 @@ function cargarGastos() {
         mostrarGastos(gastos);
     }, error => console.error("Error al obtener gastos:", error));
 }
+
 
 
