@@ -91,18 +91,33 @@ body { margin: 0; font-family: 'Poppins', sans-serif; }
 }
 
 .main-footer {
-    padding: 20px;
-    text-align: center;
-    background-color: var(--background-light); /* Usa el mismo color que el panel izquierdo */
+    background-color: var(--secondary-color); /* Fondo azul oscuro */
+    color: #a9b3c1; /* Texto gris claro para el copyright */
+    padding: 30px 40px;
     font-size: 0.9em;
 }
 
+.footer-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px; /* Mismo ancho que las otras secciones */
+    margin: 0 auto; /* Centra el contenido */
+    flex-wrap: wrap; /* Para que se ajuste en pantallas pequeñas */
+    gap: 15px; /* Espacio entre elementos si se apilan */
+}
+
+.footer-content p {
+    margin: 0;
+}
+
 .main-footer a {
-    color: #888;
+    color: var(--text-color-light); /* Enlace en blanco */
     text-decoration: none;
+    font-weight: 500;
+    transition: color 0.3s ease;
 }
 
 .main-footer a:hover {
-    text-decoration: underline;
+    color: var(--primary-color); /* Color turquesa al pasar el mouse */
 }
-
