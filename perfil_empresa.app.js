@@ -64,7 +64,6 @@ async function cargarDatosDeEmpresa(id) {
         });
 }
 
-// Función para mostrar los proyectos en sus respectivas listas
 function mostrarProyectos(proyectos) {
     activeProjectsList.innerHTML = '';
     inactiveProjectsList.innerHTML = '';
@@ -76,26 +75,67 @@ function mostrarProyectos(proyectos) {
 
     proyectos.forEach(proyecto => {
         const item = document.createElement('div');
-        item.classList.add('activity-feed-item'); // Reutilizamos estilos
-        
-        if (proyecto.status === 'activo') {
-            item.innerHTML = `
+        item.classList.add('project-container'); // Nueva clase contenedora
+
+        const isActive = proyecto.status === 'activo';
+        const buttonText = isActive ? 'Desactivar' : 'Activar';
+        const buttonClass = isActive ? 'btn-deactivate' : 'btn-activate';
+        const lineThrough = isActive ? '' : 'style="text-decoration: line-through;"';
+
+        // El elemento principal del proyecto (lo que se ve siempre)
+        item.innerHTML = `
+            <div class="activity-feed-item project-header" data-project-id="${proyecto.id}">
                 <div class="item-info">
-                    <span class="item-description">${proyecto.nombre}</span>
+                    <span class="item-description" ${lineThrough}>${proyecto.nombre}</span>
                 </div>
-                <button class="btn btn-secondary btn-deactivate" data-id="${proyecto.id}">Desactivar</button>
-            `;
+                <button class="btn btn-secondary ${buttonClass}" data-id="${proyecto.id}">${buttonText}</button>
+            </div>
+            <div class="project-history" id="history-${proyecto.id}" style="display: none;">Cargando historial...</div>
+        `;
+
+        if (isActive) {
             activeProjectsList.appendChild(item);
-        } else { // Si es 'inactivo'
-            item.innerHTML = `
-                <div class="item-info">
-                    <span class="item-description" style="text-decoration: line-through;">${proyecto.nombre}</span>
-                </div>
-                <button class="btn btn-activate" data-id="${proyecto.id}">Activar</button>
-            `;
+        } else {
             inactiveProjectsList.appendChild(item);
         }
     });
+}
+
+async function cargarHistorialDeProyecto(proyectoId) {
+    const historyContainer = document.getElementById(`history-${proyectoId}`);
+    if (!historyContainer) return;
+
+    // Alternar visibilidad
+    const isVisible = historyContainer.style.display === 'block';
+    if (isVisible) {
+        historyContainer.style.display = 'none';
+        return;
+    } else {
+        historyContainer.style.display = 'block';
+    }
+
+    try {
+        const gastosPromise = db.collection('gastos').where('proyectoId', '==', proyectoId).get();
+        const ingresosPromise = db.collection('ingresos').where('proyectoId', '==', proyectoId).get();
+
+        const [gastosSnapshot, ingresosSnapshot] = await Promise.all([gastosPromise, ingresosPromise]);
+
+        let movimientosHTML = '';
+        gastosSnapshot.forEach(doc => {
+            const gasto = doc.data();
+            movimientosHTML += `<p class="history-line expense">Gasto: ${gasto.descripcion} <strong>-$${gasto.monto.toLocaleString()}</strong></p>`;
+        });
+        ingresosSnapshot.forEach(doc => {
+            const ingreso = doc.data();
+            movimientosHTML += `<p class="history-line income">Ingreso: ${ingreso.descripcion} <strong>+$${ingreso.monto.toLocaleString()}</strong></p>`;
+        });
+
+        historyContainer.innerHTML = movimientosHTML || '<p class="history-line">No hay movimientos para este proyecto.</p>';
+
+    } catch (error) {
+        console.error("Error al cargar historial:", error);
+        historyContainer.innerHTML = '<p class="history-line">Error al cargar historial.</p>';
+    }
 }
 
 // Listener para el formulario de agregar proyecto
@@ -113,16 +153,25 @@ addProjectForm.addEventListener('submit', (e) => {
     }).catch(error => console.error("Error al agregar proyecto:", error));
 });
 
-// Listener para los botones de activar/desactivar (usando delegación de eventos)
 document.addEventListener('click', (e) => {
-    const projectId = e.target.dataset.id;
-    if (!projectId) return;
-
-    if (e.target.classList.contains('btn-deactivate')) {
-        db.collection('proyectos').doc(projectId).update({ status: 'inactivo' });
+    // --- Lógica para activar/desactivar (ya la tienes) ---
+    const statusProjectId = e.target.dataset.id;
+    if (statusProjectId) {
+        if (e.target.classList.contains('btn-deactivate')) {
+            db.collection('proyectos').doc(statusProjectId).update({ status: 'inactivo' });
+        }
+        if (e.target.classList.contains('btn-activate')) {
+            db.collection('proyectos').doc(statusProjectId).update({ status: 'activo' });
+        }
     }
 
-    if (e.target.classList.contains('btn-activate')) {
-        db.collection('proyectos').doc(projectId).update({ status: 'activo' });
+    // --- NUEVA LÓGICA para mostrar/ocultar historial ---
+    const projectHeader = e.target.closest('.project-header');
+    if (projectHeader) {
+        // Evitamos que el clic en el botón active también esto
+        if (!e.target.matches('button')) {
+            const historyProjectId = projectHeader.dataset.projectId;
+            cargarHistorialDeProyecto(historyProjectId);
+        }
     }
 });
