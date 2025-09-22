@@ -21,11 +21,13 @@ const includeIngresosCheck = document.getElementById('include-ingresos');
 const includeGastosCheck = document.getElementById('include-gastos');
 const includeNominaCheck = document.getElementById('include-nomina');
 const includeImpuestosCheck = document.getElementById('include-impuestos');
+const companyFilter = document.getElementById('company-filter');
 
 auth.onAuthStateChanged(user => {
     if (user) {
         poblarFiltroUsuarios();
-        poblarFiltroCuentas();
+        poblarFiltroCuentas();   
+        poblarFiltroEmpresas();
     } else {
         window.location.href = 'index.html';
     }
@@ -38,6 +40,18 @@ function poblarFiltroUsuarios() {
                 const user = doc.data();
                 const option = new Option(user.nombre, doc.id);
                 userFilter.appendChild(option);
+            });
+        });
+}
+
+function poblarFiltroEmpresas() {
+    db.collection('empresas').orderBy('nombre').get()
+        .then(snapshot => {
+            snapshot.forEach(doc => {
+                const empresa = doc.data();
+                // OJO: Usamos el NOMBRE como valor, ya que en los gastos/ingresos no guardamos el ID
+                const option = new Option(empresa.nombre, empresa.nombre);
+                companyFilter.appendChild(option);
             });
         });
 }
@@ -64,6 +78,7 @@ generateBtn.addEventListener('click', async () => {
     const includeImpuestos = includeImpuestosCheck.checked;
     const selectedUserId = userFilter.value;
     const selectedAccountId = accountFilter.value;
+    const selectedCompanyName = companyFilter.value;
 
     if (!startDateInput.value || !endDateInput.value) {
         return alert('Por favor, selecciona una fecha de inicio y de fin.');
