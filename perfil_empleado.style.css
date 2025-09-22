@@ -109,3 +109,15 @@ body {
     height: 300px; /* Ajusta esta altura como prefieras */
     width: auto;
 }
+
+.project-header { cursor: pointer; }
+.project-history {
+    padding: 15px;
+    margin: 0 15px 15px 15px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    border: 1px solid #eee;
+}
+.history-line { margin: 5px 0; font-size: 0.9em; }
+.history-line.expense strong { color: #c62828; }
+.history-line.income strong { color: #2e7d32; }
