@@ -122,6 +122,7 @@ generateBtn.addEventListener('click', async () => {
                 // Filtramos por colaborador y cuenta
                 if (selectedUserId !== 'todos' && (data.creadoPor !== selectedUserId && data.userId !== selectedUserId)) return;
                 if (selectedAccountId !== 'todas' && data.cuentaId !== selectedAccountId) return;
+                if (selectedCompanyName !== 'todas' && data.empresa !== selectedCompanyName) return;
 
                 let row = {
                     Fecha: (data.fechaDeCreacion || data.fechaDePago || data.fecha).toDate().toLocaleDateString('es-ES'),
