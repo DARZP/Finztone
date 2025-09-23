@@ -184,7 +184,7 @@ body {
 .hero-logo {
     position: relative; /* Para que esté por encima del resplandor */
     z-index: 2;
-    max-width: 150px;
+    max-width: 200px;
     height: auto;
     /* El efecto de vidrio esmerilado */
     background: rgba(255, 255, 255, 0.1);
