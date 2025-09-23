@@ -4,94 +4,92 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bienvenido a FINZTONE</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="landing.style.css">
+    
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
 </head>
 <body>
 
-    <div class="main-container">
-        <div class="left-pane">
-            <div class="branding">
-                <img src="images/logo.png" alt="Logo de FINZTONE" class="logo-main">
-                <h2>El Futuro de tus Finanzas, Hoy.</h2>
-                <p>Transforma la gestión de tu empresa o finanzas personales con herramientas inteligentes y un diseño intuitivo.</p>
-            </div>
-        </div>
-        <div class="right-pane">
-            <div class="login-box-wrapper">
-                <div class="login-box">
-                    <div class="tabs">
-                        <button class="tab-link active" onclick="openTab(event, 'Admin')">Administrador</button>
-                        <button class="tab-link" onclick="openTab(event, 'Employee')">Colaborador</button>
-                        <button class="tab-link" onclick="openTab(event, 'Personal')">Personal</button>
-                    </div>
+    <section class="hero">
+        <img src="images/35.png" alt="deco" class="deco-shape deco-1">
+        <img src="images/36.png" alt="deco" class="deco-shape deco-2">
+        <img src="images/39.png" alt="deco" class="deco-shape deco-3">
+        <img src="images/38.png" alt="deco" class="deco-shape deco-4">
 
-                    <div id="Admin" class="tab-content">
-                        <form id="admin-login-form">
-                            <div class="input-group"><input type="email" id="admin-email" placeholder="Correo de Administrador" required></div>
-                            <div class="input-group"><input type="password" id="admin-password" placeholder="Contraseña" required></div>
-                            <button type="submit" class="btn-primary">Acceder</button>
-                            <a href="#" class="forgot-password">¿Olvidaste tu contraseña?</a>
-                        </form>
-                    </div>
-                    <div id="Employee" class="tab-content">
-                        <form id="employee-login-form">
-                            <div class="input-group"><input type="email" id="employee-email" placeholder="Correo de Empleado" required></div>
-                            <div class="input-group"><input type="password" id="employee-password" placeholder="Contraseña" required></div>
-                            <button type="submit" class="btn-primary">Acceder</button>
-                            <a href="#" class="forgot-password">¿Olvidaste tu contraseña?</a>
-                        </form>
-                    </div>
-                    <div id="Personal" class="tab-content">
-                        <form id="personal-login-form">
-                            <div class="input-group"><input type="email" id="personal-email" placeholder="Tu Correo" required></div>
-                            <div class="input-group"><input type="password" id="personal-password" placeholder="Contraseña" required></div>
-                            <button type="submit" class="btn-primary">Acceder</button>
-                            <a href="registro.html" class="signup-link">¿No tienes una cuenta? Regístrate aquí</a>
-                        </form>
-                    </div>
+        <div class="container hero-content">
+            <h1>CONTROL <span>TOTAL</span></h1>
+            <p>Domina el flujo de tus cuentas personales, empresariales o familiares. FINZTONE te da las herramientas para registrar cada movimiento de forma colaborativa.</p>
+        </div>
+        
+        <div class="login-wrapper">
+            <div class="login-box">
+                <div class="tabs">
+                    <button class="tab-link active" onclick="openTab(event, 'Admin')">Administrador</button>
+                    <button class="tab-link" onclick="openTab(event, 'Employee')">Colaborador</button>
+                    <button class="tab-link" onclick="openTab(event, 'Personal')">Personal</button>
                 </div>
+                <div id="Admin" class="tab-content"><form id="admin-login-form"><div class="input-group"><input type="email" id="admin-email" placeholder="Correo de Administrador" required></div><div class="input-group"><input type="password" id="admin-password" placeholder="Contraseña" required></div><button type="submit" class="btn-primary">Acceder</button><a href="#" class="forgot-password">¿Olvidaste tu contraseña?</a></form></div>
+                <div id="Employee" class="tab-content"><form id="employee-login-form"><div class="input-group"><input type="email" id="employee-email" placeholder="Correo de Empleado" required></div><div class="input-group"><input type="password" id="employee-password" placeholder="Contraseña" required></div><button type="submit" class="btn-primary">Acceder</button><a href="#" class="forgot-password">¿Olvidaste tu contraseña?</a></form></div>
+                <div id="Personal" class="tab-content"><form id="personal-login-form"><div class="input-group"><input type="email" id="personal-email" placeholder="Tu Correo" required></div><div class="input-group"><input type="password" id="personal-password" placeholder="Contraseña" required></div><button type="submit" class="btn-primary">Acceder</button><a href="registro.html" class="signup-link">¿No tienes cuenta? Regístrate</a></form></div>
             </div>
         </div>
-    </div>
-
-    <section class="features-section">
-        <h2>Un Ecosistema de Herramientas a tu Medida</h2>
-        <div class="features-grid">
-            <div class="feature-card"><span>💸</span> Gastos</div>
-            <div class="feature-card"><span>💰</span> Ingresos</div>
-            <div class="feature-card"><span>👥</span> Colaboradores</div>
-            <div class="feature-card"><span>🧾</span> Nómina</div>
-            <div class="feature-card"><span>🏦</span> Cuentas</div>
-            <div class="feature-card"><span>⚖️</span> Impuestos</div>
-            <div class="feature-card"><span>✅</span> Aprobaciones</div>
-            <div class="feature-card"><span>📊</span> Reportes</div>
-        </div>
     </section>
-    
-    <section class="whatsapp-section">
-        <div class="whatsapp-content">
-            <h2>Tu Asistente Financiero en WhatsApp</h2>
-            <p>Próximamente podrás registrar tus gastos, consultar saldos y generar reportes con un simple mensaje. La gestión financiera nunca fue tan fácil.</p>
-        </div>
-        <div class="whatsapp-image">
+
+    <section class="section">
+        <div class="container">
+            <div class="feature-card">
+                <div class="feature-text"><h3>Digitaliza tus Gastos al Instante</h3><p>Tu equipo puede registrar gastos desde cualquier lugar. Solo llenan un formulario simple, adjuntan el comprobante y lo envían. Se acabaron los papeles perdidos y los reportes manuales.</p></div>
+                <div class="feature-image"><img src="images/23.png" alt="Digitalización de Gastos"></div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-text"><h3>Aprobaciones con un Clic</h3><p>Revisa las solicitudes de tu equipo en un panel de aprobaciones centralizado. Aprueba o rechaza en segundos y observa cómo el saldo de tus cuentas se actualiza automáticamente.</p></div>
+                <div class="feature-image"><img src="images/30.png" alt="Panel de Aprobaciones"></div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-text"><h3>La Nómina, por Fin Sencilla</h3><p>Olvídate de las hojas de cálculo complejas. Paga la nómina a tus colaboradores por quincenas, descuenta sueldo bruto o neto y genera los registros de impuestos de forma automática y sin errores.</p></div>
+                <div class="feature-image"><img src="images/36.png" alt="Gestión de Nómina"></div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-text"><h3>Reportes Inteligentes en un Segundo</h3><p>Genera reportes personalizados en segundos. Filtra por fecha, colaborador, empresa, cuenta o categoría y descarga hojas de cálculo listas para analizar.</p></div>
+                <div class="feature-image"><img src="images/42.jpg" alt="Generador de Reportes"></div>
+            </div>
         </div>
     </section>
 
-    </section> <footer class="main-footer">
-    <div class="footer-content">
-        <p>&copy; 2025 FINZTONE. Todos los derechos reservados.</p>
-        <a href="politica-de-privacidad.html" target="_blank">Política de Privacidad</a>
-    </div>
-</footer>
-<script src="app.js"></script>
+    <section class="section">
+        <div class="container">
+            <h2 class="section-header">Un Ecosistema de Herramientas a tu Medida</h2>
+            <div class="tools-grid">
+                <div class="tool-item"><span>💸</span> Gastos</div>
+                <div class="tool-item"><span>💰</span> Ingresos</div>
+                <div class="tool-item"><span>👥</span> Colaboradores</div>
+                <div class="tool-item"><span>🧾</span> Nómina</div>
+                <div class="tool-item"><span>🏦</span> Cuentas</div>
+                <div class="tool-item"><span>⚖️</span> Impuestos</div>
+                <div class="tool-item"><span>✅</span> Aprobaciones</div>
+                <div class="tool-item"><span>📊</span> Reportes</div>
+            </div>
+        </div>
+    </section>
+    <section class="section whatsapp-section">
+        <div class="container whatsapp-content">
+            <div class="whatsapp-text">
+                <h2 class="section-header" style="text-align: left;">Tu Asistente Financiero en WhatsApp</h2>
+                <p>Próximamente podrás registrar tus gastos, consultar saldos y generar reportes con un simple mensaje. La gestión financiera nunca fue tan fácil.</p>
+            </div>
+            <div class="whatsapp-image">
+                <img src="images/18.png" alt="WhatsApp en el teléfono">
+            </div>
+        </div>
+    </section>
+    <footer class="main-footer">
+        <div class="container footer-content">
+            <p>&copy; 2025 FINZTONE. Todos los derechos reservados.</p>
+            <a href="politica-de-privacidad.html" target="_blank">Política de Privacidad</a>
+        </div>
+    </footer>
+    <script src="app.js"></script>
 </body>
 </html>
-
-
-
