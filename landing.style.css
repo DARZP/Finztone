@@ -1,4 +1,4 @@
-/* landing.style.css */
+/* landing.style.css (Actualizado) */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
 
 :root {
@@ -34,54 +34,23 @@ body {
     position: relative;
 }
 
-.hero-content {
-    flex: 1;
-    z-index: 2;
-}
+.hero-content { flex: 1; z-index: 2; }
+.hero-content h1 { font-size: 4rem; font-weight: 800; line-height: 1.2; margin: 0 0 16px 0; }
+.hero-content h1 span { color: var(--primary-color); }
+.hero-content p { font-size: 1.2rem; max-width: 500px; margin-bottom: 32px; color: #cbd5e1;}
+.hero .login-wrapper { flex: 1; display: flex; justify-content: center; align-items: center; z-index: 2; }
 
-.hero-content h1 {
-    font-size: 4rem;
-    font-weight: 800;
-    line-height: 1.2;
-    margin: 0 0 16px 0;
-}
-
-.hero-content h1 span {
-    color: var(--primary-color);
-}
-
-.hero-content p {
-    font-size: 1.2rem;
-    max-width: 500px;
-    margin-bottom: 32px;
-    color: #cbd5e1;
-}
-
-.hero .login-wrapper {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 2;
-}
-
-/* --- Login Box Styles (from your original style.css, adapted) --- */
+/* --- Login Box Styles --- */
 .login-box {
-    background-color: #ffffff;
-    padding: 40px;
-    border-radius: 16px;
-    text-align: center;
-    width: 100%;
-    max-width: 400px;
-    color: var(--text-dark);
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    background-color: #ffffff; padding: 40px; border-radius: 16px;
+    text-align: center; width: 100%; max-width: 400px;
+    color: var(--text-dark); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 }
-
 .tabs { display: flex; border-bottom: 1px solid #e2e8f0; }
 .tab-link {
-    flex: 1; padding: 15px 5px; border: none; background: none;
-    cursor: pointer; font-size: 0.9em; font-family: 'Poppins', sans-serif;
-    color: #64748b; border-bottom: 3px solid transparent; transition: all 0.3s ease;
+    flex: 1; padding: 15px 5px; border: none; background: none; cursor: pointer;
+    font-size: 0.9em; font-family: 'Poppins', sans-serif; color: #64748b;
+    border-bottom: 3px solid transparent; transition: all 0.3s ease;
 }
 .tab-link:hover { color: var(--primary-color); }
 .tab-link.active { color: var(--primary-color); border-bottom-color: var(--primary-color); font-weight: 600; }
@@ -89,9 +58,8 @@ body {
 .input-group { margin-bottom: 20px; }
 .input-group input { width: 100%; padding: 14px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 1em; }
 .btn-primary {
-    width: 100%; padding: 14px; background-color: var(--primary-color);
-    color: white; border: none; border-radius: 8px; font-size: 1.1em; cursor: pointer;
-    transition: background-color 0.3s ease;
+    width: 100%; padding: 14px; background-color: var(--primary-color); color: white;
+    border: none; border-radius: 8px; font-size: 1.1em; cursor: pointer; transition: background-color 0.3s ease;
 }
 .btn-primary:hover { background-color: #008a7e; }
 .forgot-password, .signup-link, .privacy-link {
@@ -102,45 +70,79 @@ body {
 
 
 /* --- Decorative Graphics --- */
-.deco-shape {
-    position: absolute;
-    z-index: 1;
-}
-
+.deco-shape { position: absolute; z-index: 1; }
 .deco-1 { top: 10%; left: 5%; width: 80px; transform: rotate(-15deg); }
 .deco-2 { top: 20%; right: 5%; width: 100px; }
 .deco-3 { bottom: 15%; left: 20%; width: 120px; }
 .deco-4 { bottom: 10%; right: 15%; width: 90px; transform: rotate(20deg); }
 
-/* --- Features Section --- */
-.features {
+/* --- Generic Section Styles --- */
+.section {
     padding: 100px 0;
     background-color: var(--background-light);
     color: var(--text-dark);
 }
+.section-header { text-align: center; font-size: 2.5rem; margin-bottom: 60px; }
 
-.features h2 {
-    text-align: center;
-    font-size: 2.5rem;
-    margin-bottom: 60px;
-}
-
-.feature-card {
-    display: flex;
-    align-items: center;
-    gap: 40px;
-    margin-bottom: 80px;
-}
-.feature-card:nth-child(even) {
-    flex-direction: row-reverse;
-}
-
+/* --- Features Section --- */
+.feature-card { display: flex; align-items: center; gap: 40px; margin-bottom: 80px; }
+.feature-card:nth-child(even) { flex-direction: row-reverse; }
 .feature-text { flex: 1; }
 .feature-text h3 { font-size: 1.8rem; color: var(--primary-color); }
 .feature-text p { font-size: 1.1rem; line-height: 1.7; }
-
 .feature-image { flex: 1; text-align: center; }
 .feature-image img { max-width: 100%; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+
+/* --- Tools Grid Section (NUEVO) --- */
+.tools-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 30px;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+.tool-item {
+    background-color: #ffffff;
+    padding: 30px;
+    border-radius: 16px;
+    font-size: 1.2em;
+    font-weight: 500;
+    text-align: center;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+.tool-item span { font-size: 2.5em; display: block; margin-bottom: 15px; }
+
+
+/* --- WhatsApp Section (NUEVO) --- */
+.whatsapp-section {
+    background-color: var(--secondary-color);
+    color: var(--text-light);
+    display: flex;
+    align-items: center;
+    gap: 40px;
+}
+.whatsapp-text { flex: 1; }
+.whatsapp-image { flex: 1; text-align: center; }
+.whatsapp-image img { max-width: 350px; }
+
+/* --- Footer (NUEVO) --- */
+.main-footer {
+    background-color: #081a31;
+    color: #a9b3c1;
+    padding: 30px 0;
+    font-size: 0.9em;
+}
+.footer-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+.footer-content p { margin: 0; }
+.main-footer a { color: var(--text-light); text-decoration: none; font-weight: 500; }
+.main-footer a:hover { color: var(--primary-color); }
+
 
 /* --- Responsive Design --- */
 @media (max-width: 900px) {
@@ -148,4 +150,5 @@ body {
     .hero-content { margin-bottom: 60px; }
     .hero-content p { margin-left: auto; margin-right: auto; }
     .feature-card, .feature-card:nth-child(even) { flex-direction: column; text-align: center; }
+    .whatsapp-section { flex-direction: column; text-align: center; }
 }
