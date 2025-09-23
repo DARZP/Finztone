@@ -40,28 +40,6 @@ body {
 .hero-content p { font-size: 1.2rem; max-width: 500px; margin-bottom: 32px; color: #cbd5e1;}
 .hero .login-wrapper { flex: 1; display: flex; justify-content: center; align-items: center; z-index: 2; }
 
-/* --- Estilos para el Logo y su Fondo --- */
-.logo-container {
-    width: 220px; /* Ancho del contenedor */
-    height: 220px; /* Alto del contenedor */
-    background-color: white; /* El fondo blanco que pediste */
-    margin-bottom: 30px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    /* La Magia: Esto recorta el div con una forma orgánica */
-    clip-path: polygon(0% 40%, 15% 15%, 40% 0%, 70% 10%, 90% 30%, 100% 60%, 85% 85%, 50% 100%, 20% 90%);
-    transition: transform 0.3s ease;
-}
-
-.logo-container:hover {
-    transform: scale(1.05) rotate(-3deg); /* Un pequeño efecto al pasar el mouse */
-}
-
-.hero-logo {
-    max-width: 160px; /* Ajustamos el tamaño del logo dentro del contenedor */
-    height: auto;
-}
 
 /* --- Login Box Styles --- */
 .login-box {
@@ -175,3 +153,44 @@ body {
     .feature-card, .feature-card:nth-child(even) { flex-direction: column; text-align: center; }
     .whatsapp-section { flex-direction: column; text-align: center; }
 }
+
+
+
+/* --- Estilos para el Logo con Efecto Glassmorphism --- */
+.logo-container {
+    position: relative; /* Necesario para el resplandor */
+    width: 200px;
+    height: 200px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 30px;
+    border-radius: 50%; /* Lo hacemos circular */
+}
+
+/* El resplandor suave detrás del logo */
+.logo-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0) 70%);
+    z-index: 1;
+}
+
+.hero-logo {
+    position: relative; /* Para que esté por encima del resplandor */
+    z-index: 2;
+    max-width: 150px;
+    height: auto;
+    /* El efecto de vidrio esmerilado */
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    padding: 25px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
