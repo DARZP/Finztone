@@ -40,6 +40,12 @@ body {
 .hero-content p { font-size: 1.2rem; max-width: 500px; margin-bottom: 32px; color: #cbd5e1;}
 .hero .login-wrapper { flex: 1; display: flex; justify-content: center; align-items: center; z-index: 2; }
 
+.hero-logo {
+    max-width: 180px; /* O el tamaño que prefieras */
+    height: auto;
+    margin-bottom: 24px;
+}
+
 /* --- Login Box Styles --- */
 .login-box {
     background-color: #ffffff; padding: 40px; border-radius: 16px;
