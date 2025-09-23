@@ -159,8 +159,8 @@ body {
 /* --- Estilos para el Logo con Efecto Glassmorphism --- */
 .logo-container {
     position: relative; /* Necesario para el resplandor */
-    width: 200px;
-    height: 200px;
+    width: 250px;
+    height: 250px;
     display: flex;
     justify-content: center;
     align-items: center;
