@@ -154,43 +154,50 @@ body {
     .whatsapp-section { flex-direction: column; text-align: center; }
 }
 
+/* --- Estilos para el Logo con Efecto Glassmorphism (Versión Mejorada) --- */
 
-
-/* --- Estilos para el Logo con Efecto Glassmorphism --- */
+/* Contenedor exterior (Controla el resplandor) */
 .logo-container {
-    position: relative; /* Necesario para el resplandor */
-    width: 300px;
-    height: 300px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    position: relative;
     margin-bottom: 30px;
-    border-radius: 50%; /* Lo hacemos circular */
+    /* El tamaño de este contenedor se adaptará al círculo de vidrio */
 }
 
-/* El resplandor suave detrás del logo */
+/* El resplandor suave detrás del círculo de vidrio */
 .logo-container::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    top: -10px; right: -10px; bottom: -10px; left: -10px; /* Lo hacemos un poco más grande */
     border-radius: 50%;
     background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0) 70%);
     z-index: 1;
 }
 
-.hero-logo {
-    position: relative; /* Para que esté por encima del resplandor */
+/* El círculo de vidrio (¡Aquí está el control principal!) */
+.logo-glass-circle {
+    position: relative;
     z-index: 2;
-    max-width: 150px;
-    height: auto;
-    /* El efecto de vidrio esmerilado */
+    width: 200px;  /* <-- AJUSTA EL TAMAÑO DEL CÍRCULO DE VIDRIO AQUÍ */
+    height: 200px; /* <-- Y AQUÍ */
+    
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    
     background: rgba(255, 255, 255, 0.1);
     border-radius: 50%;
-    padding: 25px;
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: transform 0.3s ease;
+}
+
+.logo-glass-circle:hover {
+    transform: scale(1.05);
+}
+
+/* La imagen del logo DENTRO del círculo */
+.hero-logo-image {
+    max-width: 150px; /* <-- AJUSTA EL TAMAÑO DE LA IMAGEN AQUÍ */
+    height: auto;
 }
 
