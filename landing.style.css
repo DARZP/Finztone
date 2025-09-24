@@ -154,13 +154,16 @@ body {
     .whatsapp-section { flex-direction: column; text-align: center; }
 }
 
-/* --- Estilos para el Logo con Efecto Glassmorphism (Versión Mejorada) --- */
-
 /* Contenedor exterior (Controla el resplandor) */
 .logo-container {
     position: relative;
     margin-bottom: 30px;
-    /* El tamaño de este contenedor se adaptará al círculo de vidrio */
+
+    /* --- LÍNEAS NUEVAS/MODIFICADAS --- */
+    margin-left: auto;   /* Centra el contenedor horizontalmente */
+    margin-right: auto;  /* Centra el contenedor horizontalmente */
+    width: 200px;         /* Le damos un ancho fijo (igual al del círculo) */
+    height: 200px;        /* Le damos un alto fijo (igual al del círculo) */
 }
 
 /* El resplandor suave detrás del círculo de vidrio */
