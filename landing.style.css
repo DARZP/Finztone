@@ -43,18 +43,26 @@ body {
 
 /* --- Login Box Styles --- */
 .login-box {
-    background-color: #ffffff; padding: 40px; border-radius: 16px;
-    text-align: center; width: 100%; max-width: 400px;
-    color: var(--text-dark); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 40px;
+    border-radius: 16px;
+    text-align: center;
+    width: 100%;
+    max-width: 400px;
+    color: var(--text-light); /* Cambiado a claro para que contraste con el fondo oscuro */
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+    z-index: 10;
 }
 .tabs { display: flex; border-bottom: 1px solid #e2e8f0; }
 .tab-link {
     flex: 1; padding: 15px 5px; border: none; background: none; cursor: pointer;
-    font-size: 0.9em; font-family: 'Poppins', sans-serif; color: #64748b;
+    font-size: 0.9em; font-family: 'Poppins', sans-serif; color: rgba(255, 255, 255, 0.6);
     border-bottom: 3px solid transparent; transition: all 0.3s ease;
 }
-.tab-link:hover { color: var(--primary-color); }
-.tab-link.active { color: var(--primary-color); border-bottom-color: var(--primary-color); font-weight: 600; }
+.tab-link:hover { color: var(--text-light); }
+.tab-link.active { color: var(--text-light); border-bottom-color: var(--primary-color); font-weight: 600; }
 .tab-content { display: none; margin-top: 30px; }
 .input-group { margin-bottom: 20px; }
 .input-group input { width: 100%; padding: 14px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 1em; }
@@ -64,8 +72,17 @@ body {
 }
 .btn-primary:hover { background-color: #008a7e; }
 .forgot-password, .signup-link, .privacy-link {
-    display: block; text-align: center; margin-top: 15px;
-    text-decoration: none; color: #64748b; font-size: 0.9em;
+    display: block;
+    text-align: center;
+    margin-top: 15px;
+    text-decoration: none;
+    color: rgba(255, 255, 255, 0.7); /* Color más claro y semitransparente */
+    font-size: 0.9em;
+    transition: color 0.3s ease;
+}
+
+.forgot-password:hover, .signup-link:hover {
+    color: var(--text-light); /* Se ilumina al pasar el mouse */
 }
 .privacy-link { margin-top: 25px; }
 
