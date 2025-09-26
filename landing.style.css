@@ -65,12 +65,45 @@ body {
 .tab-link.active { color: var(--text-light); border-bottom-color: var(--primary-color); font-weight: 600; }
 .tab-content { display: none; margin-top: 30px; }
 .input-group { margin-bottom: 20px; }
-.input-group input { width: 100%; padding: 14px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box; font-size: 1em; }
-.btn-primary {
-    width: 100%; padding: 14px; background-color: var(--primary-color); color: white;
-    border: none; border-radius: 8px; font-size: 1.1em; cursor: pointer; transition: background-color 0.3s ease;
+.input-group input {
+    width: 100%;
+    padding: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    box-sizing: border-box;
+    font-size: 1em;
+    background-color: rgba(255, 255, 255, 0.15);
+    color: var(--text-light);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
-.btn-primary:hover { background-color: #008a7e; }
+
+.input-group input::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.input-group input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 169, 157, 0.3);
+}
+.btn-primary {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(90deg, var(--primary-color), #00c7b6);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 4px 15px rgba(0, 169, 157, 0.3);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 169, 157, 0.4);
+}
 .forgot-password, .signup-link, .privacy-link {
     display: block;
     text-align: center;
@@ -87,12 +120,38 @@ body {
 .privacy-link { margin-top: 25px; }
 
 
-/* --- Decorative Graphics --- */
-.deco-shape { position: absolute; z-index: 1; }
-.deco-1 { top: 10%; left: 5%; width: 80px; transform: rotate(-15deg); }
-.deco-2 { top: 20%; right: 5%; width: 100px; }
-.deco-3 { bottom: 15%; left: 20%; width: 120px; }
-.deco-4 { bottom: 10%; right: 15%; width: 90px; transform: rotate(20deg); }
+/* --- Decorative Graphics & Animations --- */
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+}
+
+.deco-shape {
+    position: absolute;
+    z-index: 1;
+    animation: float 6s ease-in-out infinite;
+}
+
+.deco-1 {
+    top: 10%; left: 5%; width: 80px;
+    animation-delay: 0s;
+    animation-duration: 7s;
+}
+.deco-2 {
+    top: 20%; right: 5%; width: 100px;
+    animation-delay: 1.5s;
+    animation-duration: 8s;
+}
+.deco-3 {
+    bottom: 15%; left: 20%; width: 120px;
+    animation-delay: 3s;
+    animation-duration: 6s;
+}
+.deco-4 {
+    bottom: 10%; right: 15%; width: 90px;
+    animation-delay: 4.5s;
+    animation-duration: 9s;
+}
 
 /* --- Generic Section Styles --- */
 .section {
