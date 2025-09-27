@@ -2,70 +2,75 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale-1.0">
     <title>Generador de Reportes - FINZTONE</title>
-    <link rel="stylesheet" href="reportes.style.css">
+
+    <link rel="stylesheet" href="main.style.css">
+
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
-    <header class="main-header">
-        <a href="dashboard.html" class="back-button">← Volver</a>
-        <img src="images/nombre.png" alt="FINZTONE" class="logo-header">
-    </header>
-    <main class="container">
-        <div class="card report-generator-card">
-            <h2>Generar Hoja de Cálculo</h2>
-            <p>Selecciona los criterios para tu reporte personalizado.</p>
-            
-            <div class="report-form-grid">
-                <div class="form-section">
-                    <h4>1. Selecciona el Período</h4>
-                    <div class="input-group">
-                        <label for="start-date">Fecha de Inicio</label>
-                        <input type="date" id="start-date">
+    <div class="page-wrapper">
+        <header class="main-header">
+            <a href="dashboard.html" class="back-button">← Volver</a>
+            <img src="images/nombre.png" alt="FINZTONE" class="logo-header">
+        </header>
+
+        <main>
+            <div class="card">
+                <h2>Generar Hoja de Cálculo</h2>
+                <p style="margin-top: -15px; color: #aeb9c5;">Selecciona los criterios para tu reporte personalizado.</p>
+                
+                <div class="report-form-grid">
+                    <div class="form-section">
+                        <h4>1. Selecciona el Período</h4>
+                        <div class="input-group">
+                            <label for="start-date">Fecha de Inicio</label>
+                            <input type="date" id="start-date">
+                        </div>
+                        <div class="input-group">
+                            <label for="end-date">Fecha de Fin</label>
+                            <input type="date" id="end-date">
+                        </div>
                     </div>
-                    <div class="input-group">
-                        <label for="end-date">Fecha de Fin</label>
-                        <input type="date" id="end-date">
+
+                    <div class="form-section">
+                        <h4>2. ¿Qué registros quieres incluir?</h4>
+                        <div class="checkbox-group">
+                            <label><input type="checkbox" id="include-ingresos" value="ingresos">Ingresos</label>
+                            <label><input type="checkbox" id="include-gastos" value="gastos">Gastos</label>
+                            <label><input type="checkbox" id="include-nomina" value="nomina">Nómina</label>
+                            <label><input type="checkbox" id="include-impuestos" value="impuestos">Impuestos</label>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h4>3. Filtros Adicionales</h4>
+                        <div class="input-group">
+                            <label for="company-filter">Empresa</label>
+                            <select id="company-filter">
+                                <option value="todas">Todas las empresas</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="user-filter">Colaborador</label>
+                            <select id="user-filter">
+                                <option value="todos">Todos los colaboradores</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="account-filter">Cuenta</label>
+                            <select id="account-filter">
+                                <option value="todas">Todas las cuentas</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
-                <div class="form-section">
-                    <h4>2. ¿Qué registros quieres incluir?</h4>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="include-ingresos" value="ingresos"><label for="include-ingresos">Ingresos</label>
-                        <input type="checkbox" id="include-gastos" value="gastos"><label for="include-gastos">Gastos</label>
-                        <input type="checkbox" id="include-nomina" value="nomina"><label for="include-nomina">Nómina</label>
-                        <input type="checkbox" id="include-impuestos" value="impuestos"><label for="include-impuestos">Impuestos</label>
-                    </div>
-                </div>
-
-                <div class="form-section">
-                    <h4>3. Filtros Adicionales</h4>
-                    <div class="input-group">
-                        <label for="company-filter">Empresa</label>
-                        <select id="company-filter">
-                            <option value="todas">Todas las empresas</option>
-                        </select>
-                    </div>
-                    <div class="input-group">
-                        <label for="user-filter">Colaborador</label>
-                        <select id="user-filter">
-                            <option value="todos">Todos los colaboradores</option>
-                        </select>
-                    </div>
-                    <div class="input-group">
-                        <label for="account-filter">Cuenta</label>
-                        <select id="account-filter">
-                            <option value="todas">Todas las cuentas</option>
-                        </select>
-                    </div>
-                </div>
+                <button id="generate-spreadsheet-btn" class="btn-primary" style="width: 100%;">Generar Hoja de Cálculo</button>
             </div>
-
-            <button id="generate-spreadsheet-btn" class="btn-primary">Generar Hoja de Cálculo</button>
-        </div>
-    </main>
+        </main>
+    </div>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
