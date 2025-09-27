@@ -819,3 +819,15 @@ tbody tr:hover {
 .filter-group {
     justify-content: space-between; /* Espacia la etiqueta y el select */
 }
+
+/* --- ARREGLO PARA CONTROLES DE NÓMINA EN MÓVIL --- */
+.payroll-controls {
+    flex-direction: column; /* Apila los controles verticalmente */
+    align-items: stretch;  /* Estira los elementos al 100% del ancho */
+    gap: 15px;
+    width: 100%; /* Asegura que ocupe todo el espacio */
+}
+
+.payroll-options {
+    justify-content: center; /* Centra las opciones de Bruto/Neto */
+}
