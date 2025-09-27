@@ -1,32 +1,51 @@
+/* dashboard.style.css (VERSIÓN ACTUALIZADA COMPLETA) */
 :root {
     --primary-color: #00A99D;
-    --background-color: #f4f7f6;
-    --box-background-color: #ffffff;
-    --text-color: #333333;
-    --header-height: 70px;
+    --secondary-color: #0D2A4B; /* Color oscuro de fondo */
+    --text-color-light: #ffffff; /* Color de texto para fondos oscuros */
 }
 
 body {
     margin: 0;
     font-family: 'Poppins', sans-serif;
-    background-color: var(--background-color);
-    color: var(--text-color);
+    /* CAMBIO: Usamos el color de fondo oscuro de la página de inicio */
+    background-color: var(--secondary-color);
+    color: var(--text-color-light); /* El texto por defecto será claro */
+    /* OPCIONAL: Puedes añadir una imagen de fondo sutil si lo deseas */
+    /* background-image: url('path/to/your/background-image.png'); */
+    /* background-size: cover; */
+}
+
+/* NUEVO: Contenedor principal para centrar el contenido */
+.dashboard-wrapper {
+    max-width: 900px; /* Ancho máximo para las 3 columnas */
+    margin: 0 auto;   /* Centra el contenedor en la página */
+    padding: 20px;
 }
 
 .main-header {
-    background-color: var(--box-background-color);
-    height: var(--header-height);
+    /* CAMBIO: Aplicamos el efecto de cristal */
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 16px; /* Bordes redondeados */
+    
+    height: 70px;
     padding: 0 30px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    
+    /* MEJORA: Hacemos que la cabecera se quede fija al hacer scroll */
+    position: sticky;
+    top: 20px; /* Espacio desde la parte superior */
+    z-index: 10;
 }
 
-.logo {
-    font-size: 1.8em;
-    font-weight: 600;
-    color: var(--primary-color);
+/* Ajuste para que el logo no sea tan grande en la nueva barra */
+.logo-header {
+    height: 35px;
+    width: auto;
 }
 
 .user-info {
@@ -37,13 +56,13 @@ body {
 
 #user-email {
     font-size: 0.9em;
-    color: #555;
+    color: var(--text-color-light); /* CAMBIO: Texto claro */
 }
 
 #logout-button {
     background-color: transparent;
-    border: 1px solid var(--primary-color);
-    color: var(--primary-color);
+    border: 1px solid var(--text-color-light); /* CAMBIO: Borde claro */
+    color: var(--text-color-light); /* CAMBIO: Texto claro */
     padding: 8px 16px;
     border-radius: 8px;
     cursor: pointer;
@@ -52,40 +71,46 @@ body {
 }
 
 #logout-button:hover {
-    background-color: var(--primary-color);
-    color: white;
+    background-color: var(--text-color-light);
+    color: var(--secondary-color);
 }
 
 .dashboard-container {
-    padding: 40px;
+    padding-top: 40px;
 }
 
 .dashboard-container h2 {
     font-weight: 500;
     font-size: 1.5em;
     margin-bottom: 30px;
+    padding-left: 10px;
 }
 
 .tools-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    /* CAMBIO: Forzamos la cuadrícula a tener siempre 3 columnas */
+    grid-template-columns: repeat(3, 1fr);
     gap: 30px;
 }
 
 .tool-card {
-    background-color: var(--box-background-color);
-    border-radius: 30px;
+    /* CAMBIO: Aplicamos el efecto de cristal a las tarjetas */
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+
+    border-radius: 16px; /* Bordes redondeados consistentes */
     padding: 20px;
     text-align: center;
     text-decoration: none;
-    color: var(--text-color);
+    color: var(--text-color-light); /* CAMBIO: Texto claro */
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .tool-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    transform: translateY(-5px) scale(1.03); /* Efecto más pronunciado */
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
 }
 
 .tool-icon {
@@ -95,9 +120,4 @@ body {
 
 .tool-card span {
     font-weight: 500;
-}
-
-.logo-header {
-    height: 300px; /* Ajusta esta altura como prefieras */
-    width: auto;
 }
