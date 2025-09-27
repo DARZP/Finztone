@@ -712,28 +712,28 @@ tbody tr:hover {
         flex-direction: row; /* Mantiene los elementos en línea */
         justify-content: space-between; /* Uno a cada lado */
         align-items: center;
-        height: 300px; /* Altura fija y compacta */
+        height: 60px; /* Altura fija y compacta */
         padding: 0 15px;
         top: 10px;
         gap: 15px;
     }
 
     .main-header .logo-header {
-        height: 35px; /* Tamaño de logo controlado para las páginas interiores */
+        height: 300px; /* Tamaño de logo controlado para las páginas interiores */
     }
 
     /* 2. REGLA ESPECIAL: SOLO PARA EL HEADER DEL DASHBOARD PRINCIPAL */
     /* Si el header contiene la clase .user-info, entonces lo apilamos. */
     .main-header:has(.user-info) {
         flex-direction: column; /* Apila los elementos */
-        height: 300px;
+        height: auto; /* Altura automática */
         padding: 15px;
         gap: 15px;
     }
 
     /* Y en ese header del dashboard, el logo puede ser un poco más grande */
     .main-header:has(.user-info) .logo-header {
-        height: 40px;
+        height: 300px;
     }
 
     .main-header .user-info {
