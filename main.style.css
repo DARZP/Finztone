@@ -59,8 +59,8 @@ body {
 }
 
 .logo-header {
-    height: 35px;
-    width: auto;
+    height: 60px; /* Aumentado a 60px para que sea más visible */
+    width: auto; /* Mantiene la proporción */
 }
 
 .back-button {
