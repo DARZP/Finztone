@@ -117,3 +117,26 @@ body {
 .tool-card span {
     font-weight: 500;
 }
+
+/* --- AJUSTES PARA PANTALLAS DE TELÉFONO --- */
+
+/* Esta regla se aplicará solo si el ancho de la pantalla es de 600px o menos */
+@media (max-width: 600px) {
+
+    /* Hacemos que la cuadrícula principal sea de 2 columnas */
+    .tools-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px; /* Reducimos un poco el espacio entre tarjetas */
+    }
+
+    /* Reducimos los márgenes generales para dar más espacio al contenido */
+    .dashboard-wrapper {
+        padding: 10px;
+    }
+
+    /* Ajustamos el header para pantallas pequeñas */
+    .main-header {
+        top: 10px; /* Lo pegamos un poco más arriba */
+        padding: 0 20px;
+    }
+}
