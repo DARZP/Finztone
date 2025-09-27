@@ -712,7 +712,7 @@ tbody tr:hover {
         flex-direction: row; /* Mantiene los elementos en línea */
         justify-content: space-between; /* Uno a cada lado */
         align-items: center;
-        height: 60px; /* Altura fija y compacta */
+        height: 300px; /* Altura fija y compacta */
         padding: 0 15px;
         top: 10px;
         gap: 15px;
@@ -726,7 +726,7 @@ tbody tr:hover {
     /* Si el header contiene la clase .user-info, entonces lo apilamos. */
     .main-header:has(.user-info) {
         flex-direction: column; /* Apila los elementos */
-        height: auto; /* Altura automática */
+        height: 300px;
         padding: 15px;
         gap: 15px;
     }
