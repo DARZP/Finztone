@@ -716,11 +716,7 @@ tbody tr:hover {
     /* 2. ARREGLO PARA HEADERS EN PÁGINAS INTERIORES (CON BOTÓN VOLVER) */
     .main-header .back-button {
         /* Encoge el header si tiene un botón "Volver" */
-        height: 70px; 
-    }
-    .main-header .logo-header {
-        /* Achica el logo en los headers de páginas interiores */
-        height: 40px; 
+        height: 70px; /* Mantiene el header compacto */
     }
 
     /* 3. ARREGLO PARA EL HEADER DEL DASHBOARD PRINCIPAL (SIN BOTÓN VOLVER) */
@@ -730,6 +726,12 @@ tbody tr:hover {
         gap: 15px;
         padding: 15px;
         top: 10px;
+    }
+    
+    /* Ajuste específico para el logo del dashboard en móvil */
+    .main-header:not(.main-header .back-button) .logo-header {
+        height: 80px; /* Un tamaño más prominente para el logo del dashboard en móvil */
+        margin-bottom: 5px; /* Pequeño espacio extra si lo necesitas */
     }
 
     .main-header .user-info {
