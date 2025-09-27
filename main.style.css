@@ -698,3 +698,59 @@ tbody tr:hover {
     margin-right: 10px;
     width: auto;
 }
+
+
+/* =============================================== */
+/* --- REGLAS ESPECIALES PARA VISTA EN MÓVILES --- */
+/* =============================================== */
+
+/* Estas reglas se aplican solo si la pantalla mide 768px o menos */
+@media (max-width: 768px) {
+
+    /* 1. ARREGLO GENERAL: ELIMINAR EL ZOOM HORIZONTAL */
+    /* Hacemos que el contenedor principal ocupe el 100% del ancho del teléfono */
+    .page-wrapper {
+        max-width: 100%;
+        padding: 10px; /* Reducimos el espacio lateral */
+    }
+
+    /* 2. ARREGLO PARA EL HEADER DEL DASHBOARD PRINCIPAL */
+    /* Hacemos que el header sea más alto y apile los elementos verticalmente */
+    .main-header {
+        flex-direction: column; /* Apila los elementos */
+        height: auto; /* Altura automática para que quepa todo */
+        gap: 15px; /* Espacio entre el logo y la info de usuario */
+        padding: 15px;
+        top: 10px; /* Lo pegamos un poco más arriba */
+    }
+
+    /* Centramos la información del usuario debajo del logo */
+    .main-header .user-info {
+        width: 100%;
+        justify-content: space-between; /* Estira los elementos */
+    }
+    
+    /* Hacemos el botón de logout más horizontal */
+    #logout-button {
+        flex-grow: 1; /* Hace que el botón ocupe el espacio disponible */
+        text-align: center;
+    }
+
+    /* 3. ARREGLO PARA HEADERS EN PÁGINAS INTERIORES */
+    /* Hacemos que el header con el botón "Volver" sea más compacto */
+    .main-header .back-button {
+        font-size: 1em;
+    }
+
+    /* Reducimos el tamaño del logo gigante en las páginas interiores */
+    .logo-header {
+        height: 40px; /* Tamaño mucho más discreto para móviles */
+    }
+
+    /* 4. ARREGLO PARA LA CUADRÍCULA DE HERRAMIENTAS */
+    /* Forzamos la cuadrícula a tener 2 columnas en móviles */
+    .tools-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+    }
+}
