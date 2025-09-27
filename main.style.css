@@ -349,3 +349,36 @@ a.user-item, a.expense-item {
     font-weight: 600;
     font-size: 1.1em;
 }
+
+/* --- ESTILOS PARA SECCIONES DE EDICIÓN (CHECKLISTS) --- */
+
+.deductions-section {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid var(--input-border-color);
+}
+
+#deductions-checklist {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.deduction-item {
+    display: flex;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.2);
+    padding: 10px;
+    border-radius: 6px;
+}
+
+.deduction-item input {
+    margin-right: 10px;
+    width: auto; /* Anula el 100% de ancho del input-group */
+}
+
+.deduction-item label {
+    margin: 0;
+    font-weight: 400;
+}
