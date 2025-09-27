@@ -449,3 +449,9 @@ a.user-item, a.expense-item {
     font-weight: 600;
     margin-top: 10px;
 }
+
+/* ARREGLO PARA EL TEXTO DE OPCIONES EN MENÚS DESPLEGABLES */
+select option {
+    color: var(--text-color-dark);
+    background-color: #ffffff; /* Asegura fondo blanco para buena lectura */
+}
