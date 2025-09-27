@@ -766,7 +766,7 @@ tbody tr:hover {
     }
 
     .main-header:has(.user-info) .logo-header {
-        height: 40px; /* O el tamaño que prefieras para el logo en escritorio */
+        height: 300px; /* O el tamaño que prefieras para el logo en escritorio */
     }
 }
 
