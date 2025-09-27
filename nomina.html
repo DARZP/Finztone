@@ -4,40 +4,46 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Nómina - FINZTONE</title>
-    <link rel="stylesheet" href="nomina.style.css">
+    
+    <link rel="stylesheet" href="main.style.css">
+
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
-    <header class="main-header">
-        <a href="dashboard.html" class="back-button">← Volver</a>
-        <img src="images/nombre.png" alt="FINZTONE" class="logo-header">
-    </header>
+    <div class="page-wrapper">
+        <header class="main-header">
+            <a href="dashboard.html" class="back-button">← Volver</a>
+            <img src="images/nombre.png" alt="FINZTONE" class="logo-header">
+        </header>
 
-    <main class="container">
-        <div class="list-card">
-            <div class="card-header-filters">
-                <h2>Lista de Empleados</h2>
-                
-                <div class="payroll-controls">
-                    <div class="payroll-options">
-                        <label>Descontar:</label>
-                        <div class="radio-group">
-                            <input type="radio" id="pay-bruto" name="payment-type" value="bruto" checked>
-                            <label for="pay-bruto">Sueldo Bruto</label>
+        <main>
+            <div class="list-card">
+                <div class="card-header-filters">
+                    <h2>Lista de Empleados</h2>
+                    
+                    <div class="payroll-controls">
+                        <div class="payroll-options">
+                            <label>Descontar:</label>
+                            <div class="radio-group">
+                                <input type="radio" id="pay-bruto" name="payment-type" value="bruto" checked>
+                                <label for="pay-bruto">Sueldo Bruto</label>
+                            </div>
+                            <div class="radio-group">
+                                <input type="radio" id="pay-neto" name="payment-type" value="neto">
+                                <label for="pay-neto">Sueldo Neto</label>
+                            </div>
                         </div>
-                        <div class="radio-group">
-                            <input type="radio" id="pay-neto" name="payment-type" value="neto">
-                            <label for="pay-neto">Sueldo Neto</label>
+                        
+                        <div class="filter-group">
+                             <select id="period-selector"></select>
                         </div>
                     </div>
-                    
-                    <select id="period-selector" class="period-selector-styled"></select>
                 </div>
+                
+                <div id="user-list"></div>
             </div>
-            
-            <div id="user-list"></div>
-        </div>
-    </main>
+        </main>
+    </div>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
