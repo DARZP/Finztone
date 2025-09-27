@@ -724,11 +724,11 @@ tbody tr:hover {
     /* 2. HEADER DEL DASHBOARD PRINCIPAL (EL QUE TIENE .user-info) */
     /* Solo en móvil, si el header contiene .user-info, entonces lo apilamos. */
     .main-header:has(.user-info) {
-        flex-direction: column; /* Apila los elementos */
-        height: auto; /* Altura automática */
-        padding: 15px;
-        gap: 15px;
-    }
+    flex-direction: column; /* Apila los elementos */
+    height: auto; /* Altura automática */
+    padding: 12px 15px; /* Menos espacio arriba y abajo */
+    gap: 12px;          /* Menos espacio entre el logo y la info */
+}
 
     .main-header:has(.user-info) .logo-header {
         height: 300px; /* Tamaño del logo en el dashboard móvil */
