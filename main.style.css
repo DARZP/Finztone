@@ -701,50 +701,57 @@ tbody tr:hover {
 
 
 /* =============================================== */
-/* --- REGLAS ESPECIALES PARA VISTA EN MÓVILES --- */
+/* --- REGLAS ESPECIALES PARA VISTA EN MÓVILES (VERSIÓN CORREGIDA) --- */
 /* =============================================== */
 
-/* Estas reglas se aplican solo si la pantalla mide 768px o menos */
 @media (max-width: 768px) {
 
-    /* 1. ARREGLO GENERAL: ELIMINAR EL ZOOM HORIZONTAL */
-    .page-wrapper {
-        max-width: 100%;
-        padding: 10px;
-    }
-
-    /* 2. ARREGLO PARA HEADERS EN PÁGINAS INTERIORES (CON BOTÓN VOLVER) */
-    .main-header .back-button {
-        /* Encoge el header si tiene un botón "Volver" */
-        height: 70px; /* Mantiene el header compacto */
-    }
-
-    /* 3. ARREGLO PARA EL HEADER DEL DASHBOARD PRINCIPAL (SIN BOTÓN VOLVER) */
+    /* 1. REGLA GENERAL PARA TODOS LOS HEADERS EN MÓVIL */
+    /* Por defecto, todos los headers serán una barra horizontal y compacta. */
     .main-header {
-        flex-direction: column;
-        height: auto;
-        gap: 15px;
-        padding: 15px;
+        flex-direction: row; /* Mantiene los elementos en línea */
+        justify-content: space-between; /* Uno a cada lado */
+        align-items: center;
+        height: 60px; /* Altura fija y compacta */
+        padding: 0 15px;
         top: 10px;
+        gap: 15px;
     }
-    
-    /* Ajuste específico para el logo del dashboard en móvil */
-    .main-header:not(.main-header .back-button) .logo-header {
-        height: 80px; /* Un tamaño más prominente para el logo del dashboard en móvil */
-        margin-bottom: 5px; /* Pequeño espacio extra si lo necesitas */
+
+    .main-header .logo-header {
+        height: 35px; /* Tamaño de logo controlado para las páginas interiores */
+    }
+
+    /* 2. REGLA ESPECIAL: SOLO PARA EL HEADER DEL DASHBOARD PRINCIPAL */
+    /* Si el header contiene la clase .user-info, entonces lo apilamos. */
+    .main-header:has(.user-info) {
+        flex-direction: column; /* Apila los elementos */
+        height: auto; /* Altura automática */
+        padding: 15px;
+        gap: 15px;
+    }
+
+    /* Y en ese header del dashboard, el logo puede ser un poco más grande */
+    .main-header:has(.user-info) .logo-header {
+        height: 40px;
     }
 
     .main-header .user-info {
         width: 100%;
         justify-content: space-between;
     }
-    
+
     #logout-button {
         flex-grow: 1;
         text-align: center;
     }
 
-    /* 4. ARREGLO PARA LA CUADRÍCULA DE HERRAMIENTAS */
+    /* 3. REGLAS GENERALES PARA EL CONTENIDO (SIN CAMBIOS) */
+    .page-wrapper {
+        max-width: 100%;
+        padding: 10px;
+    }
+
     .tools-grid {
         grid-template-columns: repeat(2, 1fr);
         gap: 15px;
