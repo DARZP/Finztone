@@ -708,47 +708,41 @@ tbody tr:hover {
 @media (max-width: 768px) {
 
     /* 1. ARREGLO GENERAL: ELIMINAR EL ZOOM HORIZONTAL */
-    /* Hacemos que el contenedor principal ocupe el 100% del ancho del teléfono */
     .page-wrapper {
         max-width: 100%;
-        padding: 10px; /* Reducimos el espacio lateral */
+        padding: 10px;
     }
 
-    /* 2. ARREGLO PARA EL HEADER DEL DASHBOARD PRINCIPAL */
-    /* Hacemos que el header sea más alto y apile los elementos verticalmente */
+    /* 2. ARREGLO PARA HEADERS EN PÁGINAS INTERIORES (CON BOTÓN VOLVER) */
+    .main-header .back-button {
+        /* Encoge el header si tiene un botón "Volver" */
+        height: 70px; 
+    }
+    .main-header .logo-header {
+        /* Achica el logo en los headers de páginas interiores */
+        height: 40px; 
+    }
+
+    /* 3. ARREGLO PARA EL HEADER DEL DASHBOARD PRINCIPAL (SIN BOTÓN VOLVER) */
     .main-header {
-        flex-direction: column; /* Apila los elementos */
-        height: auto; /* Altura automática para que quepa todo */
-        gap: 15px; /* Espacio entre el logo y la info de usuario */
+        flex-direction: column;
+        height: auto;
+        gap: 15px;
         padding: 15px;
-        top: 10px; /* Lo pegamos un poco más arriba */
+        top: 10px;
     }
 
-    /* Centramos la información del usuario debajo del logo */
     .main-header .user-info {
         width: 100%;
-        justify-content: space-between; /* Estira los elementos */
+        justify-content: space-between;
     }
     
-    /* Hacemos el botón de logout más horizontal */
     #logout-button {
-        flex-grow: 1; /* Hace que el botón ocupe el espacio disponible */
+        flex-grow: 1;
         text-align: center;
     }
 
-    /* 3. ARREGLO PARA HEADERS EN PÁGINAS INTERIORES */
-    /* Hacemos que el header con el botón "Volver" sea más compacto */
-    .main-header .back-button {
-        font-size: 1em;
-    }
-
-    /* Reducimos el tamaño del logo gigante en las páginas interiores */
-    .logo-header {
-        height: 40px; /* Tamaño mucho más discreto para móviles */
-    }
-
     /* 4. ARREGLO PARA LA CUADRÍCULA DE HERRAMIENTAS */
-    /* Forzamos la cuadrícula a tener 2 columnas en móviles */
     .tools-grid {
         grid-template-columns: repeat(2, 1fr);
         gap: 15px;
