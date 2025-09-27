@@ -175,15 +175,17 @@ h2 {
     gap: 30px;
 }
 .tool-card {
-    background: rgba(255, 255, 255, 0.1);
+    /* Efecto de cristal UNIFICADO Y CORRECTO */
+    background: rgba(255, 255, 255, 0.1); /* <--- Este es el color claro que te gustó */
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
+    
     border-radius: 16px;
     padding: 20px;
     text-align: center;
     text-decoration: none;
     color: var(--text-color-light);
-    box-shadow: 0 5px 15px rgb(0 0 0 / 5%);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 .tool-card:hover {
