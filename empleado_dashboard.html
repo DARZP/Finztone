@@ -4,32 +4,39 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - FINZTONE</title>
-    <link rel="stylesheet" href="empleado_dashboard.style.css">
+    
+    <link rel="stylesheet" href="main.style.css">
+    
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
-    <header class="main-header">
-        <img src="images/nombre.png" alt="FINZTONE" class="logo-header">
-        <button id="logout-button">Cerrar Sesión</button>
-    </header>
-    <main class="dashboard-container">
-        <h2 id="welcome-message">¡Hola!</h2>
-        <p>Este es tu panel de control. Desde aquí podrás gestionar tus gastos y perfil.</p>
-        <div class="tools-grid">
-            <a href="#" class="tool-card">
-                <div class="tool-icon">👤</div>
-                <span>Mi Perfil</span>
-            </a>
-            <a href="empleado_gastos.html" class="tool-card">
-                <div class="tool-icon">💸</div>
-                <span>Mis Gastos</span>
-            </a>
-            <a href="empleado_ingresos.html" class="tool-card">
-                <div class="tool-icon">💰</div>
-                <span>Mis Ingresos</span>
-            </a>
-        </div>
-    </main>
+    <div class="page-wrapper">
+        <header class="main-header">
+            <img src="images/nombre.png" alt="FINZTONE" class="logo-header">
+            <button id="logout-button">Cerrar Sesión</button>
+        </header>
+
+        <main>
+            <div class="card">
+                <h2 id="welcome-message">¡Hola!</h2>
+                <p>Este es tu panel de control. Desde aquí podrás gestionar tus gastos y perfil.</p>
+                <div class="tools-grid">
+                    <a href="#" class="tool-card">
+                        <div class="tool-icon">👤</div>
+                        <span>Mi Perfil</span>
+                    </a>
+                    <a href="empleado_gastos.html" class="tool-card">
+                        <div class="tool-icon">💸</div>
+                        <span>Mis Gastos</span>
+                    </a>
+                    <a href="empleado_ingresos.html" class="tool-card">
+                        <div class="tool-icon">💰</div>
+                        <span>Mis Ingresos</span>
+                    </a>
+                </div>
+            </div>
+        </main>
+    </div>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
