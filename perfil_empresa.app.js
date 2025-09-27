@@ -11,14 +11,12 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// --- LÓGICA DE LA PÁGINA DE PERFIL DE EMPRESA ---
-
-// Obtenemos el ID de la empresa de la URL (ej: ?id=ABC123XYZ)
 const urlParams = new URLSearchParams(window.location.search);
 const empresaId = urlParams.get('id');
 
 // Elementos del DOM
 const companyNameEl = document.getElementById('company-name');
+const downloadCompanyRecordsBtn = document.getElementById('download-company-records-btn');
 const companyRfcEl = document.getElementById('company-rfc');
 const contactNameEl = document.getElementById('contact-name');
 const contactEmailEl = document.getElementById('contact-email');
@@ -27,26 +25,95 @@ const editCompanyBtn = document.getElementById('edit-company-btn');
 const addProjectForm = document.getElementById('add-project-form');
 const activeProjectsList = document.getElementById('active-projects-list');
 const inactiveProjectsList = document.getElementById('inactive-projects-list');
+let empresaData = null; // Variable global para guardar datos de la empresa
 
+async function descargarRegistrosEmpresa() {
+    if (!empresaData) return;
+
+    alert('Preparando la descarga de todos los registros de la empresa. Esto puede tardar un momento...');
+    
+    try {
+        const gastosPromise = db.collection('gastos').where('empresa', '==', empresaData.nombre).get();
+        const ingresosPromise = db.collection('ingresos').where('empresa', '==', empresaData.nombre).get();
+        
+        const [gastosSnapshot, ingresosSnapshot] = await Promise.all([gastosPromise, ingresosPromise]);
+        
+        const registros = [];
+        gastosSnapshot.forEach(doc => {
+            const data = doc.data();
+            registros.push({
+                Fecha: data.fecha,
+                Tipo: 'Gasto',
+                Concepto: data.descripcion,
+                Proyecto: data.proyectoNombre || 'N/A',
+                Monto: -data.monto,
+                Total: -data.totalConImpuestos,
+                Creador: data.nombreCreador
+            });
+        });
+        ingresosSnapshot.forEach(doc => {
+            const data = doc.data();
+            registros.push({
+                Fecha: data.fecha,
+                Tipo: 'Ingreso',
+                Concepto: data.descripcion,
+                Proyecto: data.proyectoNombre || 'N/A',
+                Monto: data.monto,
+                Total: data.totalConImpuestos,
+                Creador: data.nombreCreador
+            });
+        });
+
+        registros.sort((a, b) => new Date(a.Fecha) - new Date(b.Fecha));
+        exportToCSV(registros, `Registros-${empresaData.nombre}`);
+
+    } catch (error) {
+        console.error("Error al descargar registros de la empresa:", error);
+        alert("Ocurrió un error al generar el reporte.");
+    }
+}
+
+async function descargarRegistrosProyecto(proyectoId, proyectoNombre) {
+    alert(`Preparando la descarga de registros para el proyecto: ${proyectoNombre}...`);
+    try {
+        const gastosPromise = db.collection('gastos').where('proyectoId', '==', proyectoId).get();
+        const ingresosPromise = db.collection('ingresos').where('proyectoId', '==', proyectoId).get();
+        
+        const [gastosSnapshot, ingresosSnapshot] = await Promise.all([gastosPromise, ingresosPromise]);
+
+        const registros = [];
+        gastosSnapshot.forEach(doc => {
+            const data = doc.data();
+            registros.push({ Fecha: data.fecha, Tipo: 'Gasto', Concepto: data.descripcion, Monto: -data.totalConImpuestos, Creador: data.nombreCreador });
+        });
+        ingresosSnapshot.forEach(doc => {
+            const data = doc.data();
+            registros.push({ Fecha: data.fecha, Tipo: 'Ingreso', Concepto: data.descripcion, Monto: data.totalConImpuestos, Creador: data.nombreCreador });
+        });
+
+        registros.sort((a, b) => new Date(a.Fecha) - new Date(b.Fecha));
+        exportToCSV(registros, `Proyecto-${proyectoNombre}`);
+
+    } catch (error) {
+        console.error("Error al descargar registros del proyecto:", error);
+        alert("Ocurrió un error al generar el reporte del proyecto.");
+    }
+}
 
 auth.onAuthStateChanged((user) => {
     if (user && empresaId) {
         cargarDatosDeEmpresa(empresaId);
-    } else if (!empresaId) {
-        alert("ID de empresa no proporcionado.");
-        window.location.href = 'empresas.html';
+        downloadCompanyRecordsBtn.addEventListener('click', descargarRegistrosEmpresa);
     } else {
         window.location.href = 'index.html';
     }
 });
 
-// Función principal para cargar toda la información
 async function cargarDatosDeEmpresa(id) {
-    // 1. Cargar datos de la empresa
     const empresaDoc = await db.collection('empresas').doc(id).get();
     if (empresaDoc.exists) {
-        const data = empresaDoc.data();
-        companyNameEl.textContent = data.nombre || 'No disponible';
+        empresaData = empresaDoc.data(); // Guardamos los datos globalmente
+        companyNameEl.textContent = empresaData.nombre || 'No disponible';
         companyRfcEl.textContent = data.rfc || 'No disponible';
         contactNameEl.textContent = data.contactoNombre || 'No disponible';
         contactEmailEl.textContent = data.contactoEmail || 'No disponible';
@@ -75,7 +142,7 @@ function mostrarProyectos(proyectos) {
 
     proyectos.forEach(proyecto => {
         const item = document.createElement('div');
-        item.classList.add('project-container'); // Nueva clase contenedora
+        item.classList.add('project-container'); 
 
         const isActive = proyecto.status === 'activo';
         const buttonText = isActive ? 'Desactivar' : 'Activar';
@@ -153,6 +220,21 @@ addProjectForm.addEventListener('submit', (e) => {
     }).catch(error => console.error("Error al agregar proyecto:", error));
 });
 
+ item.innerHTML += `
+            <div class="project-actions">
+                <button class="btn-secondary download-project-btn" data-project-id="${proyecto.id}" data-project-name="${proyecto.nombre}">Descargar Registros del Proyecto</button>
+            </div>
+        `;
+        
+        if (proyecto.status === 'activo') {
+            activeProjectsList.appendChild(item);
+        } else {
+            inactiveProjectsList.appendChild(item);
+        }
+    });
+}
+
+
 document.addEventListener('click', (e) => {
     // --- Lógica para activar/desactivar (ya la tienes) ---
     const statusProjectId = e.target.dataset.id;
@@ -163,6 +245,12 @@ document.addEventListener('click', (e) => {
         if (e.target.classList.contains('btn-activate')) {
             db.collection('proyectos').doc(statusProjectId).update({ status: 'activo' });
         }
+        if (e.target.classList.contains('download-project-btn')) {
+        const projectId = e.target.dataset.projectId;
+        const projectName = e.target.dataset.projectName;
+        descargarRegistrosProyecto(projectId, projectName);
+    }
+});
     }
 
     // --- NUEVA LÓGICA para mostrar/ocultar historial ---
