@@ -183,3 +183,48 @@ a.user-item, a.expense-item {
         flex-direction: column;
     }
 }
+
+/* --- ESTILOS PARA LA CUADRÍCULA DEL DASHBOARD --- */
+
+.tools-grid {
+    display: grid;
+    /* Define la cuadrícula de 3 columnas en escritorio */
+    grid-template-columns: repeat(3, 1fr);
+    gap: 30px;
+}
+
+.tool-card {
+    /* Efecto de cristal para las tarjetas */
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+    text-decoration: none; /* Quita el subrayado de los enlaces */
+    color: var(--text-color-light); /* Asegura que el texto sea claro */
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.tool-card:hover {
+    transform: translateY(-5px) scale(1.03);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.tool-icon {
+    font-size: 3em;
+    line-height: 1.2;
+}
+
+/* --- AJUSTE ADICIONAL EN LA REGLA PARA MÓVILES --- */
+
+/* Modifica la regla @media que ya tienes para que también incluya este cambio */
+@media (max-width: 700px) {
+    .tools-grid {
+        /* En pantallas pequeñas, la cuadrícula será de 2 columnas */
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
+}
