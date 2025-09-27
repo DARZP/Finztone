@@ -4,126 +4,111 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Gastos - FINZTONE</title>
-    <link rel="stylesheet" href="gastos.style.css">
+
+    <link rel="stylesheet" href="main.style.css">
+    
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
-    <header class="main-header">
-        <a href="dashboard.html" class="back-button">← Volver</a>
-        <img src="images/nombre.png" alt="FINZTONE" class="logo-header">
-    </header>
+    <div class="page-wrapper">
+        <header class="main-header">
+            <a href="dashboard.html" class="back-button">← Volver</a>
+            <img src="images/nombre.png" alt="FINZTONE" class="logo-header">
+        </header>
 
-    <main class="container">
-        <div class="form-card">
-            <h2>Registrar un Nuevo Gasto</h2>
+        <main>
+            <div class="form-card">
+                <h2>Registrar un Nuevo Gasto</h2>
+                <form id="add-expense-form">
+                    <div class="input-group">
+                        <label for="expense-description">Concepto del Gasto</label>
+                        <input type="text" id="expense-description" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="expense-amount">Monto ($)</label>
+                        <input type="number" id="expense-amount" step="0.01" required>
+                    </div>
 
-            <form id="add-expense-form">
-    <div class="input-group">
-        <label for="expense-description">Concepto del Gasto</label>
-        <input type="text" id="expense-description" required>
-    </div>
-    <div class="input-group">
-        <label for="expense-amount">Monto ($)</label>
-        <input type="number" id="expense-amount" step="0.01" required>
-    </div>
-
-    <div class="deductions-section">
-    <div class="input-group-checkbox">
-        <input type="checkbox" id="add-taxes-checkbox">
-        <label for="add-taxes-checkbox">Desglosar Monto (con Impuestos/Retenciones)</label>
-    </div>
-
-    <div id="taxes-details-container" style="display: none;">
-        <div id="taxes-checklist">
+                    <div class="deductions-section">
+                        <div class="input-group-checkbox">
+                            <input type="checkbox" id="add-taxes-checkbox">
+                            <label for="add-taxes-checkbox">Desglosar Monto (con Impuestos/Retenciones)</label>
+                        </div>
+                        <div id="taxes-details-container" style="display: none;">
+                            <div id="taxes-checklist"></div>
+                            <div class="totals-summary">
+                                <div class="summary-line">
+                                    <span>Monto Bruto:</span>
+                                    <span id="summary-bruto">$0.00</span>
+                                </div>
+                                <div class="summary-line">
+                                    <span>Total Impuestos:</span>
+                                    <span id="summary-impuestos">$0.00</span>
+                                </div>
+                                <div class="summary-line net-total">
+                                    <span>Monto Neto (Total a Descontar):</span>
+                                    <span id="summary-neto">$0.00</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="expense-category">Categoría</label>
+                        <select id="expense-category" required></select>
+                    </div>
+                    <div class="input-group">
+                        <label for="expense-date">Fecha</label>
+                        <input type="date" id="expense-date" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="expense-company">Empresa o Proveedor</label>
+                        <input type="text" id="expense-company" list="company-list">
+                        <datalist id="company-list"></datalist>
+                    </div>
+                    <div class="input-group">
+                        <label for="project-select">Proyecto (Opcional)</label>
+                        <select id="project-select" disabled>
+                            <option value="">Primero selecciona una empresa</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="payment-method">Método de Pago</label>
+                        <select id="payment-method">
+                            <option value="Efectivo">Efectivo</option>
+                            <option value="Tarjeta de Crédito">Tarjeta de Crédito</option>
+                            <option value="Tarjeta de Débito">Tarjeta de Débito</option>
+                            <option value="Transferencia">Transferencia</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="account-select">Cuenta de Origen</label>
+                        <select id="account-select" required></select>
+                    </div>
+                    <div class="input-group">
+                        <label for="expense-comments">Comentarios</label>
+                        <textarea id="expense-comments" rows="3"></textarea>
+                    </div>
+                    <div class="input-group-checkbox">
+                        <input type="checkbox" id="is-invoice">
+                        <label for="is-invoice">Anexar datos de facturación</label>
+                    </div>
+                    <div id="invoice-details" style="display: none;">
+                    </div>
+                    
+                    <div class="form-actions" style="display: flex; gap: 15px;">
+                        <button type="button" id="save-draft-btn" class="btn-secondary" style="flex: 1;">Guardar Borrador</button>
+                        <button type="button" id="add-approved-btn" class="btn-primary" style="flex: 1;">Agregar Gasto Aprobado</button>
+                    </div>
+                </form>
             </div>
-        <hr>
-        <div class="totals-summary">
-            <div class="summary-line">
-                <span>Monto Bruto:</span>
-                <span id="summary-bruto">$0.00</span>
-            </div>
-            <div class="summary-line">
-                <span>Total Impuestos:</span>
-                <span id="summary-impuestos">$0.00</span>
-            </div>
-            <div class="summary-line net-total">
-                <span>Monto Neto (Total a Descontar):</span>
-                <span id="summary-neto">$0.00</span>
-            </div>
-        </div>
-    </div>
-</div>
-    
-    <div class="input-group">
-        <label for="expense-category">Categoría</label>
-        <select id="expense-category" required></select>
-    </div>
-    <div class="input-group">
-        <label for="expense-date">Fecha</label>
-        <input type="date" id="expense-date" required>
-    </div>
-    <div class="input-group">
-        <label for="expense-company">Empresa o Proveedor</label>
-        <input type="text" id="expense-company" list="company-list">
-        <datalist id="company-list"></datalist>
-    </div>
-    <div class="input-group">
-        <label for="project-select">Proyecto (Opcional)</label>
-        <select id="project-select" disabled>
-            <option value="">Primero selecciona una empresa</option>
-        </select>
-    </div>
-    <div class="input-group">
-        <label for="payment-method">Método de Pago</label>
-        <select id="payment-method">
-            <option value="Efectivo">Efectivo</option>
-            <option value="Tarjeta de Crédito">Tarjeta de Crédito</option>
-            <option value="Tarjeta de Débito">Tarjeta de Débito</option>
-            <option value="Transferencia">Transferencia</option>
-        </select>
-    </div>
-    <div class="input-group">
-        <label for="account-select">Cuenta de Origen</label>
-        <select id="account-select" required></select>
-    </div>
-    <div class="input-group">
-        <label for="expense-comments">Comentarios</label>
-        <textarea id="expense-comments" rows="3"></textarea>
-    </div>
-    <div class="input-group-checkbox">
-        <input type="checkbox" id="is-invoice">
-        <label for="is-invoice">Anexar datos de facturación</label>
-    </div>
-    <div id="invoice-details" style="display: none;">
-        </div>
-    
-    <div class="form-actions">
-        <button type="button" id="save-draft-btn" class="btn btn-secondary">Guardar Borrador</button>
-        <button type="button" id="add-approved-btn" class="btn btn-primary">Agregar Gasto Aprobado</button>
-    </div>
-</form>
 
-
-            
-        </div>
-
-        <div class="list-card">
-            <div class="card-header-filters">
+            <div class="list-card">
                 <h2>Historial de Gastos</h2>
-                <div class="filters-container">
-                    <div class="filter-group">
-                        <label>Categoría</label>
-                        <select id="category-filter"></select>
-                    </div>
-                    <div class="filter-group">
-                        <label>Mes</label>
-                        <select id="month-filter"></select>
-                    </div>
-                </div>
+                <div id="expense-list"></div>
             </div>
-            <div id="expense-list"></div>
-        </div>
-    </main>
+        </main>
+    </div>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
