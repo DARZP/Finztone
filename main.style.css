@@ -291,3 +291,61 @@ a.user-item, a.expense-item {
         gap: 20px;
     }
 }
+
+/* --- ESTILOS PARA PÁGINAS DE PERFIL --- */
+
+.profile-details p {
+    font-size: 1.1em;
+    line-height: 1.6;
+    border-bottom: 1px solid var(--input-border-color);
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+}
+.profile-details p:last-child {
+    border-bottom: none;
+}
+.profile-details p > span {
+    font-weight: 500;
+}
+
+.deduction-line {
+    display: flex;
+    justify-content: space-between;
+    font-size: 1em;
+    padding: 2px 20px;
+}
+.deduction-line .name {
+    color: #ff8a80; /* Un rojo claro para que resalte en fondo oscuro */
+}
+
+.net-salary {
+    margin-top: 15px !important;
+    padding-top: 15px !important;
+    border-top: 2px solid var(--primary-color) !important;
+    font-size: 1.2em !important;
+    font-weight: 600;
+}
+
+.activity-feed-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 0;
+    border-bottom: 1px solid var(--input-border-color);
+}
+.activity-feed-item:last-child {
+    border-bottom: none;
+}
+.item-info .item-description {
+    font-weight: 500;
+}
+.item-info .item-details {
+    font-size: 0.9em;
+    color: #aeb9c5; /* Un gris más claro */
+}
+.item-amount {
+    font-weight: 600;
+    font-size: 1.1em;
+}
