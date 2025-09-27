@@ -1,0 +1,185 @@
+/* main.style.css - EL NUEVO ARCHIVO DE ESTILOS CENTRALIZADO */
+
+:root {
+    --primary-color: #00A99D;
+    --secondary-color: #0D2A4B;
+    --text-color-light: #f8fafc; /* Un blanco un poco más suave */
+    --text-color-dark: #333333;
+    --input-bg-color: rgba(255, 255, 255, 0.15);
+    --input-border-color: rgba(255, 255, 255, 0.3);
+    --approve-color: #2e7d32;
+    --reject-color: #c62828;
+}
+
+body {
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+    background-color: var(--secondary-color);
+    color: var(--text-color-light);
+}
+
+/* --- ESTRUCTURA PRINCIPAL DE LA PÁGINA --- */
+
+.page-wrapper {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.main-header {
+    background: rgba(30, 41, 59, 0.3); /* Un fondo ligeramente más oscuro para contraste */
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    height: 70px;
+    padding: 0 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 20px;
+    z-index: 10;
+}
+
+.logo-header {
+    height: 35px;
+    width: auto;
+}
+
+.back-button {
+    text-decoration: none;
+    color: var(--text-color-light);
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+.back-button:hover {
+    color: var(--primary-color);
+}
+
+/* --- TARJETAS DE CONTENIDO (GLASSMORPHISM) --- */
+
+.card, .form-card, .list-card {
+    background: rgba(30, 41, 59, 0.3);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 30px;
+    margin-top: 40px;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+}
+
+h2 {
+    font-weight: 500;
+    margin-top: 0;
+    border-bottom: 1px solid var(--primary-color);
+    padding-bottom: 10px;
+    margin-bottom: 25px;
+}
+
+/* --- FORMULARIOS --- */
+
+.input-group {
+    margin-bottom: 20px;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.input-group input, .input-group select, .input-group textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--input-border-color);
+    border-radius: 8px;
+    box-sizing: border-box;
+    font-size: 1em;
+    font-family: 'Poppins', sans-serif;
+    background-color: var(--input-bg-color);
+    color: var(--text-color-light);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.input-group input::placeholder, .input-group textarea::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.input-group input:focus, .input-group select:focus, .input-group textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 169, 157, 0.3);
+}
+
+/* --- BOTONES --- */
+
+.btn, .btn-primary, .btn-secondary, .btn-cancel, .btn-pay {
+    padding: 14px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: linear-gradient(90deg, var(--primary-color), #00c7b6);
+    color: white;
+    box-shadow: 0 4px 15px rgba(0, 169, 157, 0.3);
+}
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 169, 157, 0.4);
+}
+
+.btn-secondary {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: var(--text-color-light);
+    border: 1px solid var(--input-border-color);
+}
+.btn-secondary:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* --- LISTAS Y TABLAS --- */
+
+.user-item, .expense-item, .account-item, .pending-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    border-bottom: 1px solid var(--input-border-color);
+    transition: background-color 0.2s ease;
+}
+.user-item:last-child, .expense-item:last-child {
+    border-bottom: none;
+}
+a.user-item, a.expense-item {
+    text-decoration: none;
+    color: inherit;
+}
+.user-item:hover, .expense-item:hover, .pending-item:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.user-name, .expense-description, .account-name, .description {
+    font-weight: 500;
+    font-size: 1.1em;
+}
+
+/* --- ESTILOS RESPONSIVOS PARA MÓVILES --- */
+@media (max-width: 700px) {
+    .page-wrapper, .main-header {
+        padding: 10px;
+    }
+    .main-header {
+        top: 10px;
+    }
+    .card, .form-card, .list-card {
+        padding: 20px;
+    }
+    .form-actions {
+        flex-direction: column;
+    }
+}
