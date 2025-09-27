@@ -506,3 +506,18 @@ select option {
     background-repeat: no-repeat;
     background-size: 1.5em 1.5em;
 }
+
+/* --- ESTILO PARA ENLACES DENTRO DE LISTAS --- */
+
+.list-card a {
+    color: var(--primary-color); /* Usamos el color principal de la marca */
+    text-decoration: none; /* Quitamos el subrayado por defecto */
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.list-card a:hover {
+    /* Al pasar el mouse, se aclara y se subraya */
+    color: #00e0cf; 
+    text-decoration: underline;
+}
