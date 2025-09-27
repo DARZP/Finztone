@@ -4,45 +4,49 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Empresas - FINZTONE</title>
-    <link rel="stylesheet" href="colaboradores.style.css">
+    
+    <link rel="stylesheet" href="main.style.css">
+    
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
-    <header class="main-header">
-        <a href="dashboard.html" class="back-button">← Volver</a>
-        <img src="images/nombre.png" alt="FINZTONE" class="logo-header">
-    </header>
+    <div class="page-wrapper">
+        <header class="main-header">
+            <a href="dashboard.html" class="back-button">← Volver</a>
+            <img src="images/nombre.png" alt="FINZTONE" class="logo-header">
+        </header>
 
-    <main class="container">
-        <div class="form-card">
-            <h2>Registrar Nueva Empresa</h2>
-            <form id="add-company-form">
-                <div class="input-group">
-                    <label for="company-name">Nombre o Razón Social</label>
-                    <input type="text" id="company-name" required>
-                </div>
-                <div class="input-group">
-                    <label for="company-rfc">RFC</label>
-                    <input type="text" id="company-rfc">
-                </div>
-                <div class="input-group">
-                    <label for="contact-name">Nombre del Contacto</label>
-                    <input type="text" id="contact-name">
-                </div>
-                <div class="input-group">
-                    <label for="contact-email">Correo Electrónico del Contacto</label>
-                    <input type="email" id="contact-email">
-                </div>
-                <button type="submit" class="btn-primary">Agregar Empresa</button>
-            </form>
-        </div>
+        <main>
+            <div class="form-card">
+                <h2>Registrar Nueva Empresa</h2>
+                <form id="add-company-form">
+                    <div class="input-group">
+                        <label for="company-name">Nombre o Razón Social</label>
+                        <input type="text" id="company-name" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="company-rfc">RFC</label>
+                        <input type="text" id="company-rfc">
+                    </div>
+                    <div class="input-group">
+                        <label for="contact-name">Nombre del Contacto</label>
+                        <input type="text" id="contact-name">
+                    </div>
+                    <div class="input-group">
+                        <label for="contact-email">Correo Electrónico del Contacto</label>
+                        <input type="email" id="contact-email">
+                    </div>
+                    <button type="submit" class="btn-primary">Agregar Empresa</button>
+                </form>
+            </div>
 
-        <div class="list-card">
-            <h2>Lista de Empresas</h2>
-            <div id="company-list">
+            <div class="list-card">
+                <h2>Lista de Empresas</h2>
+                <div id="company-list">
                 </div>
-        </div>
-    </main>
+            </div>
+        </main>
+    </div>
     
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
