@@ -20,7 +20,9 @@
             <div class="card">
                 <div class="card-header">
                      <h2>Información de la Empresa</h2>
-                     <a href="#" id="edit-company-btn" class="btn-primary">Editar Información</a>
+                     <div class="header-actions" style="display: flex; gap: 15px;">
+                         <button id="download-company-records-btn" class="btn-secondary">Descargar Registros</button>
+                         <a href="#" id="edit-company-btn" class="btn-primary">Editar Información</a>
                 </div>
                 <div class="profile-details">
                     <p><strong>Razón Social:</strong> <span id="company-name">Cargando...</span></p>
@@ -50,6 +52,9 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+
+    <script src="utils.js"></script>
+    
     <script src="perfil_empresa.app.js"></script>
 </body>
 </html>
