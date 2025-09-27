@@ -809,3 +809,13 @@ tbody tr:hover {
     width: 100%;
     box-sizing: border-box;
 }
+
+/* --- ARREGLO PARA FILTROS EN MÓVIL --- */
+.filters-container {
+    flex-direction: column; /* Apila los filtros verticalmente */
+    align-items: stretch; /* Estira cada filtro al 100% del ancho */
+}
+
+.filter-group {
+    justify-content: space-between; /* Espacia la etiqueta y el select */
+}
