@@ -382,3 +382,70 @@ a.user-item, a.expense-item {
     margin: 0;
     font-weight: 400;
 }
+
+/* --- ESTILOS PARA FORMULARIO DE GASTOS/INGRESOS (IMPUESTOS) --- */
+
+.deductions-section {
+    border: 1px solid var(--input-border-color);
+    border-radius: 8px;
+    padding: 15px 20px;
+    margin: 25px 0;
+}
+
+.input-group-checkbox {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+}
+.input-group-checkbox input {
+    margin-right: 10px;
+    width: auto; /* Anula el 100% de ancho */
+}
+.input-group-checkbox label {
+    margin: 0;
+    font-weight: 400;
+}
+
+#taxes-checklist {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.tax-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+}
+.tax-item label {
+    font-weight: 400;
+    display: flex;
+    align-items: center;
+}
+.tax-item input {
+    margin-right: 10px;
+    width: auto;
+}
+.tax-item .calculated-amount {
+    font-weight: 500;
+    color: var(--primary-color);
+    text-align: right;
+}
+
+.totals-summary {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid var(--input-border-color);
+}
+.summary-line {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 500;
+    margin-bottom: 5px;
+}
+.summary-line.net-total {
+    font-size: 1.2em;
+    font-weight: 600;
+    margin-top: 10px;
+}
