@@ -41,6 +41,23 @@ body {
     z-index: 10;
 }
 
+.dashboard-container {
+    padding-top: 40px;
+}
+
+.dashboard-container h2 {
+    font-weight: 500;
+    font-size: 1.5em;
+    margin-bottom: 30px;
+    padding-left: 10px;
+    border-bottom: none; /* Quitamos la línea de abajo para un look más limpio */
+}
+
+/* ARREGLO: Esto unifica el grosor de la letra en las tarjetas */
+.tool-card span {
+    font-weight: 500;
+}
+
 .logo-header {
     height: 35px;
     width: auto;
@@ -55,8 +72,6 @@ body {
 .back-button:hover {
     color: var(--primary-color);
 }
-
-/* --- TARJETAS DE CONTENIDO (GLASSMORPHISM) --- */
 
 .card, .form-card, .list-card {
     background: rgba(30, 41, 59, 0.3);
