@@ -618,3 +618,49 @@ select option {
     background-color: rgba(245, 124, 0, 0.2);
     color: #ffab40;
 }
+
+/* --- ESTILOS PARA PÁGINA DE IMPUESTOS (TABLAS) --- */
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+th, td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--input-border-color);
+}
+
+thead th {
+    font-weight: 600;
+    font-size: 0.9em;
+    color: #aeb9c5; /* Un gris más claro para los encabezados */
+}
+
+tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.payment-section {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid var(--input-border-color);
+}
+.payment-section h3 {
+    margin-top: 0;
+}
+.payment-controls {
+    display: flex;
+    align-items: flex-end;
+    gap: 20px;
+}
+.btn-pay {
+    background-color: var(--approve-color);
+    color: white;
+}
