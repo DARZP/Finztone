@@ -4,42 +4,48 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Perfil de Empresa - FINZTONE</title>
-    <link rel="stylesheet" href="perfil_empleado.style.css">
+    
+    <link rel="stylesheet" href="main.style.css">
+    
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
-    <header class="main-header">
-        <a href="empresas.html" class="back-button">← Volver a Empresas</a>
-        <img src="images/nombre.png" alt="FINZTONE" class="logo-header">
-    </header>
+    <div class="page-wrapper">
+        <header class="main-header">
+            <a href="empresas.html" class="back-button">← Volver a Empresas</a>
+            <img src="images/nombre.png" alt="FINZTONE" class="logo-header">
+        </header>
 
-    <main class="container">
-        <div class="card profile-card">
-            <div class="card-header">
-                 <h2>Información de la Empresa</h2>
-                 <a href="#" id="edit-company-btn" class="btn btn-primary">Editar Información</a>
+        <main>
+            <div class="card">
+                <div class="card-header">
+                     <h2>Información de la Empresa</h2>
+                     <a href="#" id="edit-company-btn" class="btn-primary">Editar Información</a>
+                </div>
+                <div class="profile-details">
+                    <p><strong>Razón Social:</strong> <span id="company-name">Cargando...</span></p>
+                    <p><strong>RFC:</strong> <span id="company-rfc">Cargando...</span></p>
+                    <p><strong>Contacto:</strong> <span id="contact-name">Cargando...</span></p>
+                    <p><strong>Email:</strong> <span id="contact-email">Cargando...</span></p>
+                </div>
             </div>
-            <div class="profile-details">
-                <p><strong>Razón Social:</strong> <span id="company-name">Cargando...</span></p>
-                <p><strong>RFC:</strong> <span id="company-rfc">Cargando...</span></p>
-                <p><strong>Contacto:</strong> <span id="contact-name">Cargando...</span></p>
-                <p><strong>Email:</strong> <span id="contact-email">Cargando...</span></p>
-            </div>
-        </div>
 
-        <div class="card activity-card">
-            <h2>Gestión de Proyectos</h2>
-            <form id="add-project-form" class="project-form">
-                <input type="text" id="project-name" placeholder="Nombre del nuevo proyecto" required>
-                <button type="submit">Agregar Proyecto</button>
-            </form>
-            <hr>
-            <h3>Proyectos Activos</h3>
-            <div id="active-projects-list"></div>
-            <h3 style="margin-top: 30px;">Proyectos Inactivos</h3>
-            <div id="inactive-projects-list"></div>
-        </div>
-    </main>
+            <div class="card">
+                <h2>Gestión de Proyectos</h2>
+                <form id="add-project-form" class="project-form">
+                    <div class="input-group">
+                        <input type="text" id="project-name" placeholder="Nombre del nuevo proyecto" required>
+                    </div>
+                    <button type="submit" class="btn-primary" style="width: 100%;">Agregar Proyecto</button>
+                </form>
+                <hr style="border-color: rgba(255,255,255,0.1); margin: 25px 0;">
+                <h3>Proyectos Activos</h3>
+                <div id="active-projects-list"></div>
+                <h3 style="margin-top: 30px;">Proyectos Inactivos</h3>
+                <div id="inactive-projects-list"></div>
+            </div>
+        </main>
+    </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
