@@ -555,3 +555,66 @@ select option {
 .tab-content {
     display: none;
 }
+
+/* --- ESTILOS PARA PÁGINA DE NÓMINA --- */
+
+.payroll-controls {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+    
+.payroll-options {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background-color: rgba(0, 0, 0, 0.2);
+    padding: 8px 12px;
+    border-radius: 8px;
+}
+.payroll-options label {
+    font-weight: 500;
+    color: #aeb9c5;
+}
+.radio-group {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+/* Ocultamos el radio button por defecto */
+.radio-group input[type="radio"] {
+    opacity: 0;
+    position: fixed;
+    width: 0;
+}
+/* Creamos un estilo para la etiqueta que simula el botón */
+.radio-group label {
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: 6px;
+    transition: all 0.2s ease-in-out;
+}
+/* Estilo para el botón seleccionado */
+.radio-group input[type="radio"]:checked + label {
+    background-color: var(--primary-color);
+    color: white;
+    font-weight: 500;
+}
+
+/* Estilos para el estado de pago del empleado */
+.status {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.9em;
+    font-weight: 500;
+    text-align: center;
+    min-width: 70px;
+}
+.status-paid {
+    background-color: rgba(0, 169, 157, 0.2);
+    color: #00e0cf;
+}
+.status-pending {
+    background-color: rgba(245, 124, 0, 0.2);
+    color: #ffab40;
+}
