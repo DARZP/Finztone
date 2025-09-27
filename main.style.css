@@ -770,3 +770,42 @@ tbody tr:hover {
     }
 }
 
+/* --- ARREGLO PARA TABLAS RESPONSIVAS --- */
+.table-container {
+    overflow-x: auto; /* ¡La magia sucede aquí! */
+    -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
+}
+/* Forzamos a que la tabla no se encoja ni rompa el texto */
+.table-container table {
+    white-space: nowrap;
+    width: 100%;
+}
+
+/* --- ARREGLO PARA LISTAS RESPONSIVAS (NÓMINA, GASTOS, ETC.) --- */
+.user-item,
+.expense-item,
+.pending-item {
+    flex-direction: column; /* Apila los elementos */
+    align-items: flex-start; /* Alinea todo a la izquierda */
+    gap: 10px;
+}
+
+/* Para textos largos que no se rompen */
+.item-info, .user-info {
+    word-break: break-word;
+}
+
+/* Hacemos que los botones en las listas ocupen todo el ancho */
+.user-item .btn,
+.pending-item .item-actions {
+    width: 100%;
+}
+.pending-item .item-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.pending-item .item-actions .btn {
+    width: 100%;
+    box-sizing: border-box;
+}
