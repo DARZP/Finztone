@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Gastos - FINZTONE</title>
-
+    
     <link rel="stylesheet" href="main.style.css">
     
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
@@ -16,7 +16,7 @@
             <img src="images/nombre.png" alt="FINZTONE" class="logo-header">
         </header>
 
-        <main>
+        <main class="container">
             <div class="form-card">
                 <h2>Registrar un Nuevo Gasto</h2>
                 <form id="add-expense-form">
@@ -36,6 +36,7 @@
                         </div>
                         <div id="taxes-details-container" style="display: none;">
                             <div id="taxes-checklist"></div>
+                            <hr>
                             <div class="totals-summary">
                                 <div class="summary-line">
                                     <span>Monto Bruto:</span>
@@ -96,15 +97,27 @@
                     <div id="invoice-details" style="display: none;">
                     </div>
                     
-                    <div class="form-actions" style="display: flex; gap: 15px;">
-                        <button type="button" id="save-draft-btn" class="btn-secondary" style="flex: 1;">Guardar Borrador</button>
-                        <button type="button" id="add-approved-btn" class="btn-primary" style="flex: 1;">Agregar Gasto Aprobado</button>
+                    <div class="form-actions">
+                        <button type="button" id="save-draft-btn" class="btn-secondary">Guardar Borrador</button>
+                        <button type="button" id="add-approved-btn" class="btn-primary">Agregar Gasto Aprobado</button>
                     </div>
                 </form>
             </div>
 
             <div class="list-card">
-                <h2>Historial de Gastos</h2>
+                <div class="card-header-filters">
+                    <h2>Historial de Gastos</h2>
+                    <div class="filters-container">
+                        <div class="filter-group">
+                            <label>Categoría</label>
+                            <select id="category-filter"></select>
+                        </div>
+                        <div class="filter-group">
+                            <label>Mes</label>
+                            <select id="month-filter"></select>
+                        </div>
+                    </div>
+                </div>
                 <div id="expense-list"></div>
             </div>
         </main>
