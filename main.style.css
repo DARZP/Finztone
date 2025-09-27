@@ -521,3 +521,37 @@ select option {
     color: #00e0cf; 
     text-decoration: underline;
 }
+
+/* --- ESTILOS PARA PÁGINAS CON PESTAÑAS (TABS) --- */
+
+.tabs {
+    display: flex;
+    border-bottom: 1px solid var(--input-border-color);
+    margin: -30px -30px 20px -30px; /* Saca las pestañas al borde de la tarjeta */
+    padding: 0 30px;
+}
+
+.tab-link {
+    padding: 10px 20px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 1.1em;
+    font-family: 'Poppins', sans-serif;
+    color: rgba(255, 255, 255, 0.6);
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s ease;
+}
+
+.tab-link:hover {
+    color: var(--text-color-light);
+}
+
+.tab-link.active {
+    color: var(--primary-color);
+    border-bottom: 3px solid var(--primary-color);
+}
+
+.tab-content {
+    display: none;
+}
