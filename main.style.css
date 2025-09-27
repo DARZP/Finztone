@@ -458,7 +458,7 @@ select option {
 
 /* --- ESTILOS PARA FILTROS EN CABECERA DE TARJETAS --- */
 
-.card-header-filters {
+.card-header- {
     display: flex;
     justify-content: space-between;
     align-items: center;
