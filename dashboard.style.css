@@ -1,4 +1,4 @@
-/* dashboard.style.css (VERSIÓN ACTUALIZADA COMPLETA) */
+/* dashboard.style.css (VERSIÓN CORREGIDA Y VERIFICADA) */
 :root {
     --primary-color: #00A99D;
     --secondary-color: #0D2A4B; /* Color oscuro de fondo */
@@ -8,15 +8,12 @@
 body {
     margin: 0;
     font-family: 'Poppins', sans-serif;
-    /* CAMBIO: Usamos el color de fondo oscuro de la página de inicio */
+    /* PASO CLAVE: Asegurarnos de que el fondo sea oscuro */
     background-color: var(--secondary-color);
     color: var(--text-color-light); /* El texto por defecto será claro */
-    /* OPCIONAL: Puedes añadir una imagen de fondo sutil si lo deseas */
-    /* background-image: url('path/to/your/background-image.png'); */
-    /* background-size: cover; */
 }
 
-/* NUEVO: Contenedor principal para centrar el contenido */
+/* Contenedor principal para centrar el contenido */
 .dashboard-wrapper {
     max-width: 900px; /* Ancho máximo para las 3 columnas */
     margin: 0 auto;   /* Centra el contenedor en la página */
@@ -24,11 +21,11 @@ body {
 }
 
 .main-header {
-    /* CAMBIO: Aplicamos el efecto de cristal */
+    /* Efecto de cristal */
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 16px; /* Bordes redondeados */
+    border-radius: 16px;
     
     height: 70px;
     padding: 0 30px;
@@ -36,13 +33,12 @@ body {
     justify-content: space-between;
     align-items: center;
     
-    /* MEJORA: Hacemos que la cabecera se quede fija al hacer scroll */
+    /* La cabecera se queda fija al hacer scroll */
     position: sticky;
-    top: 20px; /* Espacio desde la parte superior */
+    top: 20px;
     z-index: 10;
 }
 
-/* Ajuste para que el logo no sea tan grande en la nueva barra */
 .logo-header {
     height: 35px;
     width: auto;
@@ -56,13 +52,13 @@ body {
 
 #user-email {
     font-size: 0.9em;
-    color: var(--text-color-light); /* CAMBIO: Texto claro */
+    color: var(--text-color-light);
 }
 
 #logout-button {
     background-color: transparent;
-    border: 1px solid var(--text-color-light); /* CAMBIO: Borde claro */
-    color: var(--text-color-light); /* CAMBIO: Texto claro */
+    border: 1px solid var(--text-color-light);
+    color: var(--text-color-light);
     padding: 8px 16px;
     border-radius: 8px;
     cursor: pointer;
@@ -88,28 +84,28 @@ body {
 
 .tools-grid {
     display: grid;
-    /* CAMBIO: Forzamos la cuadrícula a tener siempre 3 columnas */
+    /* Forzamos la cuadrícula a tener siempre 3 columnas */
     grid-template-columns: repeat(3, 1fr);
     gap: 30px;
 }
 
 .tool-card {
-    /* CAMBIO: Aplicamos el efecto de cristal a las tarjetas */
+    /* Efecto de cristal */
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
 
-    border-radius: 16px; /* Bordes redondeados consistentes */
+    border-radius: 16px;
     padding: 20px;
     text-align: center;
     text-decoration: none;
-    color: var(--text-color-light); /* CAMBIO: Texto claro */
+    color: var(--text-color-light);
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 .tool-card:hover {
-    transform: translateY(-5px) scale(1.03); /* Efecto más pronunciado */
+    transform: translateY(-5px) scale(1.03);
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
 }
 
