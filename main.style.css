@@ -699,31 +699,30 @@ tbody tr:hover {
     width: auto;
 }
 
-
 /* =============================================== */
-/* --- REGLAS ESPECIALES PARA VISTA EN MÓVILES (VERSIÓN CORREGIDA) --- */
+/* --- REGLAS ESPECIALES PARA VISTA EN MÓVILES (VERSIÓN FINAL) --- */
 /* =============================================== */
 
 @media (max-width: 768px) {
 
-    /* 1. REGLA GENERAL PARA TODOS LOS HEADERS EN MÓVIL */
+    /* 1. HEADERS DE PÁGINAS INTERIORES (CON BOTÓN VOLVER) */
     /* Por defecto, todos los headers serán una barra horizontal y compacta. */
     .main-header {
-        flex-direction: row; /* Mantiene los elementos en línea */
-        justify-content: space-between; /* Uno a cada lado */
+        flex-direction: row;
+        justify-content: space-between;
         align-items: center;
-        height: 60px; /* Altura fija y compacta */
+        height: 60px;
         padding: 0 15px;
         top: 10px;
         gap: 15px;
     }
 
     .main-header .logo-header {
-        height: 300px; /* Tamaño de logo controlado para las páginas interiores */
+        height: 300px;
     }
 
-    /* 2. REGLA ESPECIAL: SOLO PARA EL HEADER DEL DASHBOARD PRINCIPAL */
-    /* Si el header contiene la clase .user-info, entonces lo apilamos. */
+    /* 2. HEADER DEL DASHBOARD PRINCIPAL (EL QUE TIENE .user-info) */
+    /* Solo en móvil, si el header contiene .user-info, entonces lo apilamos. */
     .main-header:has(.user-info) {
         flex-direction: column; /* Apila los elementos */
         height: auto; /* Altura automática */
@@ -731,9 +730,8 @@ tbody tr:hover {
         gap: 15px;
     }
 
-    /* Y en ese header del dashboard, el logo puede ser un poco más grande */
     .main-header:has(.user-info) .logo-header {
-        height: 300px;
+        height: 300px; /* Tamaño del logo en el dashboard móvil */
     }
 
     .main-header .user-info {
@@ -746,7 +744,7 @@ tbody tr:hover {
         text-align: center;
     }
 
-    /* 3. REGLAS GENERALES PARA EL CONTENIDO (SIN CAMBIOS) */
+    /* 3. REGLAS GENERALES DE CONTENIDO EN MÓVIL */
     .page-wrapper {
         max-width: 100%;
         padding: 10px;
@@ -757,3 +755,18 @@ tbody tr:hover {
         gap: 15px;
     }
 }
+
+/* --- REGLA ADICIONAL PARA CORREGIR EL HEADER DEL DASHBOARD EN ESCRITORIO --- */
+/* Esta regla asegura que en pantallas grandes, el header del dashboard vuelva a ser horizontal */
+@media (min-width: 769px) {
+    .main-header:has(.user-info) {
+        flex-direction: row;
+        height: 70px;
+        padding: 0 30px;
+    }
+
+    .main-header:has(.user-info) .logo-header {
+        height: 40px; /* O el tamaño que prefieras para el logo en escritorio */
+    }
+}
+
