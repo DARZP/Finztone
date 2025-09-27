@@ -4,101 +4,105 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mis Ingresos - FINZTONE</title>
-    <link rel="stylesheet" href="empleado_ingresos.style.css">
+    
+    <link rel="stylesheet" href="main.style.css">
+
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
-    <header class="main-header">
-        <a href="empleado_dashboard.html" class="back-button">← Volver</a>
-        <img src="images/nombre.png" alt="FINZTONE" class="logo-header">
-    </header>
+    <div class="page-wrapper">
+        <header class="main-header">
+            <a href="empleado_dashboard.html" class="back-button">← Volver</a>
+            <img src="images/nombre.png" alt="FINZTONE" class="logo-header">
+        </header>
 
-    <main class="container">
-        <div class="form-card">
-            <h2>Registrar un Nuevo Ingreso</h2>
-            <form id="add-income-form">
-                <div class="input-group">
-                    <label for="income-description">Concepto del Ingreso</label>
-                    <input type="text" id="income-description" required>
-                </div>
-                <div class="input-group">
-                    <label for="income-amount">Monto ($)</label>
-                    <input type="number" id="income-amount" step="0.01" required>
-                </div>
-                <div class="deductions-section">
-                    <div class="input-group-checkbox">
-                        <input type="checkbox" id="add-taxes-checkbox">
-                        <label for="add-taxes-checkbox">Desglosar Monto (con Impuestos/Retenciones)</label>
+        <main class="container">
+            <div class="form-card">
+                <h2>Registrar un Nuevo Ingreso</h2>
+                <form id="add-income-form">
+                    <div class="input-group">
+                        <label for="income-description">Concepto del Ingreso</label>
+                        <input type="text" id="income-description" required>
                     </div>
-                    <div id="taxes-details-container" style="display: none;">
-                        <div id="taxes-checklist"></div>
-                        <hr>
-                        <div class="totals-summary">
-                            <div class="summary-line"><span>Monto Bruto:</span><span id="summary-bruto">$0.00</span></div>
-                            <div class="summary-line"><span>Total Retenciones:</span><span id="summary-impuestos">$0.00</span></div>
-                            <div class="summary-line net-total"><span>Monto Neto (Total a Recibir):</span><span id="summary-neto">$0.00</span></div>
+                    <div class="input-group">
+                        <label for="income-amount">Monto ($)</label>
+                        <input type="number" id="income-amount" step="0.01" required>
+                    </div>
+                    <div class="deductions-section">
+                        <div class="input-group-checkbox">
+                            <input type="checkbox" id="add-taxes-checkbox">
+                            <label for="add-taxes-checkbox">Desglosar Monto (con Impuestos/Retenciones)</label>
+                        </div>
+                        <div id="taxes-details-container" style="display: none;">
+                            <div id="taxes-checklist"></div>
+                            <hr>
+                            <div class="totals-summary">
+                                <div class="summary-line"><span>Monto Bruto:</span><span id="summary-bruto">$0.00</span></div>
+                                <div class="summary-line"><span>Total Retenciones:</span><span id="summary-impuestos">$0.00</span></div>
+                                <div class="summary-line net-total"><span>Monto Neto (Total a Recibir):</span><span id="summary-neto">$0.00</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="income-category">Categoría</label>
+                        <select id="income-category" required></select>
+                    </div>
+                    <div class="input-group">
+                        <label for="income-date">Fecha</label>
+                        <input type="date" id="income-date" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="income-company">Empresa o Cliente</label>
+                        <input type="text" id="income-company" list="company-list">
+                        <datalist id="company-list"></datalist>
+                    </div>
+                    <div class="input-group">
+                        <label for="project-select">Proyecto (Opcional)</label>
+                        <select id="project-select" disabled>
+                            <option value="">Primero selecciona una empresa</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="payment-method">Método de Cobro</label>
+                        <select id="payment-method"></select>
+                    </div>
+                    <div class="input-group">
+                        <label for="income-comments">Comentarios</label>
+                        <textarea id="income-comments" rows="3"></textarea>
+                    </div>
+                    <div class="input-group-checkbox">
+                        <input type="checkbox" id="is-invoice">
+                        <label for="is-invoice">Anexar datos de facturación</label>
+                    </div>
+                    <div id="invoice-details" style="display: none;">
+                        <div class="input-group"><label for="invoice-rfc">RFC</label><input type="text" id="invoice-rfc"></div>
+                        <div class="input-group"><label for="invoice-folio">Folio Fiscal</label><input type="text" id="invoice-folio"></div>
+                    </div>
+                    <div class="form-actions" style="display: flex; gap: 15px;">
+                        <button type="button" id="save-draft-btn" class="btn-secondary" style="flex: 1;">Guardar Borrador</button>
+                        <button type="button" id="send-for-approval-btn" class="btn-primary" style="flex: 1;">Enviar para Aprobación</button>
+                        <button type="button" id="cancel-edit-btn" class="btn-cancel" style="display: none; flex: 1;">Cancelar Edición</button>
+                    </div>
+                </form>
+            </div>
+            <div class="list-card">
+                <div class="card-header-filters">
+                    <h2>Mi Historial de Ingresos</h2>
+                    <div class="filters-container">
+                        <div class="filter-group">
+                            <label>Categoría</label>
+                            <select id="category-filter"></select>
+                        </div>
+                        <div class="filter-group">
+                            <label>Mes</label>
+                            <select id="month-filter"></select>
                         </div>
                     </div>
                 </div>
-                <div class="input-group">
-                    <label for="income-category">Categoría</label>
-                    <select id="income-category" required></select>
-                </div>
-                <div class="input-group">
-                    <label for="income-date">Fecha</label>
-                    <input type="date" id="income-date" required>
-                </div>
-                <div class="input-group">
-                    <label for="income-company">Empresa o Cliente</label>
-                    <input type="text" id="income-company" list="company-list">
-                    <datalist id="company-list"></datalist>
-                </div>
-                <div class="input-group">
-                    <label for="project-select">Proyecto (Opcional)</label>
-                    <select id="project-select" disabled>
-                        <option value="">Primero selecciona una empresa</option>
-                    </select>
-                </div>
-                <div class="input-group">
-                    <label for="payment-method">Método de Cobro</label>
-                    <select id="payment-method"></select>
-                </div>
-                <div class="input-group">
-                    <label for="income-comments">Comentarios</label>
-                    <textarea id="income-comments" rows="3"></textarea>
-                </div>
-                <div class="input-group-checkbox">
-                    <input type="checkbox" id="is-invoice">
-                    <label for="is-invoice">Anexar datos de facturación</label>
-                </div>
-                <div id="invoice-details" style="display: none;">
-                    <div class="input-group"><label for="invoice-rfc">RFC</label><input type="text" id="invoice-rfc"></div>
-                    <div class="input-group"><label for="invoice-folio">Folio Fiscal</label><input type="text" id="invoice-folio"></div>
-                </div>
-                <div class="form-actions">
-                    <button type="button" id="save-draft-btn" class="btn btn-secondary">Guardar Borrador</button>
-                    <button type="button" id="send-for-approval-btn" class="btn btn-primary">Enviar para Aprobación</button>
-                    <button type="button" id="cancel-edit-btn" class="btn btn-cancel" style="display: none;">Cancelar Edición</button>
-                </div>
-            </form>
-        </div>
-        <div class="list-card">
-            <div class="card-header-filters">
-                <h2>Mi Historial de Ingresos</h2>
-                <div class="filters-container">
-                    <div class="filter-group">
-                        <label>Categoría</label>
-                        <select id="category-filter"></select>
-                    </div>
-                    <div class="filter-group">
-                        <label>Mes</label>
-                        <select id="month-filter"></select>
-                    </div>
-                </div>
+                <div id="income-list"></div>
             </div>
-            <div id="income-list"></div>
-        </div>
-    </main>
+        </main>
+    </div>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
