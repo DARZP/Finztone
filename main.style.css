@@ -59,7 +59,7 @@ body {
 }
 
 .logo-header {
-    height: 70px; /* Aumentado a 60px para que sea más visible */
+    height: 65px; /* Aumentado a 60px para que sea más visible */
     width: auto; /* Mantiene la proporción */
 }
 
@@ -718,7 +718,7 @@ tbody tr:hover {
     }
 
     .main-header .logo-header {
-        height: 70px;
+        height: 65px;
     }
 
     /* 2. HEADER DEL DASHBOARD PRINCIPAL (EL QUE TIENE .user-info) */
@@ -731,7 +731,7 @@ tbody tr:hover {
 }
 
     .main-header:has(.user-info) .logo-header {
-        height: 70px; /* Tamaño del logo en el dashboard móvil */
+        height: 65px; /* Tamaño del logo en el dashboard móvil */
     }
 
     .main-header .user-info {
@@ -761,12 +761,12 @@ tbody tr:hover {
 @media (min-width: 769px) {
     .main-header:has(.user-info) {
         flex-direction: row;
-        height: 70px;
+        height: 65px;
         padding: 0 30px;
     }
 
     .main-header:has(.user-info) .logo-header {
-        height: 70px; /* O el tamaño que prefieras para el logo en escritorio */
+        height: 65px; /* O el tamaño que prefieras para el logo en escritorio */
     }
 }
 
