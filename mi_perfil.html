@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Perfil - FINZTONE</title>
+    <link rel="stylesheet" href="main.style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="page-wrapper">
+        <header class="main-header">
+            <a href="#" id="back-button" class="back-button">← Volver</a>
+            <img src="images/nombre.png" alt="FINZTONE" class="logo-header">
+        </header>
+
+        <main>
+            <div class="card">
+                <div class="card-header">
+                     <h2>Mi Perfil</h2>
+                     <a href="#" id="edit-profile-btn" class="btn-primary">Editar Perfil</a>
+                </div>
+                <div class="profile-details">
+                    <p><strong>Nombre:</strong> <span id="profile-name">Cargando...</span></p>
+                    <p><strong>Correo:</strong> <span id="profile-email">Cargando...</span></p>
+                    <p><strong>Rol:</strong> <span id="profile-role">Cargando...</span></p>
+                    <hr style="border-color: rgba(255,255,255,0.1); margin: 15px 0;">
+                    <p><strong>Teléfono:</strong> <span id="profile-phone">No registrado</span></p>
+                    <p><strong>CLABE:</strong> <span id="profile-clabe">No registrada</span></p>
+                    <p><strong>RFC:</strong> <span id="profile-rfc">No registrado</span></p>
+                    <hr style="border-color: rgba(255,255,255,0.1); margin: 15px 0;">
+                    <button id="change-password-btn" class="btn-secondary" style="width: 100%;">Cambiar Contraseña</button>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="mi_perfil.app.js"></script>
+</body>
+</html>
