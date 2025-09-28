@@ -41,28 +41,39 @@ document.addEventListener('DOMContentLoaded', (event) => {
     }
 });
 
-
-// ---- NUEVA LÓGICA CENTRAL DE REDIRECCIÓN ----
-
-// Esta nueva función se encarga de decidir a dónde enviar al usuario después de iniciar sesión.
 function handleLoginSuccess(user) {
-    // Buscamos el perfil del usuario en nuestra base de datos 'usuarios' usando su email.
     db.collection('usuarios').where('email', '==', user.email).get()
         .then((querySnapshot) => {
+            
             if (querySnapshot.empty) {
-                // Si el usuario existe en Authentication pero no en nuestra base de datos 'usuarios',
-                // asumimos que es el administrador principal.
-                console.log('Usuario es Administrador (no tiene perfil en la base de datos).');
-                window.location.href = 'dashboard.html';
+                // --- ¡NUEVA LÓGICA! ---
+                // El usuario existe en Authentication pero no en Firestore.
+                // Asumimos que es un Administrador y le creamos su perfil.
+                console.log('Administrador sin perfil detectado. Creando perfil...');
+                
+                // Usamos el UID de Authentication como ID del documento para una fácil referencia
+                const userRef = db.collection('usuarios').doc(user.uid); 
+                
+                userRef.set({
+                    email: user.email,
+                    nombre: "Administrador", // Nombre por defecto
+                    rol: 'admin',
+                    telefono: "",
+                    clabe: "",
+                    rfc: "",
+                    fechaDeCreacion: new Date()
+                }).then(() => {
+                    console.log('Perfil de administrador creado. Redirigiendo...');
+                    window.location.href = 'dashboard.html';
+                });
+
             } else {
-                // Si encontramos un perfil, leemos sus datos.
+                // El perfil ya existe, procedemos como antes.
                 const userData = querySnapshot.docs[0].data();
                 if (userData.rol === 'empleado') {
-                    // Si el campo 'rol' dice 'empleado', lo enviamos a su dashboard.
                     console.log('Usuario es Empleado, redirigiendo...');
                     window.location.href = 'empleado_dashboard.html';
                 } else {
-                    // Si el campo 'rol' no existe o es diferente, lo tratamos como admin.
                     console.log('Usuario es Administrador, redirigiendo...');
                     window.location.href = 'dashboard.html';
                 }
@@ -71,12 +82,9 @@ function handleLoginSuccess(user) {
         .catch(error => {
             console.error("Error al obtener el rol del usuario:", error);
             alert('Ocurrió un error al verificar tu rol. Contacta al administrador.');
-            auth.signOut(); // Cerramos sesión si hay un error crítico
+            auth.signOut();
         });
 }
-
-
-// ---- LÓGICA DE INICIO DE SESIÓN (ACTUALIZADA) ----
 
 // 1. Escuchador para el formulario de Administrador (actualizado)
 const adminLoginForm = document.getElementById('admin-login-form');
