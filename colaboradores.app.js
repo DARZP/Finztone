@@ -17,82 +17,70 @@ const userListContainer = document.getElementById('user-list');
 
 // colaboradores.app.js
 
-addUserForm.addEventListener('submit', (e) => {
+addUserForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const user = auth.currentUser;
     if (!user) {
         return alert("Error de autenticación. Por favor, inicia sesión de nuevo.");
     }
 
-    const name = addUserForm['user-name'].value;
-    const email = addUserForm['user-email'].value;
-    const position = addUserForm['user-position'].value;
-    const salary = parseFloat(addUserForm['user-salary'].value);
-
-    // --- ¡NUEVA LÓGICA! ---
-    // Usamos el UID del nuevo empleado como ID del documento
-    // (Esto requiere que primero crees el usuario en Firebase Authentication)
-    const newEmployeeUid = prompt("Pega aquí el UID del nuevo colaborador creado en Firebase Authentication:");
-
-    if (!newEmployeeUid) {
-        alert("La creación fue cancelada. Debes proporcionar un UID.");
-        return;
-    }
-
-    const newUserData = {
-        nombre: name,
-        email: email,
-        cargo: position,
-        sueldoBruto: salary,
-        fechaDeIngreso: new Date(),
-        rol: 'empleado',
-        adminUid: user.uid // <-- AÑADIMOS EL ID DEL ADMIN ACTUAL
-    };
-
-    db.collection('usuarios').doc(newEmployeeUid).set(newUserData)
-        .then(() => {
-            alert('¡Colaborador agregado exitosamente!');
-            addUserForm.reset();
-        })
-        .catch((error) => console.error('Error al agregar colaborador: ', error));
-});
-
-function mostrarUsuarios(usuarios) {
-    userListContainer.innerHTML = '';
-    if (usuarios.length === 0) {
-        userListContainer.innerHTML = '<p>No hay colaboradores registrados.</p>';
-        return;
-    }
-
-    usuarios.forEach(usuario => {
-        const userElement = document.createElement('a');
-        userElement.href = `perfil_empleado.html?id=${usuario.id}`; 
-        userElement.classList.add('user-item');
+    try {
+        // --- ¡NUEVA LÓGICA DE VERIFICACIÓN! ---
         
-        const sueldoFormateado = (usuario.sueldoBruto || 0).toLocaleString('es-MX', {
-            style: 'currency',
-            currency: 'MXN'
-        });
+        // 1. Obtenemos la información de la suscripción del admin
+        const subRef = db.collection('suscripciones').doc(user.uid);
+        const subDoc = await subRef.get();
 
-        userElement.innerHTML = `
-            <div class="user-info">
-                <div class="user-name">${usuario.nombre}</div>
-                <div class="user-details">${usuario.cargo || 'Sin cargo'} - ${usuario.email}</div>
-            </div>
-            <div class="user-salary">${sueldoFormateado}</div>
-        `;
-        userListContainer.appendChild(userElement);
-    });
-}
+        if (!subDoc.exists) {
+            return alert("No se pudo verificar tu plan de suscripción.");
+        }
+        const subData = subDoc.data();
+        const limiteColaboradores = subData.limiteColaboradores;
 
-auth.onAuthStateChanged((user) => {
-    if (user) {
-        db.collection('usuarios').orderBy('nombre').onSnapshot(snapshot => {
-            const usuarios = [];
-            snapshot.forEach(doc => usuarios.push({ id: doc.id, ...doc.data() }));
-            mostrarUsuarios(usuarios);
-        }, error => console.error("Error al obtener usuarios: ", error));
-    } else {
-        window.location.href = 'index.html';
+        // 2. Contamos los colaboradores actuales que tiene este admin
+        const colaboradoresQuery = await db.collection('usuarios')
+            .where('adminUid', '==', user.uid)
+            .where('rol', '==', 'empleado')
+            .get();
+        
+        const colaboradoresActuales = colaboradoresQuery.size;
+
+        // 3. Comparamos el uso actual con el límite del plan
+        if (colaboradoresActuales >= limiteColaboradores) {
+            alert(`Has alcanzado el límite de ${limiteColaboradores} colaboradores para tu plan "${subData.planNombre}". Por favor, actualiza tu plan para añadir más usuarios.`);
+            return; // Detenemos la ejecución si se alcanzó el límite
+        }
+
+        // --- SI PASA LA VERIFICACIÓN, CONTINUAMOS CON LA CREACIÓN ---
+
+        const name = addUserForm['user-name'].value;
+        const email = addUserForm['user-email'].value;
+        const position = addUserForm['user-position'].value;
+        const salary = parseFloat(addUserForm['user-salary'].value);
+
+        const newEmployeeUid = prompt("Pega aquí el UID del nuevo colaborador creado en Firebase Authentication:");
+        if (!newEmployeeUid) {
+            alert("La creación fue cancelada. Debes proporcionar un UID.");
+            return;
+        }
+
+        const newUserData = {
+            nombre: name,
+            email: email,
+            cargo: position,
+            sueldoBruto: salary,
+            fechaDeIngreso: new Date(),
+            rol: 'empleado',
+            adminUid: user.uid
+        };
+
+        await db.collection('usuarios').doc(newEmployeeUid).set(newUserData);
+        
+        alert(`¡Colaborador agregado exitosamente! Colaboradores en uso: ${colaboradoresActuales + 1} de ${limiteColaboradores}.`);
+        addUserForm.reset();
+
+    } catch (error) {
+        console.error('Error al agregar colaborador: ', error);
+        alert("Ocurrió un error inesperado al intentar agregar al colaborador.");
     }
 });
