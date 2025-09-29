@@ -15,27 +15,46 @@ const db = firebase.firestore();
 const addUserForm = document.getElementById('add-user-form');
 const userListContainer = document.getElementById('user-list');
 
-// Lógica para agregar un nuevo colaborador a Firestore
+// colaboradores.app.js
+
 addUserForm.addEventListener('submit', (e) => {
     e.preventDefault();
+    const user = auth.currentUser;
+    if (!user) {
+        return alert("Error de autenticación. Por favor, inicia sesión de nuevo.");
+    }
+
     const name = addUserForm['user-name'].value;
     const email = addUserForm['user-email'].value;
     const position = addUserForm['user-position'].value;
     const salary = parseFloat(addUserForm['user-salary'].value);
 
-    db.collection('usuarios').add({
+    // --- ¡NUEVA LÓGICA! ---
+    // Usamos el UID del nuevo empleado como ID del documento
+    // (Esto requiere que primero crees el usuario en Firebase Authentication)
+    const newEmployeeUid = prompt("Pega aquí el UID del nuevo colaborador creado en Firebase Authentication:");
+
+    if (!newEmployeeUid) {
+        alert("La creación fue cancelada. Debes proporcionar un UID.");
+        return;
+    }
+
+    const newUserData = {
         nombre: name,
         email: email,
         cargo: position,
         sueldoBruto: salary,
         fechaDeIngreso: new Date(),
-        rol: 'empleado' // Asignamos el rol por defecto
-    })
-    .then(() => {
-        alert('¡Colaborador agregado!\n\nRecuerda crear su cuenta en Firebase Authentication.');
-        addUserForm.reset();
-    })
-    .catch((error) => console.error('Error al agregar colaborador: ', error));
+        rol: 'empleado',
+        adminUid: user.uid // <-- AÑADIMOS EL ID DEL ADMIN ACTUAL
+    };
+
+    db.collection('usuarios').doc(newEmployeeUid).set(newUserData)
+        .then(() => {
+            alert('¡Colaborador agregado exitosamente!');
+            addUserForm.reset();
+        })
+        .catch((error) => console.error('Error al agregar colaborador: ', error));
 });
 
 function mostrarUsuarios(usuarios) {
