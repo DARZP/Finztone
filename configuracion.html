@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuración de Cuenta - FINZTONE</title>
+    <link rel="stylesheet" href="main.style.css">
+    <style>
+        /* Estilos específicos para esta página */
+        .usage-metric { margin-bottom: 20px; }
+        .usage-bar {
+            background-color: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            overflow: hidden;
+            height: 25px;
+            margin-top: 8px;
+        }
+        .usage-bar-fill {
+            background-color: var(--primary-color);
+            height: 100%;
+            width: 0%; /* Se actualizará con JS */
+            transition: width 0.5s ease-in-out;
+            text-align: center;
+            line-height: 25px;
+            font-weight: 500;
+            font-size: 0.9em;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="page-wrapper">
+        <header class="main-header">
+            <a href="dashboard.html" class="back-button">← Volver</a>
+            <img src="images/nombre.png" alt="FINZTONE" class="logo-header">
+        </header>
+
+        <main>
+            <div class="card">
+                <h2>Configuración de la Cuenta</h2>
+                
+                <div class="plan-info">
+                    <h3>Plan Actual</h3>
+                    <p>Estás en el <strong id="plan-nombre" style="color: var(--primary-color);">Cargando...</strong></p>
+                    <p><strong>Estado:</strong> <span id="plan-estado">Cargando...</span></p>
+                </div>
+
+                <hr style="border-color: rgba(255,255,255,0.1); margin: 25px 0;">
+
+                <div class="usage-info">
+                    <h3>Uso de Cuenta</h3>
+                    <div class="usage-metric">
+                        <label>Colaboradores</label>
+                        <div class="usage-bar">
+                            <div id="usage-bar-fill" class="usage-bar-fill"></div>
+                        </div>
+                        <span id="usage-text" style="font-size: 0.9em; color: #aeb9c5;">Calculando...</span>
+                    </div>
+                </div>
+
+                <hr style="border-color: rgba(255,255,255,0.1); margin: 25px 0;">
+
+                <div class="manage-plan">
+                    <h3>Administrar Suscripción</h3>
+                    <p>¿Necesitas añadir más colaboradores? Actualiza tu plan.</p>
+                    <button class="btn-primary" style="width: 100%;">Administrar Plan (Próximamente)</button>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="configuracion.app.js"></script>
+</body>
+</html>
