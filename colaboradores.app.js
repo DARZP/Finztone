@@ -12,8 +12,6 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// ---- LÓGICA DE LA PÁGINA DE COLABORADORES ----
-
 const addUserForm = document.getElementById('add-user-form');
 const userListContainer = document.getElementById('user-list');
 
@@ -40,8 +38,6 @@ addUserForm.addEventListener('submit', (e) => {
     .catch((error) => console.error('Error al agregar colaborador: ', error));
 });
 
-// En el archivo colaboradores.app.js
-
 function mostrarUsuarios(usuarios) {
     userListContainer.innerHTML = '';
     if (usuarios.length === 0) {
@@ -50,25 +46,26 @@ function mostrarUsuarios(usuarios) {
     }
 
     usuarios.forEach(usuario => {
-        // Cambiamos el 'div' por una etiqueta 'a' (enlace)
         const userElement = document.createElement('a');
-        // Creamos una URL dinámica con el ID del usuario
         userElement.href = `perfil_empleado.html?id=${usuario.id}`; 
         userElement.classList.add('user-item');
         
+        const sueldoFormateado = (usuario.sueldoBruto || 0).toLocaleString('es-MX', {
+            style: 'currency',
+            currency: 'MXN'
+        });
+
         userElement.innerHTML = `
             <div class="user-info">
                 <div class="user-name">${usuario.nombre}</div>
-                <div class="user-details">${usuario.cargo} - ${usuario.email}</div>
+                <div class="user-details">${usuario.cargo || 'Sin cargo'} - ${usuario.email}</div>
             </div>
-            <div class="user-salary">$${usuario.sueldoBruto.toLocaleString('es-MX')}</div>
+            <div class="user-salary">${sueldoFormateado}</div>
         `;
         userListContainer.appendChild(userElement);
     });
 }
 
-
-// Carga inicial de datos y protección de la ruta
 auth.onAuthStateChanged((user) => {
     if (user) {
         db.collection('usuarios').orderBy('nombre').onSnapshot(snapshot => {
