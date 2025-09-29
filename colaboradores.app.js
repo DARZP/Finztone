@@ -74,7 +74,12 @@ addUserForm.addEventListener('submit', async (e) => {
             adminUid: user.uid
         };
 
-        await db.collection('usuarios').doc(newEmployeeUid).set(newUserData);
+        db.collection('usuarios')
+            .where('adminUid', '==', user.uid)
+            .where('rol', '==', 'empleado')
+            .orderBy('nombre')
+            .onSnapshot(snapshot => {
+            });
         
         alert(`¡Colaborador agregado exitosamente! Colaboradores en uso: ${colaboradoresActuales + 1} de ${limiteColaboradores}.`);
         addUserForm.reset();
