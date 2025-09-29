@@ -1,5 +1,3 @@
-// perfil_empleado.app.js (VERSIÓN ACTUALIZADA)
-
 const firebaseConfig = {
     apiKey: "AIzaSyA4zRiQnr2PiG1zQc_k-Of9CmGQQSkVQ84",
     authDomain: "finztone-app.firebaseapp.com",
@@ -16,7 +14,6 @@ const db = firebase.firestore();
 const urlParams = new URLSearchParams(window.location.search);
 const userId = urlParams.get('id');
 
-// --- Elementos del DOM ---
 const profileName = document.getElementById('profile-name');
 const profileEmail = document.getElementById('profile-email');
 const profilePosition = document.getElementById('profile-position');
@@ -32,18 +29,25 @@ const downloadEmployeeRecordsBtn = document.getElementById('download-employee-re
 
 let currentUserData = null; 
 
-// --- LÓGICA DE DESCARGA ---
-
 async function descargarRegistrosColaborador() {
     if (!currentUserData) return;
     alert(`Preparando la descarga de todos los registros de ${currentUserData.nombre}. Esto puede tardar...`);
 
     try {
         const email = currentUserData.email;
+        
+        const userIdFromUrl = urlParams.get('id'); 
+
         const gastosPromise = db.collection('gastos').where('emailCreador', '==', email).get();
         const ingresosPromise = db.collection('ingresos').where('emailCreador', '==', email).get();
+        
+        const nominaPromise = db.collection('pagos_nomina').where('userId', '==', userIdFromUrl).get();
 
-        const [gastosSnapshot, ingresosSnapshot] = await Promise.all([gastosPromise, ingresosPromise]);
+        const [gastosSnapshot, ingresosSnapshot, nominaSnapshot] = await Promise.all([
+            gastosPromise, 
+            ingresosPromise, 
+            nominaPromise 
+        ]);
 
         const registros = [];
         gastosSnapshot.forEach(doc => {
@@ -66,6 +70,16 @@ async function descargarRegistrosColaborador() {
                 Estado: data.status || ''
             });
         });
+        nominaSnapshot.forEach(doc => {
+            const data = doc.data();
+            registros.push({
+                Fecha: data.fechaDePago.toDate().toISOString().split('T')[0],
+                Tipo: 'Nómina',
+                Concepto: `Pago de nómina (${data.periodo})`,
+                Monto: data.montoNeto, // El monto neto que recibió el empleado
+                Estado: 'Pagado'
+            });
+        });
 
         registros.sort((a, b) => new Date(a.Fecha) - new Date(b.Fecha));
         exportToCSV(registros, `Registros-${currentUserData.nombre.replace(/ /g, '_')}`);
@@ -75,9 +89,7 @@ async function descargarRegistrosColaborador() {
         alert("Ocurrió un error al generar el reporte.");
     }
 }
-
-// --- LÓGICA PRINCIPAL DE LA PÁGINA ---
-
+        
 auth.onAuthStateChanged((user) => {
     if (user) {
         if (userId) {
