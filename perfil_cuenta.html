@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfil de Cuenta - FINZTONE</title>
+    <link rel="stylesheet" href="main.style.css">
+    <style>
+        /* Estilos específicos para esta página */
+        .balance-display {
+            text-align: center;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .balance-amount {
+            font-size: 3em;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        .balance-label {
+            font-size: 1.2em;
+            color: #aeb9c5;
+        }
+        .credit-details {
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="page-wrapper">
+        <header class="main-header">
+            <a href="cuentas.html" class="back-button">← Volver a Cuentas</a>
+            <img src="images/nombre.png" alt="FINZTONE" class="logo-header">
+        </header>
+
+        <main>
+            <div class="card">
+                <div class="card-header" style="border: none;">
+                    <h2 id="account-name-title">Cargando...</h2>
+                    </div>
+
+                <div id="account-details">
+                    <div id="debit-details" style="display: none;">
+                        <div class="balance-display">
+                            <div class="balance-label">Saldo Actual</div>
+                            <div id="debit-balance" class="balance-amount">$0.00</div>
+                        </div>
+                    </div>
+
+                    <div id="credit-details-section" style="display: none;">
+                        <div class="balance-display">
+                            <div class="balance-label">Deuda Actual</div>
+                            <div id="credit-debt" class="balance-amount" style="color: #ff8a80;">$0.00</div>
+                        </div>
+                        <div class="credit-details">
+                            <div>
+                                <div class="balance-label">Próximo Corte</div>
+                                <div id="cutoff-day" style="font-size: 1.5em; font-weight: 500;">Día 00</div>
+                            </div>
+                            <div>
+                                <div class="balance-label">Pago para no generar intereses</div>
+                                <div id="payment-due" style="font-size: 1.5em; font-weight: 500;">$0.00</div>
+                            </div>
+                        </div>
+                         <button class="btn-primary" style="width:100%;" id="pay-card-btn">Realizar un Pago (Próximamente)</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="list-card">
+                <h2>Movimientos Recientes</h2>
+                <div id="movements-list">
+                    </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="perfil_cuenta.app.js"></script>
+</body>
+</html>
