@@ -20,16 +20,31 @@
             <div class="form-card">
                 <h2>Crear Nueva Cuenta</h2>
                 <form id="add-account-form">
-                    <div class="input-group">
-                        <label for="account-name">Nombre de la Cuenta</label>
-                        <input type="text" id="account-name" placeholder="Ej: Banco Principal, Caja Chica" required>
-                    </div>
-                    <div class="input-group">
-                        <label for="initial-balance">Saldo Inicial ($)</label>
-                        <input type="number" id="initial-balance" placeholder="Ej: 50000.00" step="0.01" required>
-                    </div>
-                    <button type="submit" class="btn-primary" style="width: 100%;">Crear Cuenta</button>
-                </form>
+    <div class="input-group">
+        <label for="account-type">Tipo de Cuenta</label>
+        <select id="account-type" required>
+            <option value="debito">Cuenta de Débito (Efectivo, Banco)</option>
+            <option value="credito">Tarjeta de Crédito</option>
+        </select>
+    </div>
+
+    <div class="input-group">
+        <label for="account-name">Nombre de la Cuenta</label>
+        <input type="text" id="account-name" placeholder="Ej: Banco Principal, Tarjeta Oro" required>
+    </div>
+
+    <div class="input-group" id="initial-balance-group">
+        <label for="initial-balance">Saldo Inicial ($)</label>
+        <input type="number" id="initial-balance" placeholder="Ej: 50000.00" step="0.01" required>
+    </div>
+
+    <div class="input-group" id="cutoff-date-group" style="display: none;">
+        <label for="cutoff-date">Día de Corte Mensual</label>
+        <input type="number" id="cutoff-date" placeholder="Ej: 15" min="1" max="31">
+    </div>
+
+    <button type="submit" class="btn-primary" style="width: 100%;">Crear Cuenta</button>
+</form>
             </div>
 
             <div class="list-card">
