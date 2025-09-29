@@ -23,14 +23,14 @@ const backButton = document.getElementById('back-button');
 const editProfileBtn = document.getElementById('edit-profile-btn');
 const changePasswordBtn = document.getElementById('change-password-btn');
 
-
 auth.onAuthStateChanged(async (user) => {
     if (user) {
-        // 1. Si hay un usuario, buscamos su perfil en Firestore por su email
-        const userProfileQuery = await db.collection('usuarios').where('email', '==', user.email).limit(1).get();
+        // Lógica simplificada: ahora que todos los usuarios tienen perfil,
+        // lo buscamos directamente con el UID de autenticación.
+        const userDocRef = db.collection('usuarios').doc(user.uid);
+        const userDoc = await userDocRef.get();
 
-        if (!userProfileQuery.empty) {
-            const userDoc = userProfileQuery.docs[0];
+        if (userDoc.exists) {
             const userData = userDoc.data();
             
             // 2. Rellenamos la página con la información
@@ -42,20 +42,15 @@ auth.onAuthStateChanged(async (user) => {
             profileRfc.textContent = userData.rfc || 'No registrado';
 
             // 3. Configuramos los botones
-            // El botón "Volver" apunta al dashboard correcto según el rol
             backButton.href = userData.rol === 'empleado' ? 'empleado_dashboard.html' : 'dashboard.html';
-            
-            // El botón "Editar" apuntará a una nueva página que crearemos después
-            // Pasamos el ID del documento del usuario para saber a quién editar
             editProfileBtn.href = `editar_mi_perfil.html?id=${userDoc.id}`;
 
         } else {
-            // Caso especial para el primer admin que no tiene perfil en Firestore
-            profileName.textContent = 'Administrador Principal';
-            profileEmail.textContent = user.email;
-            profileRole.textContent = 'admin';
-            backButton.href = 'dashboard.html';
-            editProfileBtn.style.display = 'none'; // Ocultamos el botón de editar
+            // Este caso de respaldo es por si algo falla en la creación automática del perfil.
+            console.error("No se encontró el perfil del usuario en Firestore.");
+            alert("No se pudo cargar tu perfil. Intenta iniciar sesión de nuevo.");
+            backButton.href = 'index.html';
+            editProfileBtn.style.display = 'none';
         }
 
         // 4. Añadimos la funcionalidad al botón de cambiar contraseña
