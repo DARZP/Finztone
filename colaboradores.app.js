@@ -79,6 +79,12 @@ addUserForm.addEventListener('submit', async (e) => {
             .where('rol', '==', 'empleado')
             .orderBy('nombre')
             .onSnapshot(snapshot => {
+                const usuarios = [];
+                snapshot.forEach(doc => usuarios.push({ id: doc.id, ...doc.data() }));
+                mostrarUsuarios(usuarios);
+            }, error => {
+                console.error("Error al obtener usuarios:", error);
+                alert("Ocurrió un error al cargar la lista. Revisa la consola para más detalles (F12).");
             });
         
         alert(`¡Colaborador agregado exitosamente! Colaboradores en uso: ${colaboradoresActuales + 1} de ${limiteColaboradores}.`);
