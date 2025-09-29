@@ -7,7 +7,6 @@ const firebaseConfig = {
     appId: "1:95145879307:web:e10017a75edf32f1fde40e",
     measurementId: "G-T8KMJXNSTP"
 };
-
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
@@ -15,7 +14,35 @@ const db = firebase.firestore();
 const addUserForm = document.getElementById('add-user-form');
 const userListContainer = document.getElementById('user-list');
 
-// colaboradores.app.js
+function mostrarUsuarios(usuarios) {
+    userListContainer.innerHTML = '';
+    if (usuarios.length === 0) {
+        userListContainer.innerHTML = '<p>No hay colaboradores registrados.</p>';
+        return;
+    }
+
+    usuarios.forEach(usuario => {
+        const userElement = document.createElement('a');
+        userElement.href = `perfil_empleado.html?id=${usuario.id}`; 
+        userElement.classList.add('user-item');
+        
+        const sueldoFormateado = (usuario.sueldoBruto || 0).toLocaleString('es-MX', {
+            style: 'currency',
+            currency: 'MXN'
+        });
+
+        userElement.innerHTML = `
+            <div class="user-info">
+                <div class="user-name">${usuario.nombre}</div>
+                <div class="user-details">${usuario.cargo || 'Sin cargo'} - ${usuario.email}</div>
+            </div>
+            <div class="user-salary">${sueldoFormateado}</div>
+        `;
+        userListContainer.appendChild(userElement);
+    });
+}
+
+// --- LÓGICA PARA AGREGAR UN NUEVO COLABORADOR ---
 
 addUserForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -25,9 +52,7 @@ addUserForm.addEventListener('submit', async (e) => {
     }
 
     try {
-        // --- ¡NUEVA LÓGICA DE VERIFICACIÓN! ---
-        
-        // 1. Obtenemos la información de la suscripción del admin
+        // 1. Verificamos el plan actual del administrador
         const subRef = db.collection('suscripciones').doc(user.uid);
         const subDoc = await subRef.get();
 
@@ -37,7 +62,7 @@ addUserForm.addEventListener('submit', async (e) => {
         const subData = subDoc.data();
         const limiteColaboradores = subData.limiteColaboradores;
 
-        // 2. Contamos los colaboradores actuales que tiene este admin
+        // 2. Contamos los colaboradores actuales
         const colaboradoresQuery = await db.collection('usuarios')
             .where('adminUid', '==', user.uid)
             .where('rol', '==', 'empleado')
@@ -45,13 +70,10 @@ addUserForm.addEventListener('submit', async (e) => {
         
         const colaboradoresActuales = colaboradoresQuery.size;
 
-        // 3. Comparamos el uso actual con el límite del plan
         if (colaboradoresActuales >= limiteColaboradores) {
             alert(`Has alcanzado el límite de ${limiteColaboradores} colaboradores para tu plan "${subData.planNombre}". Por favor, actualiza tu plan para añadir más usuarios.`);
-            return; // Detenemos la ejecución si se alcanzó el límite
+            return;
         }
-
-        // --- SI PASA LA VERIFICACIÓN, CONTINUAMOS CON LA CREACIÓN ---
 
         const name = addUserForm['user-name'].value;
         const email = addUserForm['user-email'].value;
@@ -74,6 +96,20 @@ addUserForm.addEventListener('submit', async (e) => {
             adminUid: user.uid
         };
 
+        await db.collection('usuarios').doc(newEmployeeUid).set(newUserData);
+        
+        alert(`¡Colaborador agregado exitosamente! Colaboradores en uso: ${colaboradoresActuales + 1} de ${limiteColaboradores}.`);
+        addUserForm.reset();
+
+    } catch (error) {
+        console.error('Error al agregar colaborador: ', error);
+        alert("Ocurrió un error inesperado al intentar agregar al colaborador.");
+    }
+});
+
+auth.onAuthStateChanged((user) => {
+    if (user) {
+        // Esta es la consulta correcta para cargar y mostrar la lista al entrar a la página
         db.collection('usuarios')
             .where('adminUid', '==', user.uid)
             .where('rol', '==', 'empleado')
@@ -84,14 +120,11 @@ addUserForm.addEventListener('submit', async (e) => {
                 mostrarUsuarios(usuarios);
             }, error => {
                 console.error("Error al obtener usuarios:", error);
-                alert("Ocurrió un error al cargar la lista. Revisa la consola para más detalles (F12).");
+                // Si ves este error, probablemente necesites crear un índice en Firestore.
+                // Revisa la consola (F12) para ver el enlace de creación.
+                alert("Ocurrió un error al cargar la lista. Revisa la consola (F12) para más detalles.");
             });
-        
-        alert(`¡Colaborador agregado exitosamente! Colaboradores en uso: ${colaboradoresActuales + 1} de ${limiteColaboradores}.`);
-        addUserForm.reset();
-
-    } catch (error) {
-        console.error('Error al agregar colaborador: ', error);
-        alert("Ocurrió un error inesperado al intentar agregar al colaborador.");
+    } else {
+        window.location.href = 'index.html';
     }
 });
