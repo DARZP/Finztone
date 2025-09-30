@@ -30,66 +30,81 @@ async function realizarPagoTarjeta(cuentaCreditoId, cuentaCreditoData) {
     const user = auth.currentUser;
     if (!user) return;
 
-    // 1. Pedimos el monto a pagar
+    // ... (El código para pedir el monto y seleccionar la cuenta de débito no cambia) ...
     const montoAPagarStr = prompt("¿Qué monto deseas pagar?", cuentaCreditoData.deudaActual.toString());
     const montoAPagar = parseFloat(montoAPagarStr);
-
-    if (!montoAPagar || montoAPagar <= 0) {
+    if (!montoAPagar || montoAPagar <= 0 || montoAPagar > cuentaCreditoData.deudaActual) {
         return alert("Monto inválido. La operación fue cancelada.");
     }
-    if (montoAPagar > cuentaCreditoData.deudaActual) {
-        return alert("El monto a pagar no puede ser mayor que la deuda actual.");
-    }
-
-    // 2. Obtenemos las cuentas de débito para que el usuario elija de dónde pagar
-    const cuentasDebitoSnapshot = await db.collection('cuentas')
-        .where('adminUid', '==', user.uid)
-        .where('tipo', '==', 'debito')
-        .get();
-    
-    if (cuentasDebitoSnapshot.empty) {
-        return alert("No tienes cuentas de débito para realizar el pago.");
-    }
-
+    const cuentasDebitoSnapshot = await db.collection('cuentas').where('adminUid', '==', user.uid).where('tipo', '==', 'debito').get();
+    if (cuentasDebitoSnapshot.empty) { return alert("No tienes cuentas de débito para realizar el pago."); }
     const cuentasDebito = cuentasDebitoSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     let promptMessage = "Selecciona la cuenta de origen para el pago:\n";
     cuentasDebito.forEach((cuenta, index) => {
         promptMessage += `${index + 1}: ${cuenta.nombre} (Saldo: $${cuenta.saldoActual.toLocaleString()})\n`;
     });
-
     const eleccionStr = prompt(promptMessage);
     const eleccionIndex = parseInt(eleccionStr) - 1;
-
     if (isNaN(eleccionIndex) || eleccionIndex < 0 || eleccionIndex >= cuentasDebito.length) {
         return alert("Selección inválida. La operación fue cancelada.");
     }
-
     const cuentaDebitoSeleccionada = cuentasDebito[eleccionIndex];
 
-    // 3. Realizamos la transacción
+    // --- TRANSACCIÓN ACTUALIZADA PARA INCLUIR REGISTROS ---
     const cuentaCreditoRef = db.collection('cuentas').doc(cuentaCreditoId);
     const cuentaDebitoRef = db.collection('cuentas').doc(cuentaDebitoSeleccionada.id);
+    const fechaActualISO = new Date().toISOString().split('T')[0];
 
     try {
         await db.runTransaction(async (transaction) => {
             const credDoc = await transaction.get(cuentaCreditoRef);
             const debDoc = await transaction.get(cuentaDebitoRef);
 
-            if (!credDoc.exists || !debDoc.exists) {
-                throw "Una de las cuentas no fue encontrada.";
-            }
+            if (!credDoc.exists || !debDoc.exists) { throw "Una de las cuentas no fue encontrada."; }
 
             const saldoDebito = debDoc.data().saldoActual;
-            if (saldoDebito < montoAPagar) {
-                throw `Saldo insuficiente en la cuenta "${debDoc.data().nombre}".`;
-            }
+            if (saldoDebito < montoAPagar) { throw `Saldo insuficiente en la cuenta "${debDoc.data().nombre}".`; }
 
-            // Actualizamos ambas cuentas
+            // 1. Actualizamos los saldos/deudas
             const nuevaDeuda = credDoc.data().deudaActual - montoAPagar;
             const nuevoSaldo = saldoDebito - montoAPagar;
-            
             transaction.update(cuentaCreditoRef, { deudaActual: nuevaDeuda });
             transaction.update(cuentaDebitoRef, { saldoActual: nuevoSaldo });
+
+            // --- ¡NUEVA LÓGICA! ---
+            // 2. Creamos un registro de GASTO para la cuenta de DÉBITO
+            const gastoRef = db.collection('gastos').doc();
+            transaction.set(gastoRef, {
+                descripcion: `Pago a tarjeta ${credDoc.data().nombre}`,
+                monto: montoAPagar,
+                totalConImpuestos: montoAPagar,
+                categoria: 'Pagos',
+                fecha: fechaActualISO,
+                status: 'aprobado',
+                cuentaId: cuentaDebitoSeleccionada.id,
+                cuentaNombre: cuentaDebitoSeleccionada.nombre,
+                adminUid: user.uid,
+                creadoPor: user.uid,
+                nombreCreador: "Sistema",
+                fechaDeCreacion: new Date()
+            });
+
+            // 3. Creamos un registro de INGRESO para la cuenta de CRÉDITO
+            const ingresoRef = db.collection('ingresos').doc();
+            transaction.set(ingresoRef, {
+                descripcion: `Pago recibido desde ${debDoc.data().nombre}`,
+                monto: montoAPagar,
+                totalConImpuestos: montoAPagar,
+                categoria: 'Pagos',
+                fecha: fechaActualISO,
+                status: 'aprobado',
+                cuentaId: cuentaCreditoId,
+                cuentaNombre: cuentaCreditoData.nombre,
+                adminUid: user.uid,
+                creadoPor: user.uid,
+                nombreCreador: "Sistema",
+                fechaDeCreacion: new Date()
+            });
         });
 
         alert(`¡Pago de $${montoAPagar.toLocaleString()} realizado exitosamente!`);
@@ -99,9 +114,6 @@ async function realizarPagoTarjeta(cuentaCreditoId, cuentaCreditoData) {
         alert("Error: " + error);
     }
 }
-    
-
-// --- LÓGICA PRINCIPAL ---
 
 auth.onAuthStateChanged((user) => {
     if (user && cuentaId) {
