@@ -173,59 +173,107 @@ async function cargarProyectos(empresaNombre) {
 async function guardarGastoAdmin(status) {
     const user = auth.currentUser;
     if (!user) return;
-    const cuentaId = accountSelect.value;
 
+    const cuentaId = accountSelect.value;
     if (status === 'aprobado' && !cuentaId) {
         return alert('Por favor, selecciona una cuenta de origen para un gasto aprobado.');
     }
+
     const montoBruto = parseFloat(document.getElementById('expense-amount').value) || 0;
-    if (montoBruto <= 0) return alert('Por favor, introduce un monto válido.');
-    
-    // ... (código para calcular impuestos y montoNeto sin cambios) ...
+    if (montoBruto <= 0) {
+        return alert('Por favor, introduce un monto válido.');
+    }
+
     let montoNeto = montoBruto;
     const impuestosSeleccionados = [];
     if (addTaxesCheckbox.checked) {
-        // ... tu lógica de cálculo de impuestos ...
+        let totalImpuestos = 0;
+        document.querySelectorAll('#taxes-checklist input[type="checkbox"]:checked').forEach(checkbox => {
+            const impuesto = JSON.parse(checkbox.dataset.impuesto);
+            impuestosSeleccionados.push(impuesto);
+            totalImpuestos += impuesto.tipo === 'porcentaje' ? (montoBruto * impuesto.valor) / 100 : impuesto.valor;
+        });
+        montoNeto = montoBruto + totalImpuestos;
     }
-    
-    const expenseData = { /* ... (tu objeto expenseData sin cambios) ... */ };
+
+    const expenseData = {
+        descripcion: addExpenseForm['expense-description'].value,
+        monto: montoBruto,
+        totalConImpuestos: montoNeto,
+        impuestos: impuestosSeleccionados,
+        categoria: formCategorySelect.value,
+        fecha: addExpenseForm['expense-date'].value,
+        empresa: addExpenseForm['expense-company'].value.trim(),
+        metodoPago: addExpenseForm['payment-method'].value,
+        comentarios: addExpenseForm['expense-comments'].value,
+        folio: generarFolio(user.uid),
+        creadoPor: user.uid,
+        emailCreador: user.email,
+        nombreCreador: "Administrador",
+        adminUid: user.uid,
+        fechaDeCreacion: new Date(),
+        status: status,
+        cuentaId: cuentaId,
+        cuentaNombre: cuentaId ? accountSelect.options[accountSelect.selectedIndex].text.split(' (')[0] : '',
+        proyectoId: projectSelect.value,
+        proyectoNombre: projectSelect.value ? projectSelect.options[projectSelect.selectedIndex].text : ''
+    };
+
+    if (isInvoiceCheckbox.checked) {
+        expenseData.datosFactura = {
+            rfc: document.getElementById('invoice-rfc').value,
+            folioFiscal: document.getElementById('invoice-folio').value
+        };
+    }
 
     if (status === 'borrador') {
-        return db.collection('gastos').add(expenseData).then(() => { /* ... */ });
+        return db.collection('gastos').add(expenseData).then(() => {
+            alert('¡Borrador guardado!');
+            addExpenseForm.reset();
+        });
     }
 
-    // --- LÓGICA DE TRANSACCIÓN MEJORADA ---
     const cuentaRef = db.collection('cuentas').doc(cuentaId);
     const newExpenseRef = db.collection('gastos').doc();
     try {
         await db.runTransaction(async (transaction) => {
-            // 1. Obtenemos los datos de la cuenta seleccionada
             const cuentaDoc = await transaction.get(cuentaRef);
             if (!cuentaDoc.exists) throw "La cuenta no existe.";
             
             const cuentaData = cuentaDoc.data();
-            
-            // 2. Verificamos el tipo de cuenta y actualizamos el campo correcto
+
+            // --- LÓGICA MEJORADA ---
+            // Verificamos el tipo de cuenta y actualizamos el campo correcto
             if (cuentaData.tipo === 'credito') {
                 const nuevaDeuda = (cuentaData.deudaActual || 0) + montoNeto;
                 transaction.update(cuentaRef, { deudaActual: nuevaDeuda });
             } else { // Es de tipo 'debito'
-                const nuevoSaldo = cuentaData.saldoActual - montoNeto;
+                const nuevoSaldo = (cuentaData.saldoActual || 0) - montoNeto;
                 if (nuevoSaldo < 0) throw "Saldo insuficiente en la cuenta seleccionada.";
                 transaction.update(cuentaRef, { saldoActual: nuevoSaldo });
             }
 
-            // 3. Guardamos el gasto y los movimientos de impuestos como antes
             transaction.set(newExpenseRef, expenseData);
+            
             impuestosSeleccionados.forEach(imp => {
                 const montoImpuesto = imp.tipo === 'porcentaje' ? (montoBruto * imp.valor) / 100 : imp.valor;
                 const taxMovRef = db.collection('movimientos_impuestos').doc();
-                transaction.set(taxMovRef, { /* ... (tus datos de movimiento de impuesto) ... */ });
+                transaction.set(taxMovRef, {
+                    origen: `Gasto Admin - ${expenseData.descripcion}`,
+                    tipoImpuesto: imp.nombre,
+                    monto: montoImpuesto,
+                    fecha: new Date(),
+                    status: 'pagado',
+                    adminUid: user.uid
+                });
             });
         });
-        alert('¡Gasto registrado y cuenta actualizada exitosamente!');
+        alert('¡Gasto registrado, saldo actualizado e impuestos generados!');
         addExpenseForm.reset();
-        // ... (resto de tu código para limpiar el formulario)
+        isInvoiceCheckbox.checked = false;
+        invoiceDetailsContainer.style.display = 'none';
+        addTaxesCheckbox.checked = false;
+        taxesDetailsContainer.style.display = 'none';
     } catch (error) {
         console.error("Error en la transacción: ", error);
         alert("Error: " + error);
