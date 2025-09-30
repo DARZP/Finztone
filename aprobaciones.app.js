@@ -131,7 +131,56 @@ async function aprobarDocumento(coleccion, docId, tipo) {
                     adminUid: user.uid
                 });
 
-                impuestos.forEach(imp => {
+async function aprobarDocumento(coleccion, docId, tipo) {
+    const user = auth.currentUser;
+    if (!user) return alert("Error de autenticación.");
+
+    const itemElement = document.querySelector(`[data-id="${docId}"]`);
+    const accountSelector = itemElement.querySelector(`.account-selector`);
+    const cuentaId = accountSelector.value;
+
+    if (!cuentaId) {
+        return alert('Por favor, selecciona una cuenta para aprobar.');
+    }
+
+    const docRef = db.collection(coleccion).doc(docId);
+    const accountRef = db.collection('cuentas').doc(cuentaId);
+
+    try {
+        await db.runTransaction(async (transaction) => {
+            const doc = await transaction.get(docRef);
+            const accountDoc = await transaction.get(accountRef);
+            if (!doc.exists || !accountDoc.exists) throw "El registro o la cuenta ya no existen.";
+
+            const data = doc.data();
+            const cuentaData = accountDoc.data();
+            const montoPrincipal = data.monto;
+            const montoTotal = data.totalConImpuestos || data.monto;
+            const impuestos = data.impuestos || [];
+
+            if (tipo === 'gasto') {
+                if (cuentaData.tipo === 'credito') {
+                    const nuevaDeuda = (cuentaData.deudaActual || 0) + montoTotal;
+                    transaction.update(accountRef, { deudaActual: nuevaDeuda });
+                } else {
+                    const nuevoSaldo = (cuentaData.saldoActual || 0) - montoTotal;
+                    if (nuevoSaldo < 0) throw "Saldo insuficiente en la cuenta.";
+                    transaction.update(accountRef, { saldoActual: nuevoSaldo });
+                }
+            } else {
+                if (cuentaData.tipo === 'credito') throw "No se pueden aprobar ingresos directamente a una tarjeta de crédito.";
+                const nuevoSaldo = (cuentaData.saldoActual || 0) + montoTotal;
+                transaction.update(accountRef, { saldoActual: nuevoSaldo });
+            }
+            
+            transaction.update(docRef, { 
+                status: 'aprobado', 
+                cuentaId: cuentaId, 
+                cuentaNombre: accountDoc.data().nombre,
+                adminUid: user.uid 
+            });
+            
+            impuestos.forEach(imp => {
                 const montoImpuesto = imp.tipo === 'porcentaje' ? (montoPrincipal * imp.valor) / 100 : imp.valor;
                 const taxMovRef = db.collection('movimientos_impuestos').doc();
                 const estadoImpuesto = tipo === 'gasto' ? 'pagado' : 'pagado (retenido)';
@@ -153,8 +202,6 @@ async function aprobarDocumento(coleccion, docId, tipo) {
     }
 }
 
-
-// Lógica de RECHAZO
 function rechazarDocumento(coleccion, id) {
     const motivo = prompt("Introduce el motivo del rechazo:");
     if (motivo) {
