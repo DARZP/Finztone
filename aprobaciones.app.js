@@ -18,9 +18,7 @@ const gastosCategoryFilter = document.getElementById('gastos-category-filter');
 const gastosUserFilter = document.getElementById('gastos-user-filter');
 const ingresosCategoryFilter = document.getElementById('ingresos-category-filter');
 const ingresosUserFilter = document.getElementById('ingresos-user-filter');
-const pendingGastosContainer = document.getElementById('pending-gastos-list');
 
-// --- DATOS GLOBALES ---
 let listaDeCuentas = [];
 
 // --- LÓGICA DE LA PÁGINA ---
