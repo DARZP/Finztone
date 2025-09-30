@@ -28,18 +28,23 @@ const addTaxesCheckbox = document.getElementById('add-taxes-checkbox');
 const taxesDetailsContainer = document.getElementById('taxes-details-container');
 const companyInput = document.getElementById('expense-company');
 const projectSelect = document.getElementById('project-select');
+const paymentMethodSelect = document.getElementById('payment-method'); // <-- Elemento añadido
 
-companyInput.addEventListener('change', () => {
-    cargarProyectos(companyInput.value);
-});
-
+let todasLasCuentas = []; // Guardaremos todas las cuentas aquí para no pedirlas a la BD cada vez
 
 // --- LÓGICA DE LA PÁGINA ---
 auth.onAuthStateChanged((user) => {
     if (user) {
+        // Obtenemos todas las cuentas primero
+        db.collection('cuentas').where('adminUid', '==', user.uid).orderBy('nombre').onSnapshot(snapshot => {
+            todasLasCuentas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            // Disparamos un evento para que el filtro se aplique la primera vez
+            paymentMethodSelect.dispatchEvent(new Event('change'));
+        });
+
+        // El resto de las funciones de carga iniciales
         cargarEmpresas();
-        poblarFiltrosYCategorias(); // <-- Se llama a la función correcta
-        cargarCuentasEnSelector();
+        poblarFiltrosYCategorias();
         cargarImpuestosParaSeleccion();
         cargarGastosAprobados();
     } else {
@@ -49,6 +54,10 @@ auth.onAuthStateChanged((user) => {
 
 // --- FUNCIONES DEL FORMULARIO ---
 
+companyInput.addEventListener('change', () => {
+    cargarProyectos(companyInput.value);
+});
+
 addTaxesCheckbox.addEventListener('change', () => {
     taxesDetailsContainer.style.display = addTaxesCheckbox.checked ? 'block' : 'none';
     recalcularTotales();
@@ -56,6 +65,17 @@ addTaxesCheckbox.addEventListener('change', () => {
 
 isInvoiceCheckbox.addEventListener('change', () => {
     invoiceDetailsContainer.style.display = isInvoiceCheckbox.checked ? 'block' : 'none';
+});
+
+// --- ¡NUEVA LÓGICA DE FILTRADO! ---
+paymentMethodSelect.addEventListener('change', () => {
+    const metodo = paymentMethodSelect.value;
+    if (metodo === 'Tarjeta de Crédito') {
+        cargarCuentasEnSelector('credito');
+    } else {
+        // Para Efectivo, Transferencia, etc., mostramos las cuentas de débito
+        cargarCuentasEnSelector('debito');
+    }
 });
 
 function cargarEmpresas() {
@@ -74,16 +94,27 @@ function generarFolio(userId) {
     return `EXP-ADM-${userInitials}-${timestamp}`;
 }
 
-function cargarCuentasEnSelector() {
-    db.collection('cuentas').orderBy('nombre').onSnapshot(snapshot => {
-        const selectedValue = accountSelect.value;
-        accountSelect.innerHTML = '<option value="" disabled selected>Selecciona una cuenta</option>';
-        snapshot.forEach(doc => {
-            const cuenta = doc.data();
-            accountSelect.appendChild(new Option(`${cuenta.nombre} ($${cuenta.saldoActual.toLocaleString('es-MX')})`, doc.id));
+// --- FUNCIÓN DE CARGA DE CUENTAS ACTUALIZADA ---
+function cargarCuentasEnSelector(filtroTipo) {
+    const selectedValue = accountSelect.value;
+    accountSelect.innerHTML = '<option value="" disabled selected>Selecciona una cuenta de origen</option>';
+    
+    const cuentasFiltradas = todasLasCuentas.filter(cuenta => cuenta.tipo === filtroTipo);
+
+    if (cuentasFiltradas.length === 0) {
+        accountSelect.innerHTML += `<option value="" disabled>No hay cuentas de tipo '${filtroTipo}'</option>`;
+    } else {
+        cuentasFiltradas.forEach(cuenta => {
+            const esCredito = cuenta.tipo === 'credito';
+            const valor = esCredito ? cuenta.deudaActual : cuenta.saldoActual;
+            const etiqueta = esCredito ? 'Deuda' : 'Saldo';
+            
+            const optionText = `${cuenta.nombre} (${etiqueta}: $${(valor || 0).toLocaleString('es-MX')})`;
+            const option = new Option(optionText, cuenta.id);
+            accountSelect.appendChild(option);
         });
-        accountSelect.value = selectedValue;
-    });
+    }
+    accountSelect.value = selectedValue;
 }
 
 async function cargarImpuestosParaSeleccion() {
@@ -108,51 +139,36 @@ async function cargarImpuestosParaSeleccion() {
 function recalcularTotales() {
     const montoBruto = parseFloat(document.getElementById('expense-amount').value) || 0;
     let totalImpuestos = 0;
-
     document.querySelectorAll('#taxes-checklist input[type="checkbox"]:checked').forEach(checkbox => {
         const impuesto = JSON.parse(checkbox.dataset.impuesto);
         const montoCalculado = impuesto.tipo === 'porcentaje' ? (montoBruto * impuesto.valor) / 100 : impuesto.valor;
         totalImpuestos += montoCalculado;
         checkbox.closest('.tax-item').querySelector('.calculated-amount').textContent = `$${montoCalculado.toLocaleString('es-MX')}`;
     });
-    
     document.querySelectorAll('#taxes-checklist input[type="checkbox"]:not(:checked)').forEach(checkbox => {
         checkbox.closest('.tax-item').querySelector('.calculated-amount').textContent = '';
     });
-
     const montoNeto = montoBruto + totalImpuestos;
-
     document.getElementById('summary-bruto').textContent = `$${montoBruto.toLocaleString('es-MX')}`;
     document.getElementById('summary-impuestos').textContent = `$${totalImpuestos.toLocaleString('es-MX')}`;
     document.getElementById('summary-neto').textContent = `$${montoNeto.toLocaleString('es-MX')}`;
 }
 
 async function cargarProyectos(empresaNombre) {
-    // Limpiamos y deshabilitamos el selector de proyectos
     projectSelect.innerHTML = '<option value="">Cargando...</option>';
     projectSelect.disabled = true;
-
     if (!empresaNombre) {
         projectSelect.innerHTML = '<option value="">Primero selecciona una empresa</option>';
         return;
     }
-
     try {
-        // 1. Buscamos el ID de la empresa a partir de su nombre
         const empresaQuery = await db.collection('empresas').where('nombre', '==', empresaNombre).limit(1).get();
-
         if (empresaQuery.empty) {
             projectSelect.innerHTML = '<option value="">Empresa no encontrada</option>';
             return;
         }
         const empresaId = empresaQuery.docs[0].id;
-
-        // 2. Buscamos los proyectos activos de esa empresa
-        const proyectosQuery = await db.collection('proyectos')
-            .where('empresaId', '==', empresaId)
-            .where('status', '==', 'activo')
-            .get();
-
+        const proyectosQuery = await db.collection('proyectos').where('empresaId', '==', empresaId).where('status', '==', 'activo').get();
         if (proyectosQuery.empty) {
             projectSelect.innerHTML = '<option value="">No hay proyectos activos</option>';
         } else {
@@ -162,7 +178,7 @@ async function cargarProyectos(empresaNombre) {
                 const option = new Option(proyecto.nombre, doc.id);
                 projectSelect.appendChild(option);
             });
-            projectSelect.disabled = false; // Habilitamos el selector
+            projectSelect.disabled = false;
         }
     } catch (error) {
         console.error("Error al cargar proyectos:", error);
@@ -173,17 +189,14 @@ async function cargarProyectos(empresaNombre) {
 async function guardarGastoAdmin(status) {
     const user = auth.currentUser;
     if (!user) return;
-
     const cuentaId = accountSelect.value;
     if (status === 'aprobado' && !cuentaId) {
         return alert('Por favor, selecciona una cuenta de origen para un gasto aprobado.');
     }
-
     const montoBruto = parseFloat(document.getElementById('expense-amount').value) || 0;
     if (montoBruto <= 0) {
         return alert('Por favor, introduce un monto válido.');
     }
-
     let montoNeto = montoBruto;
     const impuestosSeleccionados = [];
     if (addTaxesCheckbox.checked) {
@@ -195,7 +208,6 @@ async function guardarGastoAdmin(status) {
         });
         montoNeto = montoBruto + totalImpuestos;
     }
-
     const expenseData = {
         descripcion: addExpenseForm['expense-description'].value,
         monto: montoBruto,
@@ -218,43 +230,34 @@ async function guardarGastoAdmin(status) {
         proyectoId: projectSelect.value,
         proyectoNombre: projectSelect.value ? projectSelect.options[projectSelect.selectedIndex].text : ''
     };
-
     if (isInvoiceCheckbox.checked) {
         expenseData.datosFactura = {
             rfc: document.getElementById('invoice-rfc').value,
             folioFiscal: document.getElementById('invoice-folio').value
         };
     }
-
     if (status === 'borrador') {
         return db.collection('gastos').add(expenseData).then(() => {
             alert('¡Borrador guardado!');
             addExpenseForm.reset();
         });
     }
-
     const cuentaRef = db.collection('cuentas').doc(cuentaId);
     const newExpenseRef = db.collection('gastos').doc();
     try {
         await db.runTransaction(async (transaction) => {
             const cuentaDoc = await transaction.get(cuentaRef);
             if (!cuentaDoc.exists) throw "La cuenta no existe.";
-            
             const cuentaData = cuentaDoc.data();
-
-            // --- LÓGICA MEJORADA ---
-            // Verificamos el tipo de cuenta y actualizamos el campo correcto
             if (cuentaData.tipo === 'credito') {
                 const nuevaDeuda = (cuentaData.deudaActual || 0) + montoNeto;
                 transaction.update(cuentaRef, { deudaActual: nuevaDeuda });
-            } else { // Es de tipo 'debito'
+            } else {
                 const nuevoSaldo = (cuentaData.saldoActual || 0) - montoNeto;
                 if (nuevoSaldo < 0) throw "Saldo insuficiente en la cuenta seleccionada.";
                 transaction.update(cuentaRef, { saldoActual: nuevoSaldo });
             }
-
             transaction.set(newExpenseRef, expenseData);
-            
             impuestosSeleccionados.forEach(imp => {
                 const montoImpuesto = imp.tipo === 'porcentaje' ? (montoBruto * imp.valor) / 100 : imp.valor;
                 const taxMovRef = db.collection('movimientos_impuestos').doc();
@@ -306,9 +309,11 @@ function poblarFiltrosYCategorias() {
 }
 
 function cargarGastosAprobados() {
+    const user = auth.currentUser;
+    if(!user) return;
     const selectedCategory = categoryFilter.value;
     const selectedMonth = monthFilter.value;
-    let query = db.collection('gastos').where('status', '==', 'aprobado');
+    let query = db.collection('gastos').where('adminUid', '==', user.uid).where('status', '==', 'aprobado');
     if (selectedCategory && selectedCategory !== 'todos') {
         query = query.where('categoria', '==', selectedCategory);
     }
