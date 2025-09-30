@@ -20,10 +20,86 @@ const creditDebt = document.getElementById('credit-debt');
 const cutoffDay = document.getElementById('cutoff-day');
 const paymentDue = document.getElementById('payment-due');
 const movementsList = document.getElementById('movements-list');
+const payCardBtn = document.getElementById('pay-card-btn');
 
 // Obtenemos el ID de la cuenta desde la URL
 const urlParams = new URLSearchParams(window.location.search);
 const cuentaId = urlParams.get('id');
+
+async function realizarPagoTarjeta(cuentaCreditoId, cuentaCreditoData) {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    // 1. Pedimos el monto a pagar
+    const montoAPagarStr = prompt("¿Qué monto deseas pagar?", cuentaCreditoData.deudaActual.toString());
+    const montoAPagar = parseFloat(montoAPagarStr);
+
+    if (!montoAPagar || montoAPagar <= 0) {
+        return alert("Monto inválido. La operación fue cancelada.");
+    }
+    if (montoAPagar > cuentaCreditoData.deudaActual) {
+        return alert("El monto a pagar no puede ser mayor que la deuda actual.");
+    }
+
+    // 2. Obtenemos las cuentas de débito para que el usuario elija de dónde pagar
+    const cuentasDebitoSnapshot = await db.collection('cuentas')
+        .where('adminUid', '==', user.uid)
+        .where('tipo', '==', 'debito')
+        .get();
+    
+    if (cuentasDebitoSnapshot.empty) {
+        return alert("No tienes cuentas de débito para realizar el pago.");
+    }
+
+    const cuentasDebito = cuentasDebitoSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    let promptMessage = "Selecciona la cuenta de origen para el pago:\n";
+    cuentasDebito.forEach((cuenta, index) => {
+        promptMessage += `${index + 1}: ${cuenta.nombre} (Saldo: $${cuenta.saldoActual.toLocaleString()})\n`;
+    });
+
+    const eleccionStr = prompt(promptMessage);
+    const eleccionIndex = parseInt(eleccionStr) - 1;
+
+    if (isNaN(eleccionIndex) || eleccionIndex < 0 || eleccionIndex >= cuentasDebito.length) {
+        return alert("Selección inválida. La operación fue cancelada.");
+    }
+
+    const cuentaDebitoSeleccionada = cuentasDebito[eleccionIndex];
+
+    // 3. Realizamos la transacción
+    const cuentaCreditoRef = db.collection('cuentas').doc(cuentaCreditoId);
+    const cuentaDebitoRef = db.collection('cuentas').doc(cuentaDebitoSeleccionada.id);
+
+    try {
+        await db.runTransaction(async (transaction) => {
+            const credDoc = await transaction.get(cuentaCreditoRef);
+            const debDoc = await transaction.get(cuentaDebitoRef);
+
+            if (!credDoc.exists || !debDoc.exists) {
+                throw "Una de las cuentas no fue encontrada.";
+            }
+
+            const saldoDebito = debDoc.data().saldoActual;
+            if (saldoDebito < montoAPagar) {
+                throw `Saldo insuficiente en la cuenta "${debDoc.data().nombre}".`;
+            }
+
+            // Actualizamos ambas cuentas
+            const nuevaDeuda = credDoc.data().deudaActual - montoAPagar;
+            const nuevoSaldo = saldoDebito - montoAPagar;
+            
+            transaction.update(cuentaCreditoRef, { deudaActual: nuevaDeuda });
+            transaction.update(cuentaDebitoRef, { saldoActual: nuevoSaldo });
+        });
+
+        alert(`¡Pago de $${montoAPagar.toLocaleString()} realizado exitosamente!`);
+
+    } catch (error) {
+        console.error("Error en la transacción de pago:", error);
+        alert("Error: " + error);
+    }
+}
+    
 
 // --- LÓGICA PRINCIPAL ---
 
@@ -36,41 +112,33 @@ auth.onAuthStateChanged((user) => {
 });
 
 async function cargarDatosDeCuenta(id) {
-    try {
-        // 1. Obtenemos la información de la cuenta
-        const cuentaRef = db.collection('cuentas').doc(id);
-        cuentaRef.onSnapshot(async (doc) => {
-            if (!doc.exists) {
-                console.error("No se encontró la cuenta");
-                accountNameTitle.textContent = "Cuenta no encontrada";
-                return;
-            }
-            const cuentaData = doc.data();
-            accountNameTitle.textContent = cuentaData.nombre;
+    const cuentaRef = db.collection('cuentas').doc(id);
+    cuentaRef.onSnapshot(async (doc) => {
+        if (!doc.exists) { /* ... */ return; }
+        const cuentaData = doc.data();
+        accountNameTitle.textContent = cuentaData.nombre;
 
-            // 2. Mostramos la sección correcta según el tipo de cuenta
-            if (cuentaData.tipo === 'credito') {
-                debitDetails.style.display = 'none';
-                creditDetailsSection.style.display = 'block';
+        if (cuentaData.tipo === 'credito') {
+            debitDetails.style.display = 'none';
+            creditDetailsSection.style.display = 'block';
 
-                creditDebt.textContent = `$${(cuentaData.deudaActual || 0).toLocaleString('es-MX')}`;
-                cutoffDay.textContent = `Día ${cuentaData.diaCorte} de cada mes`;
-                // Lógica de "pago para no generar intereses" (por ahora es la deuda total)
-                paymentDue.textContent = `$${(cuentaData.deudaActual || 0).toLocaleString('es-MX')}`;
-                
-            } else { // Es de tipo 'debito'
-                creditDetailsSection.style.display = 'none';
-                debitDetails.style.display = 'block';
+            creditDebt.textContent = `$${(cuentaData.deudaActual || 0).toLocaleString('es-MX')}`;
+            cutoffDay.textContent = `Día ${cuentaData.diaCorte} de cada mes`;
+            paymentDue.textContent = `$${(cuentaData.deudaActual || 0).toLocaleString('es-MX')}`;
 
-                debitBalance.textContent = `$${(cuentaData.saldoActual || 0).toLocaleString('es-MX')}`;
-            }
+            // Activamos el botón de pago y le pasamos los datos necesarios
+            payCardBtn.textContent = "Realizar un Pago";
+            payCardBtn.disabled = false;
+            payCardBtn.onclick = () => realizarPagoTarjeta(id, cuentaData);
+            
+        } else { // Es de tipo 'debito'
+            creditDetailsSection.style.display = 'none';
+            debitDetails.style.display = 'block';
+            debitBalance.textContent = `$${(cuentaData.saldoActual || 0).toLocaleString('es-MX')}`;
+        }
 
-            // 3. Cargamos el historial de movimientos de esa cuenta
-            await cargarMovimientos(id);
-        });
-    } catch (error) {
-        console.error("Error al cargar los datos de la cuenta:", error);
-    }
+        await cargarMovimientos(id);
+    });
 }
 
 async function cargarMovimientos(id) {
