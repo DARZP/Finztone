@@ -35,27 +35,25 @@ auth.onAuthStateChanged((user) => {
     }
 });
 
-// Obtiene y guarda la lista de cuentas disponibles
 async function cargarCuentas() {
+    const user = auth.currentUser;
+    if(!user) return;
     listaDeCuentas = [];
-    const snapshot = await db.collection('cuentas').orderBy('nombre').get();
+    const snapshot = await db.collection('cuentas').where('adminUid', '==', user.uid).orderBy('nombre').get();
     snapshot.forEach(doc => {
         listaDeCuentas.push({ id: doc.id, ...doc.data() });
     });
 }
 
-
-
-
 function generarSelectorDeCuentas(itemId) {
     let optionsHTML = '<option value="" disabled selected>Seleccionar cuenta</option>';
     listaDeCuentas.forEach(cuenta => {
-        optionsHTML += `<option value="${cuenta.id}">${cuenta.nombre}</option>`;
+        const etiqueta = cuenta.tipo === 'credito' ? 'Crédito' : 'Débito';
+        optionsHTML += `<option value="${cuenta.id}">${cuenta.nombre} (${etiqueta})</option>`;
     });
     return `<select class="account-selector" data-item-id="${itemId}">${optionsHTML}</select>`;
 }
 
-// Función para manejar las pestañas
 function openTab(evt, tabName) {
     let i, tabcontent, tablinks;
     tabcontent = document.getElementsByClassName("tab-content");
@@ -99,71 +97,6 @@ async function aprobarDocumento(coleccion, docId, tipo) {
                 if (cuentaData.tipo === 'credito') {
                     const nuevaDeuda = (cuentaData.deudaActual || 0) + montoTotal;
                     transaction.update(accountRef, { deudaActual: nuevaDeuda });
-                } else { // Es de débito
-                    const nuevoSaldo = (cuentaData.saldoActual || 0) - montoTotal;
-                    if (nuevoSaldo < 0) throw "Saldo insuficiente en la cuenta.";
-                    transaction.update(accountRef, { saldoActual: nuevoSaldo });
-                }
-            } else { // Es un ingreso
-                if (cuentaData.tipo === 'credito') throw "No se pueden aprobar ingresos directamente a una tarjeta de crédito.";
-                const nuevoSaldo = (cuentaData.saldoActual || 0) + montoTotal;
-                transaction.update(accountRef, { saldoActual: nuevoSaldo });
-            }
-            
-            transaction.update(docRef, { 
-                status: 'aprobado', 
-                cuentaId: cuentaId, 
-                cuentaNombre: accountDoc.data().nombre,
-                adminUid: user.uid // Guardamos quién aprobó
-            });
-            
-            impuestos.forEach(imp => {
-                const montoImpuesto = imp.tipo === 'porcentaje' ? (montoPrincipal * imp.valor) / 100 : imp.valor;
-                const taxMovRef = db.collection('movimientos_impuestos').doc();
-                const estadoImpuesto = tipo === 'gasto' ? 'pagado' : 'pagado (retenido)';
-                
-                transaction.set(taxMovRef, {
-                    origen: `${tipo.charAt(0).toUpperCase() + tipo.slice(1)} - ${data.descripcion}`,
-                    tipoImpuesto: imp.nombre,
-                    monto: montoImpuesto,
-                    fecha: new Date(),
-                    status: estadoImpuesto,
-                    adminUid: user.uid
-                });
-
-// aprobaciones.app.js
-
-async function aprobarDocumento(coleccion, docId, tipo) {
-    const user = auth.currentUser;
-    if (!user) return alert("Error de autenticación.");
-
-    const itemElement = document.querySelector(`[data-id="${docId}"]`);
-    const accountSelector = itemElement.querySelector(`.account-selector`);
-    const cuentaId = accountSelector.value;
-
-    if (!cuentaId) {
-        return alert('Por favor, selecciona una cuenta para aprobar.');
-    }
-
-    const docRef = db.collection(coleccion).doc(docId);
-    const accountRef = db.collection('cuentas').doc(cuentaId);
-
-    try {
-        await db.runTransaction(async (transaction) => {
-            const doc = await transaction.get(docRef);
-            const accountDoc = await transaction.get(accountRef);
-            if (!doc.exists || !accountDoc.exists) throw "El registro o la cuenta ya no existen.";
-
-            const data = doc.data();
-            const cuentaData = accountDoc.data();
-            const montoPrincipal = data.monto;
-            const montoTotal = data.totalConImpuestos || data.monto;
-            const impuestos = data.impuestos || [];
-
-            if (tipo === 'gasto') {
-                if (cuentaData.tipo === 'credito') {
-                    const nuevaDeuda = (cuentaData.deudaActual || 0) + montoTotal;
-                    transaction.update(accountRef, { deudaActual: nuevaDeuda });
                 } else {
                     const nuevoSaldo = (cuentaData.saldoActual || 0) - montoTotal;
                     if (nuevoSaldo < 0) throw "Saldo insuficiente en la cuenta.";
@@ -175,12 +108,11 @@ async function aprobarDocumento(coleccion, docId, tipo) {
                 transaction.update(accountRef, { saldoActual: nuevoSaldo });
             }
             
-            // --- CORRECCIÓN --- Se eliminó la coma extra después de 'adminUid'
             transaction.update(docRef, { 
                 status: 'aprobado', 
                 cuentaId: cuentaId, 
                 cuentaNombre: accountDoc.data().nombre,
-                adminUid: user.uid 
+                adminUid: user.uid
             });
             
             impuestos.forEach(imp => {
@@ -204,7 +136,6 @@ async function aprobarDocumento(coleccion, docId, tipo) {
         alert("Ocurrió un error al aprobar: " + error);
     }
 }
-            
 
 function rechazarDocumento(coleccion, id) {
     const motivo = prompt("Introduce el motivo del rechazo:");
@@ -216,13 +147,15 @@ function rechazarDocumento(coleccion, id) {
 }
 
 function poblarFiltros() {
+    const user = auth.currentUser;
+    if(!user) return;
     gastosCategoryFilter.innerHTML = `<option value="todos">Todas</option><option>Comida</option><option>Transporte</option><option>Oficina</option><option>Marketing</option><option>Otro</option>`;
     ingresosCategoryFilter.innerHTML = `<option value="todos">Todas</option><option>Cobro de Factura</option><option>Venta de Producto</option><option>Servicios Profesionales</option><option>Otro</option>`;
-    db.collection('usuarios').where('rol', '==', 'empleado').orderBy('nombre').get().then(snapshot => {
+    db.collection('usuarios').where('adminUid', '==', user.uid).orderBy('nombre').get().then(snapshot => {
         let userOptionsHTML = '<option value="todos">Todos</option>';
         snapshot.forEach(doc => {
-            const user = doc.data();
-            userOptionsHTML += `<option value="${doc.id}">${user.nombre}</option>`;
+            const userData = doc.data();
+            userOptionsHTML += `<option value="${doc.id}">${userData.nombre}</option>`;
         });
         gastosUserFilter.innerHTML = userOptionsHTML;
         ingresosUserFilter.innerHTML = userOptionsHTML;
@@ -230,11 +163,15 @@ function poblarFiltros() {
 }
 
 function cargarGastosPendientes() {
-    let query = db.collection('gastos').where('status', '==', 'pendiente');
+    const user = auth.currentUser;
+    if(!user) return;
+    let query = db.collection('gastos').where('adminUid', '==', user.uid).where('status', '==', 'pendiente');
     if (gastosCategoryFilter.value && gastosCategoryFilter.value !== 'todos') {
         query = query.where('categoria', '==', gastosCategoryFilter.value);
     }
-    // El filtro de usuario se puede añadir aquí si se guarda el ID de usuario en los gastos
+    if (gastosUserFilter.value && gastosUserFilter.value !== 'todos') {
+        query = query.where('creadorId', '==', gastosUserFilter.value);
+    }
     query = query.orderBy('fechaDeCreacion', 'asc');
     query.onSnapshot(snapshot => {
         const pendientes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -243,9 +180,14 @@ function cargarGastosPendientes() {
 }
 
 function cargarIngresosPendientes() {
-    let query = db.collection('ingresos').where('status', '==', 'pendiente');
+    const user = auth.currentUser;
+    if(!user) return;
+    let query = db.collection('ingresos').where('adminUid', '==', user.uid).where('status', '==', 'pendiente');
     if (ingresosCategoryFilter.value && ingresosCategoryFilter.value !== 'todos') {
         query = query.where('categoria', '==', ingresosCategoryFilter.value);
+    }
+    if (ingresosUserFilter.value && ingresosUserFilter.value !== 'todos') {
+        query = query.where('creadorId', '==', ingresosUserFilter.value);
     }
     query = query.orderBy('fechaDeCreacion', 'asc');
     query.onSnapshot(snapshot => {
