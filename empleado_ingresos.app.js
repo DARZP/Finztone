@@ -222,58 +222,86 @@ async function guardarIngreso(status) {
     const montoBruto = parseFloat(addIncomeForm['income-amount'].value) || 0;
     if (montoBruto <= 0) return alert('Por favor, introduce un monto válido.');
     
-    let montoNeto = montoBruto;
-    const impuestosSeleccionados = [];
-    if (addTaxesCheckbox.checked) {
-        let totalImpuestos = 0;
-        document.querySelectorAll('#taxes-checklist input[type="checkbox"]:checked').forEach(checkbox => {
-            impuestosSeleccionados.push(JSON.parse(checkbox.dataset.impuesto));
-        });
-        impuestosSeleccionados.forEach(imp => {
-            totalImpuestos += imp.tipo === 'porcentaje' ? (montoBruto * imp.valor) / 100 : imp.valor;
-        });
-        montoNeto = montoBruto - totalImpuestos;
-    }
+    // Desactivamos botones para evitar duplicados
+    saveDraftBtn.disabled = true;
+    sendForApprovalBtn.disabled = true;
 
-    const userProfile = await db.collection('usuarios').doc(user.uid).get();
-    const userName = userProfile.exists ? userProfile.data().nombre : user.email;
+    try {
+        // Buscamos el perfil del empleado por su email para obtener su nombre y el ID de su admin
+        const userProfileQuery = await db.collection('usuarios').where('email', '==', user.email).limit(1).get();
+        if (userProfileQuery.empty) {
+            throw "No se pudo encontrar el perfil del usuario.";
+        }
+        
+        const userProfileDoc = userProfileQuery.docs[0];
+        const userProfileData = userProfileDoc.data();
+        const userName = userProfileData.nombre;
+        const adminUid = userProfileData.adminUid; // <-- ¡OBTENEMOS EL ID DEL ADMIN!
 
-    const incomeData = {
-        descripcion: addIncomeForm['income-description'].value,
-        monto: montoBruto,
-        totalConImpuestos: montoNeto,
-        impuestos: impuestosSeleccionados,
-        categoria: formCategorySelect.value,
-        fecha: addIncomeForm['income-date'].value,
-        empresa: addIncomeForm['income-company'].value.trim(),
-        metodoPago: formPaymentMethodSelect.value,
-        comentarios: addIncomeForm['income-comments'].value,
-        nombreCreador: userName,
-        proyectoId: projectSelect.value,
-        proyectoNombre: projectSelect.value ? projectSelect.options[projectSelect.selectedIndex].text : ''
-    };
-    if (isInvoiceCheckbox.checked) { /* ... */ }
+        if (!adminUid) {
+            throw "El perfil de este empleado no está vinculado a ningún administrador.";
+        }
 
-    if (modoEdicion) {
-        db.collection('ingresos').doc(idIngresoEditando).update({ ...incomeData, status: status })
-            .then(() => {
-                alert(status === 'borrador' ? '¡Borrador actualizado!' : '¡Ingreso enviado!');
-                salirModoEdicion();
-            }).catch(error => console.error("Error al actualizar:", error));
-    } else {
-        db.collection('ingresos').add({
-            ...incomeData,
-            folio: generarFolio(user.uid),
-            creadoPor: user.uid,
-            emailCreador: user.email,
-            fechaDeCreacion: new Date(),
-            status: status
-        }).then(() => {
+        let montoNeto = montoBruto;
+        const impuestosSeleccionados = [];
+        if (addTaxesCheckbox.checked) {
+            let totalImpuestos = 0;
+            document.querySelectorAll('#taxes-checklist input[type="checkbox"]:checked').forEach(checkbox => {
+                const impuesto = JSON.parse(checkbox.dataset.impuesto);
+                impuestosSeleccionados.push(impuesto);
+                totalImpuestos += impuesto.tipo === 'porcentaje' ? (montoBruto * impuesto.valor) / 100 : impuesto.valor;
+            });
+            montoNeto = montoBruto - totalImpuestos;
+        }
+
+        const incomeData = {
+            descripcion: addIncomeForm['income-description'].value,
+            monto: montoBruto,
+            totalConImpuestos: montoNeto,
+            impuestos: impuestosSeleccionados,
+            categoria: formCategorySelect.value,
+            fecha: addIncomeForm['income-date'].value,
+            empresa: addIncomeForm['income-company'].value.trim(),
+            metodoPago: formPaymentMethodSelect.value,
+            comentarios: addIncomeForm['income-comments'].value,
+            nombreCreador: userName,
+            creadorId: userProfileDoc.id,
+            adminUid: adminUid, // <-- ¡LO AÑADIMOS AQUÍ!
+            proyectoId: projectSelect.value,
+            proyectoNombre: projectSelect.value ? projectSelect.options[projectSelect.selectedIndex].text : ''
+        };
+
+        if (isInvoiceCheckbox.checked) {
+            incomeData.datosFactura = { /* ... tus datos de factura ... */ };
+        }
+
+        if (modoEdicion) {
+            await db.collection('ingresos').doc(idIngresoEditando).update({ ...incomeData, status: status });
+            alert(status === 'borrador' ? '¡Borrador actualizado!' : '¡Ingreso enviado!');
+        } else {
+            await db.collection('ingresos').add({
+                ...incomeData,
+                folio: generarFolio(user.uid),
+                creadoPor: user.uid,
+                emailCreador: user.email,
+                fechaDeCreacion: new Date(),
+                status: status
+            });
             alert(status === 'borrador' ? '¡Borrador guardado!' : '¡Ingreso enviado!');
-            salirModoEdicion();
-        }).catch(error => console.error("Error al guardar:", error));
+        }
+        
+        salirModoEdicion();
+    
+    } catch (error) {
+        console.error("Error al guardar ingreso:", error);
+        alert("Ocurrió un error: " + error);
+    } finally {
+        // Reactivamos los botones
+        saveDraftBtn.disabled = false;
+        sendForApprovalBtn.disabled = false;
     }
 }
+
 
 function mostrarIngresos(ingresos) {
     incomeListContainer.innerHTML = '';
