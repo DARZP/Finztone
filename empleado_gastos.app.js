@@ -245,7 +245,7 @@ async function guardarGasto(status) {
         }
 
         // --- CORRECCIÓN ---
-        // Buscamos el perfil del empleado por su email, no por su UID.
+        // Buscamos el perfil del empleado por su email, no por su UID de documento.
         const userProfileQuery = await db.collection('usuarios').where('email', '==', user.email).limit(1).get();
         
         if (userProfileQuery.empty) {
@@ -284,7 +284,7 @@ async function guardarGasto(status) {
             metodoPago: formPaymentMethodSelect.value,
             comentarios: addExpenseForm['expense-comments'].value,
             nombreCreador: userName,
-            creadorId: userProfileDoc.id, // ID del documento de Firestore
+            creadorId: userProfileDoc.id, // ID del documento de Firestore, no el UID de Auth
             adminUid: adminUid,
             comprobanteURL: comprobanteURL,
             proyectoId: projectSelect.value,
