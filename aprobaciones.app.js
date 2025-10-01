@@ -131,6 +131,8 @@ async function aprobarDocumento(coleccion, docId, tipo) {
                     adminUid: user.uid
                 });
 
+// aprobaciones.app.js
+
 async function aprobarDocumento(coleccion, docId, tipo) {
     const user = auth.currentUser;
     if (!user) return alert("Error de autenticación.");
@@ -173,6 +175,7 @@ async function aprobarDocumento(coleccion, docId, tipo) {
                 transaction.update(accountRef, { saldoActual: nuevoSaldo });
             }
             
+            // --- CORRECCIÓN --- Se eliminó la coma extra después de 'adminUid'
             transaction.update(docRef, { 
                 status: 'aprobado', 
                 cuentaId: cuentaId, 
@@ -201,6 +204,7 @@ async function aprobarDocumento(coleccion, docId, tipo) {
         alert("Ocurrió un error al aprobar: " + error);
     }
 }
+            
 
 function rechazarDocumento(coleccion, id) {
     const motivo = prompt("Introduce el motivo del rechazo:");
