@@ -831,3 +831,59 @@ tbody tr:hover {
 .payroll-options {
     justify-content: center; /* Centra las opciones de Bruto/Neto */
 }
+
+/* --- ESTILOS ADICIONALES PARA PÁGINA DE APROBACIONES --- */
+
+.pending-item {
+    flex-direction: column;
+    align-items: stretch;
+    cursor: pointer;
+    border: 1px solid var(--input-border-color);
+    border-radius: 8px;
+    margin-bottom: 15px;
+    padding: 0;
+}
+
+.item-summary {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 20px;
+    padding: 20px;
+    align-items: center;
+}
+
+.item-details .amount {
+    font-size: 1.2em;
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-left: 10px;
+}
+
+.item-details .meta {
+    font-size: 0.9em;
+    color: #aeb9c5;
+    margin-top: 5px;
+}
+
+.item-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.item-actions .account-selector {
+    min-width: 160px;
+}
+
+.btn-approve { background-color: var(--approve-color); color: white; padding: 8px 16px; font-size: 0.9em; }
+.btn-reject { background-color: var(--reject-color); color: white; padding: 8px 16px; font-size: 0.9em; }
+
+.item-details-view {
+    display: none; /* Oculto por defecto */
+    padding: 0 20px 20px 20px;
+    border-top: 1px dashed var(--input-border-color);
+    font-size: 0.9em;
+}
+.item-details-view h4 { margin-top: 15px; margin-bottom: 10px; color: var(--primary-color); }
+.tax-breakdown { color: #aeb9c5; }
+.tax-line { display: flex; justify-content: space-between; padding: 4px 0; }
