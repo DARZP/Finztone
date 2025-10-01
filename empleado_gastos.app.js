@@ -221,8 +221,6 @@ function salirModoEdicion() {
     idGastoEditando = null;
 }
 
-// empleado_gastos.app.js
-
 async function guardarGasto(status) {
     const user = auth.currentUser;
     if (!user) return;
@@ -246,16 +244,18 @@ async function guardarGasto(status) {
             comprobanteURL = await fileRef.getDownloadURL();
         }
 
-        // --- LÓGICA MEJORADA ---
-        // Buscamos el perfil del empleado para obtener su nombre y el ID de su admin
-        const userProfileSnapshot = await db.collection('usuarios').doc(user.uid).get();
-        if (!userProfileSnapshot.exists) {
+        // --- CORRECCIÓN ---
+        // Buscamos el perfil del empleado por su email, no por su UID.
+        const userProfileQuery = await db.collection('usuarios').where('email', '==', user.email).limit(1).get();
+        
+        if (userProfileQuery.empty) {
             throw "No se pudo encontrar el perfil del usuario.";
         }
         
-        const userProfileData = userProfileSnapshot.data();
+        const userProfileDoc = userProfileQuery.docs[0];
+        const userProfileData = userProfileDoc.data();
         const userName = userProfileData.nombre;
-        const adminUid = userProfileData.adminUid; // <-- ¡OBTENEMOS EL ID DEL ADMIN!
+        const adminUid = userProfileData.adminUid;
 
         if (!adminUid) {
             throw "El perfil de este empleado no está vinculado a ningún administrador.";
@@ -264,7 +264,13 @@ async function guardarGasto(status) {
         let montoNeto = montoBruto;
         const impuestosSeleccionados = [];
         if (addTaxesCheckbox.checked) {
-            // ... tu lógica de cálculo de impuestos ...
+            let totalImpuestos = 0;
+            document.querySelectorAll('#taxes-checklist input[type="checkbox"]:checked').forEach(checkbox => {
+                const impuesto = JSON.parse(checkbox.dataset.impuesto);
+                impuestosSeleccionados.push(impuesto);
+                totalImpuestos += impuesto.tipo === 'porcentaje' ? (montoBruto * impuesto.valor) / 100 : impuesto.valor;
+            });
+            montoNeto = montoBruto + totalImpuestos;
         }
         
         const expenseData = {
@@ -275,17 +281,22 @@ async function guardarGasto(status) {
             categoria: formCategorySelect.value,
             fecha: addExpenseForm['expense-date'].value,
             empresa: addExpenseForm['expense-company'].value.trim(),
-            metodoPago: addExpenseForm['payment-method'].value,
+            metodoPago: formPaymentMethodSelect.value,
             comentarios: addExpenseForm['expense-comments'].value,
             nombreCreador: userName,
-            creadorId: user.uid, // Usamos el UID de Auth como creadorId
-            adminUid: adminUid, // <-- ¡LO AÑADIMOS AQUÍ!
+            creadorId: userProfileDoc.id, // ID del documento de Firestore
+            adminUid: adminUid,
             comprobanteURL: comprobanteURL,
             proyectoId: projectSelect.value,
             proyectoNombre: projectSelect.value ? projectSelect.options[projectSelect.selectedIndex].text : ''
         };
         
-        if (isInvoiceCheckbox.checked) { /* ... */ }
+        if (isInvoiceCheckbox.checked) {
+             expenseData.datosFactura = {
+                rfc: document.getElementById('invoice-rfc').value,
+                folioFiscal: document.getElementById('invoice-folio').value
+            };
+        }
 
         if (modoEdicion) {
             await db.collection('gastos').doc(idGastoEditando).update({ ...expenseData, status: status });
@@ -294,7 +305,7 @@ async function guardarGasto(status) {
             await db.collection('gastos').add({
                 ...expenseData,
                 folio: generarFolio(user.uid),
-                creadoPor: user.uid, // Usamos UID de Auth
+                creadoPor: user.uid,
                 emailCreador: user.email,
                 fechaDeCreacion: new Date(),
                 status: status
@@ -388,7 +399,3 @@ function cargarGastos() {
         mostrarGastos(gastos);
     }, error => console.error("Error al obtener gastos:", error));
 }
-
-
-
-
