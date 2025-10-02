@@ -16,7 +16,6 @@ const addExpenseForm = document.getElementById('add-expense-form');
 const expenseListContainer = document.getElementById('expense-list');
 const isInvoiceCheckbox = document.getElementById('is-invoice');
 const invoiceDetailsContainer = document.getElementById('invoice-details');
-const companyDataList = document.getElementById('company-list');
 const categoryFilter = document.getElementById('category-filter');
 const monthFilter = document.getElementById('month-filter');
 const accountSelect = document.getElementById('account-select');
@@ -26,24 +25,23 @@ const addApprovedBtn = document.getElementById('add-approved-btn');
 const formCategorySelect = document.getElementById('expense-category');
 const addTaxesCheckbox = document.getElementById('add-taxes-checkbox');
 const taxesDetailsContainer = document.getElementById('taxes-details-container');
-const companyInput = document.getElementById('expense-company');
+const paymentMethodSelect = document.getElementById('payment-method');
+const expensePlaceInput = document.getElementById('expense-place');
+const clientSelect = document.getElementById('client-select');
 const projectSelect = document.getElementById('project-select');
-const paymentMethodSelect = document.getElementById('payment-method'); // <-- Elemento añadido
 
-let todasLasCuentas = []; // Guardaremos todas las cuentas aquí para no pedirlas a la BD cada vez
+let todasLasCuentas = [];
+let empresasCargadas = [];
 
 // --- LÓGICA DE LA PÁGINA ---
 auth.onAuthStateChanged((user) => {
     if (user) {
-        // Obtenemos todas las cuentas primero
         db.collection('cuentas').where('adminUid', '==', user.uid).orderBy('nombre').onSnapshot(snapshot => {
             todasLasCuentas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            // Disparamos un evento para que el filtro se aplique la primera vez
             paymentMethodSelect.dispatchEvent(new Event('change'));
         });
 
-        // El resto de las funciones de carga iniciales
-        cargarEmpresas();
+        cargarClientesYProyectos();
         poblarFiltrosYCategorias();
         cargarImpuestosParaSeleccion();
         cargarGastosAprobados();
@@ -52,12 +50,7 @@ auth.onAuthStateChanged((user) => {
     }
 });
 
-// --- FUNCIONES DEL FORMULARIO ---
-
-companyInput.addEventListener('change', () => {
-    cargarProyectos(companyInput.value);
-});
-
+// --- LISTENERS ---
 addTaxesCheckbox.addEventListener('change', () => {
     taxesDetailsContainer.style.display = addTaxesCheckbox.checked ? 'block' : 'none';
     recalcularTotales();
@@ -67,23 +60,50 @@ isInvoiceCheckbox.addEventListener('change', () => {
     invoiceDetailsContainer.style.display = isInvoiceCheckbox.checked ? 'block' : 'none';
 });
 
-// --- ¡NUEVA LÓGICA DE FILTRADO! ---
 paymentMethodSelect.addEventListener('change', () => {
     const metodo = paymentMethodSelect.value;
     if (metodo === 'Tarjeta de Crédito') {
         cargarCuentasEnSelector('credito');
     } else {
-        // Para Efectivo, Transferencia, etc., mostramos las cuentas de débito
         cargarCuentasEnSelector('debito');
     }
 });
 
-function cargarEmpresas() {
-    db.collection('empresas').get().then(snapshot => {
-        companyDataList.innerHTML = '';
-        snapshot.forEach(doc => {
-            companyDataList.appendChild(new Option(doc.data().nombre));
+clientSelect.addEventListener('change', async () => {
+    const empresaId = clientSelect.value;
+    projectSelect.innerHTML = '<option value="">Cargando...</option>';
+    projectSelect.disabled = true;
+    if (!empresaId) {
+        projectSelect.innerHTML = '<option value="">Selecciona un cliente primero</option>';
+        return;
+    }
+    const proyectosSnapshot = await db.collection('proyectos').where('empresaId', '==', empresaId).where('status', '==', 'activo').get();
+    if (proyectosSnapshot.empty) {
+        projectSelect.innerHTML = '<option value="">Este cliente no tiene proyectos activos</option>';
+    } else {
+        projectSelect.innerHTML = '<option value="">Seleccionar Proyecto</option>';
+        proyectosSnapshot.forEach(doc => {
+            projectSelect.innerHTML += `<option value="${doc.id}">${doc.data().nombre}</option>`;
         });
+        projectSelect.disabled = false;
+    }
+});
+
+saveDraftBtn.addEventListener('click', () => guardarGastoAdmin('borrador'));
+addApprovedBtn.addEventListener('click', () => guardarGastoAdmin('aprobado'));
+document.getElementById('expense-amount').addEventListener('input', recalcularTotales);
+taxesChecklistContainer.addEventListener('change', recalcularTotales);
+categoryFilter.addEventListener('change', cargarGastosAprobados);
+monthFilter.addEventListener('change', cargarGastosAprobados);
+
+// --- FUNCIONES ---
+
+async function cargarClientesYProyectos() {
+    const empresasSnapshot = await db.collection('empresas').orderBy('nombre').get();
+    empresasCargadas = empresasSnapshot.docs.map(doc => ({ id: doc.id, nombre: doc.data().nombre }));
+    clientSelect.innerHTML = '<option value="">Ninguno</option>';
+    empresasCargadas.forEach(empresa => {
+        clientSelect.innerHTML += `<option value="${empresa.id}">${empresa.nombre}</option>`;
     });
 }
 
@@ -94,13 +114,10 @@ function generarFolio(userId) {
     return `EXP-ADM-${userInitials}-${timestamp}`;
 }
 
-// --- FUNCIÓN DE CARGA DE CUENTAS ACTUALIZADA ---
 function cargarCuentasEnSelector(filtroTipo) {
     const selectedValue = accountSelect.value;
     accountSelect.innerHTML = '<option value="" disabled selected>Selecciona una cuenta de origen</option>';
-    
     const cuentasFiltradas = todasLasCuentas.filter(cuenta => cuenta.tipo === filtroTipo);
-
     if (cuentasFiltradas.length === 0) {
         accountSelect.innerHTML += `<option value="" disabled>No hay cuentas de tipo '${filtroTipo}'</option>`;
     } else {
@@ -108,10 +125,8 @@ function cargarCuentasEnSelector(filtroTipo) {
             const esCredito = cuenta.tipo === 'credito';
             const valor = esCredito ? cuenta.deudaActual : cuenta.saldoActual;
             const etiqueta = esCredito ? 'Deuda' : 'Saldo';
-            
             const optionText = `${cuenta.nombre} (${etiqueta}: $${(valor || 0).toLocaleString('es-MX')})`;
-            const option = new Option(optionText, cuenta.id);
-            accountSelect.appendChild(option);
+            accountSelect.appendChild(new Option(optionText, cuenta.id));
         });
     }
     accountSelect.value = selectedValue;
@@ -125,13 +140,7 @@ async function cargarImpuestosParaSeleccion() {
         const valorDisplay = impuesto.tipo === 'porcentaje' ? `${impuesto.valor}%` : `$${impuesto.valor}`;
         const item = document.createElement('div');
         item.classList.add('tax-item');
-        item.innerHTML = `
-            <label>
-                <input type="checkbox" data-impuesto='${JSON.stringify(impuesto)}'>
-                ${impuesto.nombre} (${valorDisplay})
-            </label>
-            <span class="calculated-amount"></span>
-        `;
+        item.innerHTML = `<label><input type="checkbox" data-impuesto='${JSON.stringify(impuesto)}'> ${impuesto.nombre} (${valorDisplay})</label><span class="calculated-amount"></span>`;
         taxesChecklistContainer.appendChild(item);
     });
 }
@@ -154,49 +163,14 @@ function recalcularTotales() {
     document.getElementById('summary-neto').textContent = `$${montoNeto.toLocaleString('es-MX')}`;
 }
 
-async function cargarProyectos(empresaNombre) {
-    projectSelect.innerHTML = '<option value="">Cargando...</option>';
-    projectSelect.disabled = true;
-    if (!empresaNombre) {
-        projectSelect.innerHTML = '<option value="">Primero selecciona una empresa</option>';
-        return;
-    }
-    try {
-        const empresaQuery = await db.collection('empresas').where('nombre', '==', empresaNombre).limit(1).get();
-        if (empresaQuery.empty) {
-            projectSelect.innerHTML = '<option value="">Empresa no encontrada</option>';
-            return;
-        }
-        const empresaId = empresaQuery.docs[0].id;
-        const proyectosQuery = await db.collection('proyectos').where('empresaId', '==', empresaId).where('status', '==', 'activo').get();
-        if (proyectosQuery.empty) {
-            projectSelect.innerHTML = '<option value="">No hay proyectos activos</option>';
-        } else {
-            projectSelect.innerHTML = '<option value="">Selecciona un proyecto</option>';
-            proyectosQuery.forEach(doc => {
-                const proyecto = doc.data();
-                const option = new Option(proyecto.nombre, doc.id);
-                projectSelect.appendChild(option);
-            });
-            projectSelect.disabled = false;
-        }
-    } catch (error) {
-        console.error("Error al cargar proyectos:", error);
-        projectSelect.innerHTML = '<option value="">Error al cargar</option>';
-    }
-}
-
 async function guardarGastoAdmin(status) {
     const user = auth.currentUser;
     if (!user) return;
     const cuentaId = accountSelect.value;
-    if (status === 'aprobado' && !cuentaId) {
-        return alert('Por favor, selecciona una cuenta de origen para un gasto aprobado.');
-    }
+    if (status === 'aprobado' && !cuentaId) return alert('Por favor, selecciona una cuenta de origen para un gasto aprobado.');
     const montoBruto = parseFloat(document.getElementById('expense-amount').value) || 0;
-    if (montoBruto <= 0) {
-        return alert('Por favor, introduce un monto válido.');
-    }
+    if (montoBruto <= 0) return alert('Por favor, introduce un monto válido.');
+
     let montoNeto = montoBruto;
     const impuestosSeleccionados = [];
     if (addTaxesCheckbox.checked) {
@@ -208,14 +182,20 @@ async function guardarGastoAdmin(status) {
         });
         montoNeto = montoBruto + totalImpuestos;
     }
+    
+    const clienteIdSeleccionado = clientSelect.value;
+    const proyectoIdSeleccionado = projectSelect.value;
+    const clienteSeleccionado = empresasCargadas.find(e => e.id === clienteIdSeleccionado);
+
     const expenseData = {
         descripcion: addExpenseForm['expense-description'].value,
+        establecimiento: expensePlaceInput.value.trim(),
         monto: montoBruto,
         totalConImpuestos: montoNeto,
         impuestos: impuestosSeleccionados,
         categoria: formCategorySelect.value,
         fecha: addExpenseForm['expense-date'].value,
-        empresa: addExpenseForm['expense-company'].value.trim(),
+        empresa: clienteSeleccionado ? clienteSeleccionado.nombre : '',
         metodoPago: addExpenseForm['payment-method'].value,
         comentarios: addExpenseForm['expense-comments'].value,
         folio: generarFolio(user.uid),
@@ -227,21 +207,24 @@ async function guardarGastoAdmin(status) {
         status: status,
         cuentaId: cuentaId,
         cuentaNombre: cuentaId ? accountSelect.options[accountSelect.selectedIndex].text.split(' (')[0] : '',
-        proyectoId: projectSelect.value,
-        proyectoNombre: projectSelect.value ? projectSelect.options[projectSelect.selectedIndex].text : ''
+        proyectoId: proyectoIdSeleccionado,
+        proyectoNombre: proyectoIdSeleccionado ? projectSelect.options[projectSelect.selectedIndex].text : ''
     };
+
     if (isInvoiceCheckbox.checked) {
         expenseData.datosFactura = {
             rfc: document.getElementById('invoice-rfc').value,
             folioFiscal: document.getElementById('invoice-folio').value
         };
     }
+
     if (status === 'borrador') {
         return db.collection('gastos').add(expenseData).then(() => {
             alert('¡Borrador guardado!');
             addExpenseForm.reset();
         });
     }
+
     const cuentaRef = db.collection('cuentas').doc(cuentaId);
     const newExpenseRef = db.collection('gastos').doc();
     try {
@@ -273,6 +256,7 @@ async function guardarGastoAdmin(status) {
         });
         alert('¡Gasto registrado, saldo actualizado e impuestos generados!');
         addExpenseForm.reset();
+        clientSelect.dispatchEvent(new Event('change'));
         isInvoiceCheckbox.checked = false;
         invoiceDetailsContainer.style.display = 'none';
         addTaxesCheckbox.checked = false;
@@ -282,11 +266,6 @@ async function guardarGastoAdmin(status) {
         alert("Error: " + error);
     }
 }
-
-saveDraftBtn.addEventListener('click', () => guardarGastoAdmin('borrador'));
-addApprovedBtn.addEventListener('click', () => guardarGastoAdmin('aprobado'));
-document.getElementById('expense-amount').addEventListener('input', recalcularTotales);
-taxesChecklistContainer.addEventListener('change', recalcularTotales);
 
 function poblarFiltrosYCategorias() {
     monthFilter.innerHTML = '<option value="todos">Todos los meses</option>';
@@ -310,7 +289,7 @@ function poblarFiltrosYCategorias() {
 
 function cargarGastosAprobados() {
     const user = auth.currentUser;
-    if(!user) return;
+    if (!user) return;
     const selectedCategory = categoryFilter.value;
     const selectedMonth = monthFilter.value;
     let query = db.collection('gastos').where('adminUid', '==', user.uid).where('status', '==', 'aprobado');
@@ -352,7 +331,9 @@ function mostrarGastosAprobados(gastos) {
             </div>
             <div class="item-details" style="display: none;">
                 <p><strong>Folio:</strong> ${gasto.folio || 'N/A'}</p>
-                <p><strong>Empresa:</strong> ${gasto.empresa || 'No especificada'}</p>
+                <p><strong>Establecimiento:</strong> ${gasto.establecimiento || 'No especificado'}</p>
+                <p><strong>Cliente Asociado:</strong> ${gasto.empresa || 'Ninguno'}</p>
+                <p><strong>Proyecto:</strong> ${gasto.proyectoNombre || 'Ninguno'}</p>
                 <p><strong>Cuenta:</strong> ${gasto.cuentaNombre || 'No especificada'}</p>
                 <p><strong>Comentarios:</strong> ${gasto.comentarios || 'Ninguno'}</p>
                 ${gasto.impuestos && gasto.impuestos.length > 0 ? '<h4>Impuestos Desglosados</h4>' : ''}
@@ -370,6 +351,3 @@ expenseListContainer.addEventListener('click', (e) => {
         details.style.display = details.style.display === 'block' ? 'none' : 'block';
     }
 });
-
-categoryFilter.addEventListener('change', cargarGastosAprobados);
-monthFilter.addEventListener('change', cargarGastosAprobados);
