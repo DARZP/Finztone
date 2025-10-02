@@ -16,7 +16,6 @@ const addIncomeForm = document.getElementById('add-income-form');
 const incomeListContainer = document.getElementById('income-list');
 const isInvoiceCheckbox = document.getElementById('is-invoice');
 const invoiceDetailsContainer = document.getElementById('invoice-details');
-const companyDataList = document.getElementById('company-list');
 const categoryFilter = document.getElementById('category-filter');
 const monthFilter = document.getElementById('month-filter');
 const accountSelect = document.getElementById('account-select');
@@ -30,13 +29,16 @@ const montoInput = document.getElementById('income-amount');
 const summaryBruto = document.getElementById('summary-bruto');
 const summaryImpuestos = document.getElementById('summary-impuestos');
 const summaryNeto = document.getElementById('summary-neto');
-const companyInput = document.getElementById('income-company');
+const incomePlaceInput = document.getElementById('income-place');
+const clientSelect = document.getElementById('client-select');
 const projectSelect = document.getElementById('project-select');
+
+let empresasCargadas = [];
 
 // --- LÓGICA DE LA PÁGINA ---
 auth.onAuthStateChanged((user) => {
     if (user) {
-        cargarEmpresas();
+        cargarClientesYProyectos();
         poblarFiltrosYCategorias();
         cargarCuentasEnSelector();
         cargarImpuestosParaSeleccion();
@@ -47,8 +49,7 @@ auth.onAuthStateChanged((user) => {
     }
 });
 
-// --- FUNCIONES DEL FORMULARIO ---
-
+// --- LISTENERS ---
 addTaxesCheckbox.addEventListener('change', () => {
     taxesDetailsContainer.style.display = addTaxesCheckbox.checked ? 'block' : 'none';
     recalcularTotales();
@@ -58,13 +59,39 @@ isInvoiceCheckbox.addEventListener('change', () => {
 });
 montoInput.addEventListener('input', recalcularTotales);
 taxesChecklistContainer.addEventListener('change', recalcularTotales);
+saveDraftBtn.addEventListener('click', () => guardarIngresoAdmin('borrador'));
+addApprovedBtn.addEventListener('click', () => guardarIngresoAdmin('aprobado'));
+categoryFilter.addEventListener('change', cargarIngresosAprobados);
+monthFilter.addEventListener('change', cargarIngresosAprobados);
 
-function cargarEmpresas() {
-    db.collection('empresas').get().then(snapshot => {
-        companyDataList.innerHTML = '';
-        snapshot.forEach(doc => {
-            companyDataList.appendChild(new Option(doc.data().nombre));
+clientSelect.addEventListener('change', async () => {
+    const empresaId = clientSelect.value;
+    projectSelect.innerHTML = '<option value="">Cargando...</option>';
+    projectSelect.disabled = true;
+    if (!empresaId) {
+        projectSelect.innerHTML = '<option value="">Selecciona un cliente primero</option>';
+        return;
+    }
+    const proyectosSnapshot = await db.collection('proyectos').where('empresaId', '==', empresaId).where('status', '==', 'activo').get();
+    if (proyectosSnapshot.empty) {
+        projectSelect.innerHTML = '<option value="">Este cliente no tiene proyectos activos</option>';
+    } else {
+        projectSelect.innerHTML = '<option value="">Seleccionar Proyecto</option>';
+        proyectosSnapshot.forEach(doc => {
+            projectSelect.innerHTML += `<option value="${doc.id}">${doc.data().nombre}</option>`;
         });
+        projectSelect.disabled = false;
+    }
+});
+
+// --- FUNCIONES ---
+
+async function cargarClientesYProyectos() {
+    const empresasSnapshot = await db.collection('empresas').orderBy('nombre').get();
+    empresasCargadas = empresasSnapshot.docs.map(doc => ({ id: doc.id, nombre: doc.data().nombre }));
+    clientSelect.innerHTML = '<option value="">Ninguno</option>';
+    empresasCargadas.forEach(empresa => {
+        clientSelect.innerHTML += `<option value="${empresa.id}">${empresa.nombre}</option>`;
     });
 }
 
@@ -76,12 +103,14 @@ function generarFolio(userId) {
 }
 
 function cargarCuentasEnSelector() {
-    db.collection('cuentas').orderBy('nombre').onSnapshot(snapshot => {
+    const user = auth.currentUser;
+    if(!user) return;
+    db.collection('cuentas').where('adminUid', '==', user.uid).where('tipo', '==', 'debito').orderBy('nombre').onSnapshot(snapshot => {
         const selectedValue = accountSelect.value;
-        accountSelect.innerHTML = '<option value="" disabled selected>Selecciona una cuenta</option>';
+        accountSelect.innerHTML = '<option value="" disabled selected>Selecciona una cuenta de destino</option>';
         snapshot.forEach(doc => {
             const cuenta = doc.data();
-            accountSelect.appendChild(new Option(`${cuenta.nombre} ($${cuenta.saldoActual.toLocaleString('es-MX')})`, doc.id));
+            accountSelect.appendChild(new Option(`${cuenta.nombre} (Saldo: $${(cuenta.saldoActual || 0).toLocaleString('es-MX')})`, doc.id));
         });
         accountSelect.value = selectedValue;
     });
@@ -95,13 +124,7 @@ async function cargarImpuestosParaSeleccion() {
         const valorDisplay = impuesto.tipo === 'porcentaje' ? `${impuesto.valor}%` : `$${impuesto.valor}`;
         const item = document.createElement('div');
         item.classList.add('tax-item');
-        item.innerHTML = `
-            <label>
-                <input type="checkbox" data-impuesto='${JSON.stringify(impuesto)}'>
-                ${impuesto.nombre} (${valorDisplay})
-            </label>
-            <span class="calculated-amount"></span>
-        `;
+        item.innerHTML = `<label><input type="checkbox" data-impuesto='${JSON.stringify(impuesto)}'> ${impuesto.nombre} (${valorDisplay})</label><span class="calculated-amount"></span>`;
         taxesChecklistContainer.appendChild(item);
     });
 }
@@ -123,54 +146,6 @@ function recalcularTotales() {
     summaryImpuestos.textContent = `-$${totalImpuestos.toLocaleString('es-MX')}`;
     summaryNeto.textContent = `$${montoNeto.toLocaleString('es-MX')}`;
 }
-
-async function cargarProyectos(empresaNombre) {
-    // Limpiamos y deshabilitamos el selector de proyectos
-    projectSelect.innerHTML = '<option value="">Cargando...</option>';
-    projectSelect.disabled = true;
-
-    if (!empresaNombre) {
-        projectSelect.innerHTML = '<option value="">Primero selecciona una empresa</option>';
-        return;
-    }
-
-    try {
-        // 1. Buscamos el ID de la empresa a partir de su nombre
-        const empresaQuery = await db.collection('empresas').where('nombre', '==', empresaNombre).limit(1).get();
-
-        if (empresaQuery.empty) {
-            projectSelect.innerHTML = '<option value="">Empresa no encontrada</option>';
-            return;
-        }
-        const empresaId = empresaQuery.docs[0].id;
-
-        // 2. Buscamos los proyectos activos de esa empresa
-        const proyectosQuery = await db.collection('proyectos')
-            .where('empresaId', '==', empresaId)
-            .where('status', '==', 'activo')
-            .get();
-
-        if (proyectosQuery.empty) {
-            projectSelect.innerHTML = '<option value="">No hay proyectos activos</option>';
-        } else {
-            projectSelect.innerHTML = '<option value="">Selecciona un proyecto</option>';
-            proyectosQuery.forEach(doc => {
-                const proyecto = doc.data();
-                const option = new Option(proyecto.nombre, doc.id);
-                projectSelect.appendChild(option);
-            });
-            projectSelect.disabled = false; // Habilitamos el selector
-        }
-    } catch (error) {
-        console.error("Error al cargar proyectos:", error);
-        projectSelect.innerHTML = '<option value="">Error al cargar</option>';
-    }
-}
-
-// Cuando el usuario escriba un nombre de empresa y salga del campo, cargamos sus proyectos
-companyInput.addEventListener('change', () => {
-    cargarProyectos(companyInput.value);
-});
 
 async function guardarIngresoAdmin(status) {
     const user = auth.currentUser;
@@ -196,27 +171,32 @@ async function guardarIngresoAdmin(status) {
         montoNeto = montoBruto - totalImpuestos;
     }
     
-    const companyName = addIncomeForm['income-company'].value.trim();
+    const clienteIdSeleccionado = clientSelect.value;
+    const proyectoIdSeleccionado = projectSelect.value;
+    const clienteSeleccionado = empresasCargadas.find(e => e.id === clienteIdSeleccionado);
+    
     const incomeData = {
         descripcion: addIncomeForm['income-description'].value,
+        establecimiento: incomePlaceInput.value.trim(),
         monto: montoBruto,
         totalConImpuestos: montoNeto,
         impuestos: impuestosSeleccionados,
         categoria: formCategorySelect.value,
         fecha: addIncomeForm['income-date'].value,
-        empresa: companyName,
+        empresa: clienteSeleccionado ? clienteSeleccionado.nombre : '',
         metodoPago: addIncomeForm['payment-method'].value,
         comentarios: addIncomeForm['income-comments'].value,
         folio: generarFolio(user.uid),
         creadoPor: user.uid,
         emailCreador: user.email,
         nombreCreador: "Administrador",
+        adminUid: user.uid,
         fechaDeCreacion: new Date(),
         status: status,
         cuentaId: cuentaId,
         cuentaNombre: cuentaId ? accountSelect.options[accountSelect.selectedIndex].text.split(' (')[0] : '',
-        proyectoId: projectSelect.value,
-        proyectoNombre: projectSelect.value ? projectSelect.options[projectSelect.selectedIndex].text : ''
+        proyectoId: proyectoIdSeleccionado,
+        proyectoNombre: proyectoIdSeleccionado ? projectSelect.options[projectSelect.selectedIndex].text : ''
     };
     if (isInvoiceCheckbox.checked) {
         incomeData.datosFactura = {
@@ -250,12 +230,14 @@ async function guardarIngresoAdmin(status) {
                     tipoImpuesto: imp.nombre,
                     monto: montoImpuesto,
                     fecha: new Date(),
-                    status: 'pagado (retenido)'
+                    status: 'pagado (retenido)',
+                    adminUid: user.uid
                 });
             });
         });
         alert('¡Ingreso registrado, saldo actualizado e impuestos generados!');
         addIncomeForm.reset();
+        clientSelect.dispatchEvent(new Event('change'));
         isInvoiceCheckbox.checked = false;
         invoiceDetailsContainer.style.display = 'none';
         addTaxesCheckbox.checked = false;
@@ -265,9 +247,6 @@ async function guardarIngresoAdmin(status) {
         alert("Error: " + error);
     }
 }
-
-saveDraftBtn.addEventListener('click', () => guardarIngresoAdmin('borrador'));
-addApprovedBtn.addEventListener('click', () => guardarIngresoAdmin('aprobado'));
 
 function poblarFiltrosYCategorias() {
     monthFilter.innerHTML = '<option value="todos">Todos los meses</option>';
@@ -290,9 +269,11 @@ function poblarFiltrosYCategorias() {
 }
 
 function cargarIngresosAprobados() {
+    const user = auth.currentUser;
+    if(!user) return;
     const selectedCategory = categoryFilter.value;
     const selectedMonth = monthFilter.value;
-    let query = db.collection('ingresos').where('status', '==', 'aprobado');
+    let query = db.collection('ingresos').where('adminUid', '==', user.uid).where('status', '==', 'aprobado');
     if (selectedCategory && selectedCategory !== 'todos') {
         query = query.where('categoria', '==', selectedCategory);
     }
@@ -331,7 +312,9 @@ function mostrarIngresosAprobados(ingresos) {
             </div>
             <div class="item-details" style="display: none;">
                 <p><strong>Folio:</strong> ${ingreso.folio || 'N/A'}</p>
-                <p><strong>Empresa/Cliente:</strong> ${ingreso.empresa || 'No especificada'}</p>
+                <p><strong>Establecimiento:</strong> ${ingreso.establecimiento || 'No especificado'}</p>
+                <p><strong>Cliente Asociado:</strong> ${ingreso.empresa || 'Ninguno'}</p>
+                <p><strong>Proyecto:</strong> ${ingreso.proyectoNombre || 'Ninguno'}</p>
                 <p><strong>Cuenta:</strong> ${ingreso.cuentaNombre || 'No especificada'}</p>
                 <p><strong>Comentarios:</strong> ${ingreso.comentarios || 'Ninguno'}</p>
                 ${ingreso.impuestos && ingreso.impuestos.length > 0 ? '<h4>Impuestos Desglosados</h4>' : ''}
@@ -352,6 +335,3 @@ incomeListContainer.addEventListener('click', (e) => {
         details.style.display = details.style.display === 'block' ? 'none' : 'block';
     }
 });
-
-categoryFilter.addEventListener('change', cargarIngresosAprobados);
-monthFilter.addEventListener('change', cargarIngresosAprobados);
