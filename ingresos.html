@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Ingresos - FINZTONE</title>
-    
     <link rel="stylesheet" href="main.style.css">
-    
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -24,35 +22,19 @@
                         <label for="income-description">Concepto del Ingreso</label>
                         <input type="text" id="income-description" required>
                     </div>
+
+                    <div class="input-group">
+                        <label for="income-place">Establecimiento o Cliente Pagador (Opcional)</label>
+                        <input type="text" id="income-place" placeholder="Ej: Nombre de la empresa cliente...">
+                    </div>
+
                     <div class="input-group">
                         <label for="income-amount">Monto ($)</label>
                         <input type="number" id="income-amount" step="0.01" required>
                     </div>
 
                     <div class="deductions-section">
-                        <div class="input-group-checkbox">
-                            <input type="checkbox" id="add-taxes-checkbox">
-                            <label for="add-taxes-checkbox">Desglosar Monto (con Impuestos/Retenciones)</label>
                         </div>
-                        <div id="taxes-details-container" style="display: none;">
-                            <div id="taxes-checklist"></div>
-                            <hr>
-                            <div class="totals-summary">
-                                <div class="summary-line">
-                                    <span>Monto Bruto:</span>
-                                    <span id="summary-bruto">$0.00</span>
-                                </div>
-                                <div class="summary-line">
-                                    <span>Total Retenciones:</span>
-                                    <span id="summary-impuestos">$0.00</span>
-                                </div>
-                                <div class="summary-line net-total">
-                                    <span>Monto Neto (Total a Ingresar):</span>
-                                    <span id="summary-neto">$0.00</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
                     <div class="input-group">
                         <label for="income-category">Categoría</label>
@@ -62,17 +44,23 @@
                         <label for="income-date">Fecha</label>
                         <input type="date" id="income-date" required>
                     </div>
-                    <div class="input-group">
-                        <label for="income-company">Empresa o Cliente</label>
-                        <input type="text" id="income-company" list="company-list" placeholder="Escribe para buscar o agregar...">
-                        <datalist id="company-list"></datalist>
-                    </div>
-                    <div class="input-group">
-                        <label for="project-select">Proyecto (Opcional)</label>
-                        <select id="project-select" disabled>
-                            <option value="">Primero selecciona una empresa</option>
-                        </select>
-                    </div>
+
+                    <fieldset style="border: 1px solid var(--input-border-color); border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                        <legend style="padding: 0 10px; font-weight: 500;">Asociar a Proyecto (Opcional)</legend>
+                        <div class="input-group">
+                            <label for="client-select">Cliente</label>
+                            <select id="client-select">
+                                <option value="">Ninguno</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="project-select">Proyecto</label>
+                            <select id="project-select" disabled>
+                                <option value="">Selecciona un cliente primero</option>
+                            </select>
+                        </div>
+                    </fieldset>
+
                     <div class="input-group">
                         <label for="payment-method">Método de Cobro</label>
                         <select id="payment-method">
@@ -89,13 +77,9 @@
                         <textarea id="income-comments" rows="3"></textarea>
                     </div>
                     <div class="input-group-checkbox">
-                        <input type="checkbox" id="is-invoice">
-                        <label for="is-invoice">Anexar datos de facturación</label>
-                    </div>
+                        </div>
                     <div id="invoice-details" style="display: none;">
-                        <div class="input-group"><label for="invoice-rfc">RFC</label><input type="text" id="invoice-rfc"></div>
-                        <div class="input-group"><label for="invoice-folio">Folio Fiscal</label><input type="text" id="invoice-folio"></div>
-                    </div>
+                        </div>
 
                     <div class="form-actions" style="display: flex; gap: 15px;">
                         <button type="button" id="save-draft-btn" class="btn-secondary" style="flex: 1;">Guardar Borrador</button>
@@ -105,21 +89,7 @@
             </div>
 
             <div class="list-card">
-                <div class="card-header-filters">
-                    <h2>Historial de Ingresos</h2>
-                    <div class="filters-container">
-                        <div class="filter-group">
-                            <label>Categoría</label>
-                            <select id="category-filter"></select>
-                        </div>
-                        <div class="filter-group">
-                            <label>Mes</label>
-                            <select id="month-filter"></select>
-                        </div>
-                    </div>
-                </div>
-                <div id="income-list"></div>
-            </div>
+                 </div>
         </main>
     </div>
     
