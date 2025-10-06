@@ -24,20 +24,20 @@ let listaDeUsuarios = []; // Guardaremos la lista de usuarios para reutilizarla
 
 auth.onAuthStateChanged((user) => {
     if (user) {
-        cargarCuentas().then(() => {
+        cargarCuentas(user).then(() => {
             poblarFiltroDePeriodos();
-            cargarDatosNomina(periodSelector.value);
+            cargarDatosNomina(user, periodSelector.value);
         });
-        periodSelector.addEventListener('change', () => cargarDatosNomina(periodSelector.value));
+        periodSelector.addEventListener('change', () => cargarDatosNomina(user, periodSelector.value));
     } else {
         window.location.href = 'index.html';
     }
 });
 
-// Obtiene y guarda la lista de cuentas disponibles
-async function cargarCuentas() {
+async function cargarCuentas(user) {
     listaDeCuentas = [];
-    const snapshot = await db.collection('cuentas').get();
+    // --- CORRECCIÓN DE SEGURIDAD ---
+    const snapshot = await db.collection('cuentas').where('adminUid', '==', user.uid).get();
     snapshot.forEach(doc => {
         listaDeCuentas.push({ id: doc.id, ...doc.data() });
     });
@@ -206,15 +206,15 @@ function poblarFiltroDePeriodos() {
 }
 
 // Carga los datos de usuarios y pagos para un período específico
-function cargarDatosNomina(periodo) {
-    db.collection('usuarios').orderBy('nombre').get().then(usersSnapshot => {
-        listaDeUsuarios = []; // Actualizamos la lista global
+function cargarDatosNomina(user, periodo) {
+    // --- CORRECCIÓN DE SEGURIDAD ---
+    db.collection('usuarios').where('adminUid', '==', user.uid).where('rol', '==', 'empleado').orderBy('nombre').get().then(usersSnapshot => {
+        listaDeUsuarios = [];
         usersSnapshot.forEach(doc => listaDeUsuarios.push({ id: doc.id, ...doc.data() }));
 
-        db.collection('pagos_nomina').where('periodo', '==', periodo).onSnapshot(paymentsSnapshot => {
+        db.collection('pagos_nomina').where('adminUid', '==', user.uid).where('periodo', '==', periodo).onSnapshot(paymentsSnapshot => {
             const pagosDelPeriodo = [];
             paymentsSnapshot.forEach(doc => pagosDelPeriodo.push({ id: doc.id, ...doc.data() }));
-            
             mostrarUsuarios(listaDeUsuarios, pagosDelPeriodo);
         });
     });
