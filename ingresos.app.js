@@ -65,6 +65,8 @@ categoryFilter.addEventListener('change', cargarIngresosAprobados);
 monthFilter.addEventListener('change', cargarIngresosAprobados);
 
 clientSelect.addEventListener('change', async () => {
+    const user = auth.currentUser;
+    if (!user) return;
     const empresaId = clientSelect.value;
     projectSelect.innerHTML = '<option value="">Cargando...</option>';
     projectSelect.disabled = true;
@@ -72,7 +74,11 @@ clientSelect.addEventListener('change', async () => {
         projectSelect.innerHTML = '<option value="">Selecciona un cliente primero</option>';
         return;
     }
-    const proyectosSnapshot = await db.collection('proyectos').where('empresaId', '==', empresaId).where('status', '==', 'activo').get();
+    const proyectosSnapshot = await db.collection('proyectos')
+        .where('empresaId', '==', empresaId)
+        .where('status', '==', 'activo')
+        .where('adminUid', '==', user.uid)
+        .get();
     if (proyectosSnapshot.empty) {
         projectSelect.innerHTML = '<option value="">Este cliente no tiene proyectos activos</option>';
     } else {
@@ -122,7 +128,11 @@ function cargarCuentasEnSelector() {
 }
 
 async function cargarImpuestosParaSeleccion() {
-    const snapshot = await db.collection('impuestos_definiciones').get();
+    const user = auth.currentUser;
+    if (!user) return;
+    const snapshot = await db.collection('impuestos_definiciones')
+        .where('adminUid', '==', user.uid)
+        .get();
     taxesChecklistContainer.innerHTML = '';
     snapshot.forEach(doc => {
         const impuesto = { id: doc.id, ...doc.data() };
