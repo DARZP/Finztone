@@ -22,7 +22,7 @@ const companyListContainer = document.getElementById('company-list');
 auth.onAuthStateChanged((user) => {
     if (user) {
         // Carga y muestra la lista de empresas en tiempo real
-        db.collection('empresas').orderBy('nombre').onSnapshot(snapshot => {
+        db.collection('empresas').where('adminUid', '==', user.uid).orderBy('nombre').onSnapshot(snapshot => {
             const empresas = [];
             snapshot.forEach(doc => {
                 empresas.push({ id: doc.id, ...doc.data() });
