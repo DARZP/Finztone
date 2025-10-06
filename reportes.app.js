@@ -69,7 +69,8 @@ function poblarFiltroCuentas() {
 
 // FUNCIÓN PRINCIPAL PARA GENERAR EL REPORTE
 generateBtn.addEventListener('click', async () => {
-    // 1. Recopilar todas las selecciones del formulario
+  const user = auth.currentUser;
+    if (!user) return alert("Por favor, inicia sesión de nuevo.");
     const startDate = new Date(startDateInput.value + 'T00:00:00');
     const endDate = new Date(endDateInput.value + 'T23:59:59');
     const includeIngresos = includeIngresosCheck.checked;
@@ -88,38 +89,35 @@ generateBtn.addEventListener('click', async () => {
     generateBtn.disabled = true; // Desactivamos el botón para evitar múltiples clics
 
     try {
+    try {
         let reportData = [];
         const queries = [];
         const types = [];
 
-        // 2. Construir las consultas a la base de datos según lo seleccionado
         if (includeIngresos) {
-            queries.push(db.collection('ingresos').where('status', '==', 'aprobado').where('fechaDeCreacion', '>=', startDate).where('fechaDeCreacion', '<=', endDate).get());
+            queries.push(db.collection('ingresos').where('adminUid', '==', user.uid).where('status', '==', 'aprobado').where('fechaDeCreacion', '>=', startDate).where('fechaDeCreacion', '<=', endDate).get());
             types.push('ingresos');
         }
         if (includeGastos) {
-            queries.push(db.collection('gastos').where('status', '==', 'aprobado').where('fechaDeCreacion', '>=', startDate).where('fechaDeCreacion', '<=', endDate).get());
+            queries.push(db.collection('gastos').where('adminUid', '==', user.uid).where('status', '==', 'aprobado').where('fechaDeCreacion', '>=', startDate).where('fechaDeCreacion', '<=', endDate).get());
             types.push('gastos');
         }
         if (includeNomina) {
-            queries.push(db.collection('pagos_nomina').where('fechaDePago', '>=', startDate).where('fechaDePago', '<=', endDate).get());
+            queries.push(db.collection('pagos_nomina').where('adminUid', '==', user.uid).where('fechaDePago', '>=', startDate).where('fechaDePago', '<=', endDate).get());
             types.push('pagos_nomina');
         }
         if (includeImpuestos) {
-            queries.push(db.collection('movimientos_impuestos').where('fecha', '>=', startDate).where('fecha', '<=', endDate).get());
+            queries.push(db.collection('movimientos_impuestos').where('adminUid', '==', user.uid).where('fecha', '>=', startDate).where('fecha', '<=', endDate).get());
             types.push('movimientos_impuestos');
         }
 
-        // 3. Ejecutar todas las consultas
         const results = await Promise.all(queries);
         
-        // 4. Procesar y unificar los resultados de forma específica
         results.forEach((snapshot, index) => {
             const type = types[index]; // Obtenemos el tipo de la consulta
             snapshot.forEach(doc => {
                 const data = doc.data();
 
-                // Filtramos por colaborador y cuenta
                 if (selectedUserId !== 'todos' && (data.creadoPor !== selectedUserId && data.userId !== selectedUserId)) return;
                 if (selectedAccountId !== 'todas' && data.cuentaId !== selectedAccountId) return;
                 if (selectedCompanyName !== 'todas' && data.empresa !== selectedCompanyName) return;
