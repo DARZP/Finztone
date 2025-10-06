@@ -89,7 +89,6 @@ generateBtn.addEventListener('click', async () => {
     generateBtn.disabled = true; // Desactivamos el botón para evitar múltiples clics
 
     try {
-    try {
         let reportData = [];
         const queries = [];
         const types = [];
