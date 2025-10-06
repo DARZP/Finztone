@@ -70,6 +70,8 @@ paymentMethodSelect.addEventListener('change', () => {
 });
 
 clientSelect.addEventListener('change', async () => {
+    const user = auth.currentUser;
+    if (!user) return;
     const empresaId = clientSelect.value;
     projectSelect.innerHTML = '<option value="">Cargando...</option>';
     projectSelect.disabled = true;
@@ -77,7 +79,11 @@ clientSelect.addEventListener('change', async () => {
         projectSelect.innerHTML = '<option value="">Selecciona un cliente primero</option>';
         return;
     }
-    const proyectosSnapshot = await db.collection('proyectos').where('empresaId', '==', empresaId).where('status', '==', 'activo').get();
+    const proyectosSnapshot = await db.collection('proyectos')
+        .where('empresaId', '==', empresaId)
+        .where('adminUid', '==', user.uid)
+        .where('status', '==', 'activo')
+        .get();
     if (proyectosSnapshot.empty) {
         projectSelect.innerHTML = '<option value="">Este cliente no tiene proyectos activos</option>';
     } else {
@@ -99,7 +105,11 @@ monthFilter.addEventListener('change', cargarGastosAprobados);
 // --- FUNCIONES ---
 
 async function cargarClientesYProyectos() {
-    const empresasSnapshot = await db.collection('empresas').orderBy('nombre').get();
+    const user = auth.currentUser;
+    if (!user) return;
+    const empresasSnapshot = await db.collection('empresas')
+        .where('adminUid', '==', user.uid)
+        .orderBy('nombre').get();
     empresasCargadas = empresasSnapshot.docs.map(doc => ({ id: doc.id, nombre: doc.data().nombre }));
     clientSelect.innerHTML = '<option value="">Ninguno</option>';
     empresasCargadas.forEach(empresa => {
@@ -133,7 +143,11 @@ function cargarCuentasEnSelector(filtroTipo) {
 }
 
 async function cargarImpuestosParaSeleccion() {
-    const snapshot = await db.collection('impuestos_definiciones').get();
+    const user = auth.currentUser;
+    if (!user) return;
+    const snapshot = await db.collection('impuestos_definiciones')
+        .where('adminUid', '==', user.uid)
+        .get();
     taxesChecklistContainer.innerHTML = '';
     snapshot.forEach(doc => {
         const impuesto = { id: doc.id, ...doc.data() };
