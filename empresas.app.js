@@ -39,6 +39,8 @@ auth.onAuthStateChanged((user) => {
 // Listener para el formulario de registro de nuevas empresas
 addCompanyForm.addEventListener('submit', (e) => {
     e.preventDefault();
+    const user = auth.currentUser;
+    if (!user) return;
 
     const companyName = addCompanyForm['company-name'].value;
     const companyRfc = addCompanyForm['company-rfc'].value;
@@ -51,7 +53,8 @@ addCompanyForm.addEventListener('submit', (e) => {
         rfc: companyRfc,
         contactoNombre: contactName,
         contactoEmail: contactEmail,
-        fechaDeCreacion: new Date()
+        fechaDeCreacion: new Date(),
+        adminUid: user.uid
     })
     .then(() => {
         alert(`¡Empresa "${companyName}" registrada exitosamente!`);
