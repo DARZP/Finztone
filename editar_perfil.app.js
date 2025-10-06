@@ -7,7 +7,6 @@ const firebaseConfig = {
     appId: "1:95145879307:web:e10017a75edf32f1fde40e",
     measurementId: "G-T8KMJXNSTP"
 };
-
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
@@ -16,12 +15,10 @@ const editForm = document.getElementById('edit-profile-form');
 const backButton = document.getElementById('back-to-profile-btn');
 const deductionsChecklist = document.getElementById('deductions-checklist');
 
-// --- LÓGICA DE LA PÁGINA ---
 const urlParams = new URLSearchParams(window.location.search);
 const userId = urlParams.get('id');
 if (userId) { backButton.href = `perfil_empleado.html?id=${userId}`; }
 
-// Función para mostrar los checkboxes de los impuestos
 function mostrarDefinicionesDeImpuestos(impuestosDefinidos, deduccionesActuales = []) {
     deductionsChecklist.innerHTML = '';
     const deduccionesActualesIds = deduccionesActuales.map(d => d.impuestoId);
@@ -39,8 +36,6 @@ function mostrarDefinicionesDeImpuestos(impuestosDefinidos, deduccionesActuales 
         deductionsChecklist.appendChild(item);
     });
 }
-
-JavaScript
 
 async function cargarDatosParaEdicion() {
     const user = auth.currentUser;
