@@ -69,15 +69,19 @@ auth.onAuthStateChanged(user => {
 
 addTaxForm.addEventListener('submit', (e) => {
     e.preventDefault();
+    const user = auth.currentUser;
+    if (!user) return;
+
     const taxName = addTaxForm['tax-name'].value;
     const taxType = addTaxForm['tax-type'].value;
     const taxValue = parseFloat(addTaxForm['tax-value'].value);
 
-    db.collection('impuestos_definiciones').add({
+    dbdb.collection('impuestos_definiciones').add({
         nombre: taxName,
         tipo: taxType,
         valor: taxValue,
-        fechaDeCreacion: new Date()
+        fechaDeCreacion: new Date(),
+        adminUid: user.uid 
     }).then(() => {
         alert(`¡El impuesto "${taxName}" ha sido guardado!`);
         addTaxForm.reset();
