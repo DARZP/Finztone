@@ -136,14 +136,14 @@ async function cargarDatosPerfil() {
 }
 
 async function cargarActividad(userEmail) {
-    if (!userId || !userEmail) return;
+    const admin = auth.currentUser; 
+    if (!userId || !userEmail || !admin) return;
 
-    const gastosPromise = db.collection('gastos').where('emailCreador', '==', userEmail).get();
-    const ingresosPromise = db.collection('ingresos').where('emailCreador', '==', userEmail).get();
-    const nominaPromise = db.collection('pagos_nomina').where('userId', '==', userId).get();
+    const gastosPromise = db.collection('gastos').where('adminUid', '==', admin.uid).where('emailCreador', '==', userEmail).get();
+    const ingresosPromise = db.collection('ingresos').where('adminUid', '==', admin.uid).where('emailCreador', '==', userEmail).get();
+    const nominaPromise = db.collection('pagos_nomina').where('adminUid', '==', admin.uid).where('userId', '==', userId).get();
 
     try {
-        // ... (resto de tu código para cargar actividad, sin cambios) ...
         const [gastosSnapshot, ingresosSnapshot, nominaSnapshot] = await Promise.all([
             gastosPromise, ingresosPromise, nominaPromise
         ]);
