@@ -40,15 +40,20 @@ function mostrarDefinicionesDeImpuestos(impuestosDefinidos, deduccionesActuales 
     });
 }
 
-// Carga los datos del usuario Y las definiciones de impuestos al mismo tiempo
-async function cargarDatosParaEdicion() {
-    if (!userId) return;
+JavaScript
 
+async function cargarDatosParaEdicion() {
+    const user = auth.currentUser;
+    if (!userId || !user) return;
+    
     const userDoc = await db.collection('usuarios').doc(userId).get();
     if (!userDoc.exists) return alert('Usuario no encontrado.');
     const userData = userDoc.data();
 
-    const impuestosSnapshot = await db.collection('impuestos_definiciones').get();
+    const impuestosSnapshot = await db.collection('impuestos_definiciones')
+        .where('adminUid', '==', user.uid)
+        .get();
+        
     const impuestosDefinidos = impuestosSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
     editForm['profile-name'].value = userData.nombre || '';
@@ -58,11 +63,9 @@ async function cargarDatosParaEdicion() {
     editForm['profile-clabe'].value = userData.clabe || '';
     editForm['profile-rfc'].value = userData.rfc || '';
     
-    // CORRECCIÓN: Nos aseguramos de pasar un array vacío si no hay deducciones previas
     mostrarDefinicionesDeImpuestos(impuestosDefinidos, userData.deducciones || []);
 }
 
-// Lógica para guardar los cambios, incluyendo las deducciones seleccionadas
 editForm.addEventListener('submit', (e) => {
     e.preventDefault();
     if (!userId) return;
@@ -99,7 +102,6 @@ editForm.addEventListener('submit', (e) => {
         });
 });
 
-// Protección de la ruta
 auth.onAuthStateChanged(user => {
     if (user) {
         cargarDatosParaEdicion();
@@ -107,4 +109,3 @@ auth.onAuthStateChanged(user => {
         window.location.href = 'index.html';
     }
 });
-// CORRECCIÓN: Se eliminó el }); extra que estaba aquí
