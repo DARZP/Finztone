@@ -1,11 +1,11 @@
 const firebaseConfig = {
-  apiKey: "AIzaSyA4zRiQnr2PiG1zQc_k-Of9CmGQQSkVQ84",
-  authDomain: "finztone-app.firebaseapp.com",
-  projectId: "finztone-app",
-  storageBucket: "finztone-app.appspot.com", 
-  messagingSenderId: "95145879307",
-  appId: "1:95145879307:web:e10017a75edf32f1fde40e",
-  measurementId: "G-T8KMJXNSTP"
+    apiKey: "AIzaSyA4zRiQnr2PiG1zQc_k-Of9CmGQQSkVQ84",
+    authDomain: "finztone-app.firebaseapp.com",
+    projectId: "finztone-app",
+    storageBucket: "finztone-app.appspot.com", 
+    messagingSenderId: "95145879307",
+    appId: "1:95145879307:web:e10017a75edf32f1fde40e",
+    measurementId: "G-T8KMJXNSTP"
 };
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
@@ -25,39 +25,38 @@ const companyFilter = document.getElementById('company-filter');
 
 auth.onAuthStateChanged(user => {
     if (user) {
-        poblarFiltroUsuarios();
-        poblarFiltroCuentas();   
-        poblarFiltroEmpresas();
+        poblarFiltroUsuarios(user);
+        poblarFiltroCuentas(user);   
+        poblarFiltroEmpresas(user);
     } else {
         window.location.href = 'index.html';
     }
 });
 
-function poblarFiltroUsuarios() {
-    db.collection('usuarios').where('rol', '==', 'empleado').orderBy('nombre').get()
+function poblarFiltroUsuarios(user) {
+    db.collection('usuarios').where('adminUid', '==', user.uid).where('rol', '==', 'empleado').orderBy('nombre').get()
         .then(snapshot => {
             snapshot.forEach(doc => {
-                const user = doc.data();
-                const option = new Option(user.nombre, doc.id);
+                const userData = doc.data();
+                const option = new Option(userData.nombre, doc.id);
                 userFilter.appendChild(option);
             });
         });
 }
 
-function poblarFiltroEmpresas() {
-    db.collection('empresas').orderBy('nombre').get()
+function poblarFiltroEmpresas(user) {
+    db.collection('empresas').where('adminUid', '==', user.uid).orderBy('nombre').get()
         .then(snapshot => {
             snapshot.forEach(doc => {
                 const empresa = doc.data();
-                // OJO: Usamos el NOMBRE como valor, ya que en los gastos/ingresos no guardamos el ID
                 const option = new Option(empresa.nombre, empresa.nombre);
                 companyFilter.appendChild(option);
             });
         });
 }
 
-function poblarFiltroCuentas() {
-    db.collection('cuentas').orderBy('nombre').get()
+function poblarFiltroCuentas(user) {
+    db.collection('cuentas').where('adminUid', '==', user.uid).orderBy('nombre').get()
         .then(snapshot => {
             snapshot.forEach(doc => {
                 const cuenta = doc.data();
@@ -69,8 +68,9 @@ function poblarFiltroCuentas() {
 
 // FUNCIÓN PRINCIPAL PARA GENERAR EL REPORTE
 generateBtn.addEventListener('click', async () => {
-  const user = auth.currentUser;
+    const user = auth.currentUser;
     if (!user) return alert("Por favor, inicia sesión de nuevo.");
+    
     const startDate = new Date(startDateInput.value + 'T00:00:00');
     const endDate = new Date(endDateInput.value + 'T23:59:59');
     const includeIngresos = includeIngresosCheck.checked;
@@ -86,9 +86,9 @@ generateBtn.addEventListener('click', async () => {
     }
 
     alert('Generando reporte... Esto puede tardar un momento.');
-    generateBtn.disabled = true; // Desactivamos el botón para evitar múltiples clics
+    generateBtn.disabled = true;
 
-    try {
+    try { // <-- SOLO UN 'try'
         let reportData = [];
         const queries = [];
         const types = [];
@@ -113,11 +113,11 @@ generateBtn.addEventListener('click', async () => {
         const results = await Promise.all(queries);
         
         results.forEach((snapshot, index) => {
-            const type = types[index]; // Obtenemos el tipo de la consulta
+            const type = types[index];
             snapshot.forEach(doc => {
                 const data = doc.data();
 
-                if (selectedUserId !== 'todos' && (data.creadoPor !== selectedUserId && data.userId !== selectedUserId)) return;
+                if (selectedUserId !== 'todos' && (data.creadorId !== selectedUserId && data.userId !== selectedUserId)) return;
                 if (selectedAccountId !== 'todas' && data.cuentaId !== selectedAccountId) return;
                 if (selectedCompanyName !== 'todas' && data.empresa !== selectedCompanyName) return;
 
@@ -153,22 +153,20 @@ generateBtn.addEventListener('click', async () => {
         });
         
         if (reportData.length === 0) {
-            return alert('No se encontraron registros con los criterios seleccionados.');
+            alert('No se encontraron registros con los criterios seleccionados.');
+        } else {
+             reportData.sort((a, b) => new Date(a.Fecha.split('/').reverse().join('-')) - new Date(b.Fecha.split('/').reverse().join('-')));
+             exportToCSV(reportData);
         }
-
-        // 5. Ordenar y exportar a CSV
-        reportData.sort((a, b) => new Date(a.Fecha.split('/').reverse().join('-')) - new Date(b.Fecha.split('/').reverse().join('-')));
-        exportToCSV(reportData);
 
     } catch (error) {
         console.error("Error al generar el reporte: ", error);
         alert("Ocurrió un error al generar el reporte.");
     } finally {
-        generateBtn.disabled = false; // Reactivamos el botón al finalizar
+        generateBtn.disabled = false;
     }
 });
 
-// Función auxiliar para convertir los datos a un archivo CSV y descargarlo
 function exportToCSV(data) {
     const headers = Object.keys(data[0]);
     const csvRows = [
@@ -181,7 +179,7 @@ function exportToCSV(data) {
     ];
 
     const csvString = csvRows.join('\n');
-    const blob = new Blob(['\uFEFF' + csvString], { type: 'text/csv;charset=utf-8;' }); // Añadimos BOM para compatibilidad con Excel
+    const blob = new Blob(['\uFEFF' + csvString], { type: 'text/csv;charset=utf-8;' });
 
     const link = document.createElement('a');
     if (link.download !== undefined) {
