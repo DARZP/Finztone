@@ -21,12 +21,11 @@ const contactNameEl = document.getElementById('contact-name');
 const contactEmailEl = document.getElementById('contact-email');
 const editCompanyBtn = document.getElementById('edit-company-btn');
 const downloadCompanyRecordsBtn = document.getElementById('download-company-records-btn');
-
 const addProjectForm = document.getElementById('add-project-form');
 const activeProjectsList = document.getElementById('active-projects-list');
 const inactiveProjectsList = document.getElementById('inactive-projects-list');
 
-let empresaData = null; // Variable global para guardar datos de la empresa
+let empresaData = null; 
 
 // --- LÓGICA DE DESCARGA ---
 
@@ -104,19 +103,17 @@ async function descargarRegistrosProyecto(proyectoId, proyectoNombre) {
 
 auth.onAuthStateChanged((user) => {
     if (user && empresaId) {
-        cargarDatosDeEmpresa(empresaId);
+        cargarDatosDeEmpresa(user, empresaId);
         downloadCompanyRecordsBtn.addEventListener('click', descargarRegistrosEmpresa);
     } else {
         window.location.href = 'index.html';
     }
 });
 
-async function cargarDatosDeEmpresa(id) {
+async function cargarDatosDeEmpresa(user, id) {
     const empresaDoc = await db.collection('empresas').doc(id).get();
     if (empresaDoc.exists) {
-        empresaData = empresaDoc.data(); // Guardamos los datos globalmente
-        
-        // --- CORREGIDO --- Se usa la variable correcta 'empresaData'
+        empresaData = empresaDoc.data();
         companyNameEl.textContent = empresaData.nombre || 'No disponible';
         companyRfcEl.textContent = empresaData.rfc || 'No disponible';
         contactNameEl.textContent = empresaData.contactoNombre || 'No disponible';
@@ -126,7 +123,10 @@ async function cargarDatosDeEmpresa(id) {
         alert("Empresa no encontrada.");
     }
 
-    db.collection('proyectos').where('empresaId', '==', id).orderBy('fechaDeCreacion', 'desc')
+    db.collection('proyectos')
+        .where('adminUid', '==', user.uid) // <-- CORRECCIÓN DE SEGURIDAD
+        .where('empresaId', '==', id)
+        .orderBy('fechaDeCreacion', 'desc')
         .onSnapshot(snapshot => {
             const proyectos = [];
             snapshot.forEach(doc => proyectos.push({ id: doc.id, ...doc.data() }));
