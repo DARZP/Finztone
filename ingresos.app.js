@@ -87,7 +87,12 @@ clientSelect.addEventListener('change', async () => {
 // --- FUNCIONES ---
 
 async function cargarClientesYProyectos() {
-    const empresasSnapshot = await db.collection('empresas').orderBy('nombre').get();
+    const user = auth.currentUser;
+    if (!user) return;
+    
+    // --- CORRECCIÓN --- Añadimos .where() para filtrar por admin
+    const empresasSnapshot = await db.collection('empresas').where('adminUid', '==', user.uid).orderBy('nombre').get();
+    
     empresasCargadas = empresasSnapshot.docs.map(doc => ({ id: doc.id, nombre: doc.data().nombre }));
     clientSelect.innerHTML = '<option value="">Ninguno</option>';
     empresasCargadas.forEach(empresa => {
