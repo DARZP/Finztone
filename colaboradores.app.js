@@ -10,7 +10,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
-const functions = firebase.functions();
+const functions = firebase.app().functions('us-central1');
 
 const addUserForm = document.getElementById('add-user-form');
 const userListContainer = document.getElementById('user-list');
