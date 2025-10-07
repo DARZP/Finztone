@@ -154,9 +154,13 @@ async function cargarDatosDeCuenta(id) {
 }
 
 async function cargarMovimientos(id) {
-    const gastosPromise = db.collection('gastos').where('cuentaId', '==', id).get();
-    const ingresosPromise = db.collection('ingresos').where('cuentaId', '==', id).get();
-    const nominaPromise = db.collection('pagos_nomina').where('cuentaId', '==', id).get();
+    const user = auth.currentUser;
+    if (!user) return;
+
+    // --- CORRECCIÓN: Añadimos el filtro .where('adminUid', '==', user.uid) a cada consulta ---
+    const gastosPromise = db.collection('gastos').where('adminUid', '==', user.uid).where('cuentaId', '==', id).get();
+    const ingresosPromise = db.collection('ingresos').where('adminUid', '==', user.uid).where('cuentaId', '==', id).get();
+    const nominaPromise = db.collection('pagos_nomina').where('adminUid', '==', user.uid).where('cuentaId', '==', id).get();
 
     const [gastosSnapshot, ingresosSnapshot, nominaSnapshot] = await Promise.all([
         gastosPromise, ingresosPromise, nominaPromise
@@ -168,9 +172,9 @@ async function cargarMovimientos(id) {
     nominaSnapshot.forEach(doc => movimientos.push({ tipoMovimiento: 'nomina', ...doc.data() }));
 
     movimientos.sort((a, b) => {
-        const dateA = a.fechaDePago?.toDate() || new Date(a.fecha);
-        const dateB = b.fechaDePago?.toDate() || new Date(b.fecha);
-        return dateB - dateA; // Ordena del más reciente al más antiguo
+        const dateA = a.fechaDePago?.toDate() || new Date(a.fecha.replace(/-/g, '/'));
+        const dateB = b.fechaDePago?.toDate() || new Date(b.fecha.replace(/-/g, '/'));
+        return dateB - dateA;
     });
     
     mostrarMovimientos(movimientos);
