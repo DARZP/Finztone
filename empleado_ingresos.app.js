@@ -68,15 +68,6 @@ categoryFilter.addEventListener('change', cargarIngresos);
 monthFilter.addEventListener('change', cargarIngresos);
 
 clientSelect.addEventListener('change', async () => {
-    const user = auth.currentUser;
-    if (!user) return;
-
-    // CORRECCIÓN: Buscamos el perfil por email para obtener el adminUid
-    const userProfileQuery = await db.collection('usuarios').where('email', '==', user.email).limit(1).get();
-    if (userProfileQuery.empty) return;
-    const adminUid = userProfileQuery.docs[0].data().adminUid;
-    if (!adminUid) return;
-
     const empresaId = clientSelect.value;
     projectSelect.innerHTML = '<option value="">Cargando...</option>';
     projectSelect.disabled = true;
@@ -86,12 +77,7 @@ clientSelect.addEventListener('change', async () => {
         return;
     }
 
-    const proyectosSnapshot = await db.collection('proyectos')
-        .where('adminUid', '==', adminUid)
-        .where('empresaId', '==', empresaId)
-        .where('status', '==', 'activo')
-        .get();
-
+    const proyectosSnapshot = await db.collection('proyectos').where('empresaId', '==', empresaId).where('status', '==', 'activo').get();
     if (proyectosSnapshot.empty) {
         projectSelect.innerHTML = '<option value="">Este cliente no tiene proyectos activos</option>';
     } else {
@@ -104,24 +90,8 @@ clientSelect.addEventListener('change', async () => {
 });
 
 async function cargarClientesYProyectos() {
-    const user = auth.currentUser;
-    if (!user) return;
-
-    // CORRECCIÓN: Buscamos el perfil por email para obtener el adminUid
-    const userProfileQuery = await db.collection('usuarios').where('email', '==', user.email).limit(1).get();
-    if (userProfileQuery.empty) {
-        console.error("Empleado no tiene perfil, no se pueden cargar clientes.");
-        return;
-    }
-    const adminUid = userProfileQuery.docs[0].data().adminUid;
-    if (!adminUid) {
-        console.error("Empleado no tiene adminUid, no se pueden cargar clientes.");
-        return;
-    }
-
-    const empresasSnapshot = await db.collection('empresas').where('adminUid', '==', adminUid).orderBy('nombre').get();
+    const empresasSnapshot = await db.collection('empresas').orderBy('nombre').get();
     empresasCargadas = empresasSnapshot.docs.map(doc => ({ id: doc.id, nombre: doc.data().nombre }));
-
     clientSelect.innerHTML = '<option value="">Ninguno</option>';
     empresasCargadas.forEach(empresa => {
         clientSelect.innerHTML += `<option value="${empresa.id}">${empresa.nombre}</option>`;
@@ -138,14 +108,6 @@ function generarFolio(userId) {
 
 async function cargarImpuestosParaSeleccion() {
     const user = auth.currentUser;
-    if (!user) return;
-
-    // CORRECCIÓN: Buscamos el perfil por email para obtener el adminUid
-    const userProfileQuery = await db.collection('usuarios').where('email', '==', user.email).limit(1).get();
-    if (userProfileQuery.empty) return;
-    const adminUid = userProfileQuery.docs[0].data().adminUid;
-    if (!adminUid) return;
-
     const snapshot = await db.collection('impuestos_definiciones').where('adminUid', '==', adminUid).get();
     taxesChecklistContainer.innerHTML = '';
     if (snapshot.empty) {
@@ -386,7 +348,6 @@ function poblarFiltrosYCategorias() {
 function cargarIngresos() {
     const user = auth.currentUser;
     if (!user) return;
-
     let query = db.collection('ingresos').where('creadoPor', '==', user.uid);
 
     if (categoryFilter.value && categoryFilter.value !== 'todos') {
