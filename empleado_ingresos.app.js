@@ -388,29 +388,23 @@ function cargarIngresos() {
     const user = auth.currentUser;
     if (!user) return;
 
-    // Obtenemos el perfil del usuario para sacar el adminUid
-    db.collection('usuarios').where('email', '==', user.email).limit(1).get().then(userProfileQuery => {
-        if (userProfileQuery.empty) return;
-        const adminUid = userProfileQuery.docs[0].data().adminUid;
-        if (!adminUid) return;
+    let query = db.collection('ingresos').where('creadoPor', '==', user.uid);
 
-        // Construimos la consulta con los filtros de seguridad
-        let query = db.collection('ingresos')
-            .where('adminUid', '==', adminUid)
-            .where('creadorId', '==', userProfileQuery.docs[0].id);
-
-        if (categoryFilter.value && categoryFilter.value !== 'todos') {
-            query = query.where('categoria', '==', categoryFilter.value);
-        }
-        if (monthFilter.value && monthFilter.value !== 'todos') {
-            const [year, month] = monthFilter.value.split('-').map(Number);
-            const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
-            const endDate = new Date(year, month, 0, 23, 59, 59).toISOString().split('T')[0];
-            query = query.where('fecha', '>=', startDate).where('fecha', '<=', endDate);
-        }
-        query.orderBy('fecha', 'desc').onSnapshot(snapshot => {
-            const ingresos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            mostrarIngresos(ingresos);
-        }, error => console.error("Error al obtener ingresos:", error));
+    if (categoryFilter.value && categoryFilter.value !== 'todos') {
+        query = query.where('categoria', '==', categoryFilter.value);
+    }
+    if (monthFilter.value && monthFilter.value !== 'todos') {
+        const [year, month] = monthFilter.value.split('-').map(Number);
+        const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
+        const endDate = new Date(year, month, 0, 23, 59, 59).toISOString().split('T')[0];
+        query = query.where('fecha', '>=', startDate).where('fecha', '<=', endDate);
+    }
+    
+    query.orderBy('fecha', 'desc').onSnapshot(snapshot => {
+        const ingresos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        mostrarIngresos(ingresos);
+    }, error => {
+        console.error("Error al obtener ingresos:", error);
+        alert("Error al cargar el historial. Revisa la consola (F12) por si Firebase sugiere crear un índice.");
     });
 }
