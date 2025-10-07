@@ -62,12 +62,12 @@ async function descargarRegistrosImpuesto(nombreImpuesto) {
 
 // --- LÓGICA PRINCIPAL DE LA PÁGINA ---
 
-auth.onAuthStateChanged(user => {
+auth.onAuthStateChanged(async (user) => {
     if (user) {
         cargarImpuestosDefinidos();
-        poblarFiltros();
+        await poblarFiltros(); 
         cargarCuentasEnSelector();
-        cargarMovimientosDeImpuestos();
+        cargarMovimientosDeImpuestos(); 
     } else {
         window.location.href = 'index.html';
     }
@@ -128,9 +128,10 @@ taxesListContainer.addEventListener('click', (e) => {
     }
 });
 
-function poblarFiltros() {
+async function poblarFiltros() {
     const user = auth.currentUser;
     if (!user) return;
+
     monthFilter.innerHTML = '<option value="todos">Todos los meses</option>';
     let fecha = new Date();
     for (let i = 0; i < 12; i++) {
@@ -139,14 +140,17 @@ function poblarFiltros() {
         monthFilter.appendChild(new Option(text, value));
         fecha.setMonth(fecha.getMonth() - 1);
     }
-    db.collection('impuestos_definiciones').where('adminUid', '==', user.uid).orderBy('nombre').get().then(snapshot => {
-        taxTypeFilter.innerHTML = '<option value="todos">Todos los tipos</option>';
-        snapshot.forEach(doc => {
-            const taxName = doc.data().nombre;
-            taxTypeFilter.appendChild(new Option(taxName, taxName));
-        });
+
+    // Usamos await para esperar a que la consulta termine
+    const snapshot = await db.collection('impuestos_definiciones').where('adminUid', '==', user.uid).orderBy('nombre').get();
+    
+    taxTypeFilter.innerHTML = '<option value="todos">Todos los tipos</option>';
+    snapshot.forEach(doc => {
+        const taxName = doc.data().nombre;
+        taxTypeFilter.appendChild(new Option(taxName, taxName));
     });
 }
+
 
 function cargarCuentasEnSelector() {
     const user = auth.currentUser;
