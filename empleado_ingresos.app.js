@@ -37,21 +37,35 @@ const projectSelect = document.getElementById('project-select');
 let empresasCargadas = [];
 let modoEdicion = false;
 let idIngresoEditando = null;
+let adminUidGlobal = null;
 
 // --- LÓGICA DE LA PÁGINA ---
-auth.onAuthStateChanged((user) => {
+auth.onAuthStateChanged(async (user) => {
     if (user) {
-        cargarClientesYProyectos();
-        poblarFiltrosYCategorias();
-        cargarIngresos();
-        cargarImpuestosParaSeleccion();
-        recalcularTotales();
+        // Obtenemos el perfil del usuario UNA SOLA VEZ al cargar la página
+        try {
+            const userProfileQuery = await db.collection('usuarios').where('email', '==', user.email).limit(1).get();
+            if (userProfileQuery.empty) throw "Perfil de usuario no encontrado.";
+            
+            adminUidGlobal = userProfileQuery.docs[0].data().adminUid;
+            if (!adminUidGlobal) throw "El empleado no está vinculado a un administrador.";
+
+            // Ahora que tenemos el adminUid, cargamos el resto
+            cargarClientesYProyectos();
+            poblarFiltrosYCategorias();
+            cargarIngresos();
+            cargarImpuestosParaSeleccion();
+            recalcularTotales();
+
+        } catch (error) {
+            console.error("Error crítico al cargar datos iniciales:", error);
+            alert("No se pudo cargar la información de la página. " + error);
+        }
     } else {
         window.location.href = 'index.html';
     }
 });
 
-// --- LISTENERS ---
 addTaxesCheckbox.addEventListener('change', () => {
     taxesDetailsContainer.style.display = addTaxesCheckbox.checked ? 'block' : 'none';
     recalcularTotales();
@@ -68,6 +82,7 @@ categoryFilter.addEventListener('change', cargarIngresos);
 monthFilter.addEventListener('change', cargarIngresos);
 
 clientSelect.addEventListener('change', async () => {
+    if (!adminUidGlobal) return;
     const empresaId = clientSelect.value;
     projectSelect.innerHTML = '<option value="">Cargando...</option>';
     projectSelect.disabled = true;
@@ -90,8 +105,10 @@ clientSelect.addEventListener('change', async () => {
 });
 
 async function cargarClientesYProyectos() {
-    const empresasSnapshot = await db.collection('empresas').orderBy('nombre').get();
+    if (!adminUidGlobal) return;
+    const empresasSnapshot = await db.collection('empresas').where('adminUid', '==', adminUidGlobal).orderBy('nombre').get();
     empresasCargadas = empresasSnapshot.docs.map(doc => ({ id: doc.id, nombre: doc.data().nombre }));
+   
     clientSelect.innerHTML = '<option value="">Ninguno</option>';
     empresasCargadas.forEach(empresa => {
         clientSelect.innerHTML += `<option value="${empresa.id}">${empresa.nombre}</option>`;
@@ -107,8 +124,8 @@ function generarFolio(userId) {
 }
 
 async function cargarImpuestosParaSeleccion() {
-    const user = auth.currentUser;
-    const snapshot = await db.collection('impuestos_definiciones').where('adminUid', '==', adminUid).get();
+    if (!adminUidGlobal) return; // Usamos la variable global
+    const snapshot = await db.collection('impuestos_definiciones').where('adminUid', '==', adminUidGlobal).get();
     taxesChecklistContainer.innerHTML = '';
     if (snapshot.empty) {
         taxesChecklistContainer.innerHTML = '<p style="font-size: 0.9em; color: var(--text-color-light);">No hay impuestos definidos.</p>';
