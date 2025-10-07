@@ -71,7 +71,7 @@ clientSelect.addEventListener('change', async () => {
     const user = auth.currentUser;
     if (!user) return;
 
-    // Para un empleado, necesitamos encontrar a su admin primero
+    // CORRECCIÓN: Buscamos el perfil por email para obtener el adminUid
     const userProfileQuery = await db.collection('usuarios').where('email', '==', user.email).limit(1).get();
     if (userProfileQuery.empty) return;
     const adminUid = userProfileQuery.docs[0].data().adminUid;
@@ -92,6 +92,7 @@ clientSelect.addEventListener('change', async () => {
         .where('status', '==', 'activo')
         .get();
 
+
     if (proyectosSnapshot.empty) {
         projectSelect.innerHTML = '<option value="">Este cliente no tiene proyectos activos</option>';
     } else {
@@ -103,16 +104,13 @@ clientSelect.addEventListener('change', async () => {
     }
 });
 
-
-// --- FUNCIONES ---
-
 async function cargarClientesYProyectos() {
     const user = auth.currentUser;
     if (!user) return;
 
-    // Para un empleado, necesitamos encontrar a su admin primero
+    // CORRECCIÓN: Buscamos el perfil por email para obtener el adminUid
     const userProfileQuery = await db.collection('usuarios').where('email', '==', user.email).limit(1).get();
-     if (userProfileQuery.empty) {
+    if (userProfileQuery.empty) {
         console.error("Empleado no tiene perfil, no se pueden cargar clientes.");
         return;
     }
@@ -120,7 +118,7 @@ async function cargarClientesYProyectos() {
     if (!adminUid) {
         console.error("Empleado no tiene adminUid, no se pueden cargar clientes.");
         return;
-    };
+    }
 
     const empresasSnapshot = await db.collection('empresas').where('adminUid', '==', adminUid).orderBy('nombre').get();
     empresasCargadas = empresasSnapshot.docs.map(doc => ({ id: doc.id, nombre: doc.data().nombre }));
@@ -130,6 +128,7 @@ async function cargarClientesYProyectos() {
         clientSelect.innerHTML += `<option value="${empresa.id}">${empresa.nombre}</option>`;
     });
 }
+
 
 function generarFolio(userId) {
     const date = new Date();
@@ -142,6 +141,7 @@ async function cargarImpuestosParaSeleccion() {
     const user = auth.currentUser;
     if (!user) return;
 
+    // CORRECCIÓN: Buscamos el perfil por email para obtener el adminUid
     const userProfileQuery = await db.collection('usuarios').where('email', '==', user.email).limit(1).get();
     if (userProfileQuery.empty) return;
     const adminUid = userProfileQuery.docs[0].data().adminUid;
@@ -399,12 +399,8 @@ function cargarIngresos() {
         const endDate = new Date(year, month, 0, 23, 59, 59).toISOString().split('T')[0];
         query = query.where('fecha', '>=', startDate).where('fecha', '<=', endDate);
     }
-    
     query.orderBy('fecha', 'desc').onSnapshot(snapshot => {
         const ingresos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         mostrarIngresos(ingresos);
-    }, error => {
-        console.error("Error al obtener ingresos:", error);
-        alert("Error al cargar el historial. Revisa la consola (F12) por si Firebase sugiere crear un índice.");
-    });
+    }, error => console.error("Error al obtener ingresos:", error));
 }
