@@ -47,6 +47,10 @@ async function descargarRegistrosImpuesto(nombreImpuesto) {
             });
         });
 
+        if (registros.length === 0) {
+            return alert(`No se encontraron movimientos para el impuesto "${nombreImpuesto}".`);
+        }
+        
         registros.sort((a, b) => new Date(a.Fecha) - new Date(b.Fecha));
         exportToCSV(registros, `Movimientos-${nombreImpuesto.replace(/ /g, '_')}`);
 
@@ -184,6 +188,9 @@ function cargarMovimientosDeImpuestos() {
         mostrarMovimientos(movimientos);
     }, error => {
         console.error("Error al obtener movimientos:", error);
+        // Si ves este error, es probable que necesites crear un índice compuesto en Firestore.
+        // Revisa la consola (F12) para ver el enlace de creación que provee Firebase.
+        alert("Error al cargar movimientos. Revisa la consola (F12).");
     });
 }
 
