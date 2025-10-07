@@ -10,6 +10,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
+const functions = firebase.functions();
 
 const addUserForm = document.getElementById('add-user-form');
 const userListContainer = document.getElementById('user-list');
@@ -51,61 +52,59 @@ addUserForm.addEventListener('submit', async (e) => {
         return alert("Error de autenticación. Por favor, inicia sesión de nuevo.");
     }
 
+    // Deshabilitamos el botón para evitar múltiples envíos
+    const submitButton = addUserForm.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
+    submitButton.textContent = 'Procesando...';
+
     try {
-        // 1. Verificamos el plan actual del administrador
+        // 1. Verificamos el plan y el límite de colaboradores (esta lógica no cambia)
         const subRef = db.collection('suscripciones').doc(user.uid);
         const subDoc = await subRef.get();
 
         if (!subDoc.exists) {
-            return alert("No se pudo verificar tu plan de suscripción.");
+            throw new Error("No se pudo verificar tu plan de suscripción.");
         }
         const subData = subDoc.data();
         const limiteColaboradores = subData.limiteColaboradores;
 
-        // 2. Contamos los colaboradores actuales
         const colaboradoresQuery = await db.collection('usuarios')
             .where('adminUid', '==', user.uid)
             .where('rol', '==', 'empleado')
-            .get();
-        
-        const colaboradoresActuales = colaboradoresQuery.size;
+            .where('status', '==', 'activo'); // <-- Usamos el nuevo campo 'status'
+
+        const colaboradoresActuales = (await colaboradoresQuery.get()).size;
 
         if (colaboradoresActuales >= limiteColaboradores) {
-            alert(`Has alcanzado el límite de ${limiteColaboradores} colaboradores para tu plan "${subData.planNombre}". Por favor, actualiza tu plan para añadir más usuarios.`);
-            return;
+            throw new Error(`Has alcanzado el límite de ${limiteColaboradores} colaboradores para tu plan.`);
         }
 
-        const name = addUserForm['user-name'].value;
-        const email = addUserForm['user-email'].value;
-        const position = addUserForm['user-position'].value;
-        const salary = parseFloat(addUserForm['user-salary'].value);
-
-        const newEmployeeUid = prompt("Pega aquí el UID del nuevo colaborador creado en Firebase Authentication:");
-        if (!newEmployeeUid) {
-            alert("La creación fue cancelada. Debes proporcionar un UID.");
-            return;
-        }
-
-        const newUserData = {
-            nombre: name,
-            email: email,
-            cargo: position,
-            sueldoBruto: salary,
-            fechaDeIngreso: new Date(),
-            rol: 'empleado',
-            adminUid: user.uid
+        const dataToSend = {
+            nombre: addUserForm['user-name'].value,
+            email: addUserForm['user-email'].value,
+            cargo: addUserForm['user-position'].value,
+            sueldoBruto: parseFloat(addUserForm['user-salary'].value),
         };
 
-        await db.collection('usuarios').doc(newEmployeeUid).set(newUserData);
-        
-        alert(`¡Colaborador agregado exitosamente! Colaboradores en uso: ${colaboradoresActuales + 1} de ${limiteColaboradores}.`);
+        // 3. Obtenemos una referencia a nuestra función y la llamamos
+        const crearColaborador = functions.httpsCallable('crearColaborador');
+        const result = await crearColaborador(dataToSend);
+
+        // 4. Mostramos el mensaje de éxito que nos devuelve la función
+        alert(result.data.message);
         addUserForm.reset();
 
     } catch (error) {
+        // Si la función devuelve un error, lo mostramos
         console.error('Error al agregar colaborador: ', error);
-        alert("Ocurrió un error inesperado al intentar agregar al colaborador.");
+        alert("Ocurrió un error: " + error.message);
+    } finally {
+        // Volvemos a habilitar el botón
+        submitButton.disabled = false;
+        submitButton.textContent = 'Agregar Colaborador';
     }
 });
+        
 
 auth.onAuthStateChanged((user) => {
     if (user) {
