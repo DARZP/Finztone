@@ -72,8 +72,9 @@ clientSelect.addEventListener('change', async () => {
     if (!user) return;
 
     // Para un empleado, necesitamos encontrar a su admin primero
-    const userProfile = await db.collection('usuarios').doc(user.uid).get();
-    const adminUid = userProfile.data()?.adminUid;
+    const userProfileQuery = await db.collection('usuarios').where('email', '==', user.email).limit(1).get();
+    if (userProfileQuery.empty) return;
+    const adminUid = userProfileQuery.docs[0].data().adminUid;
     if (!adminUid) return;
 
     const empresaId = clientSelect.value;
@@ -110,8 +111,12 @@ async function cargarClientesYProyectos() {
     if (!user) return;
 
     // Para un empleado, necesitamos encontrar a su admin primero
-    const userProfile = await db.collection('usuarios').doc(user.uid).get();
-    const adminUid = userProfile.data()?.adminUid;
+    const userProfileQuery = await db.collection('usuarios').where('email', '==', user.email).limit(1).get();
+     if (userProfileQuery.empty) {
+        console.error("Empleado no tiene perfil, no se pueden cargar clientes.");
+        return;
+    }
+    const adminUid = userProfileQuery.docs[0].data().adminUid;
     if (!adminUid) {
         console.error("Empleado no tiene adminUid, no se pueden cargar clientes.");
         return;
@@ -136,8 +141,10 @@ function generarFolio(userId) {
 async function cargarImpuestosParaSeleccion() {
     const user = auth.currentUser;
     if (!user) return;
-    const userProfile = await db.collection('usuarios').doc(user.uid).get();
-    const adminUid = userProfile.data()?.adminUid;
+
+    const userProfileQuery = await db.collection('usuarios').where('email', '==', user.email).limit(1).get();
+    if (userProfileQuery.empty) return;
+    const adminUid = userProfileQuery.docs[0].data().adminUid;
     if (!adminUid) return;
 
     const snapshot = await db.collection('impuestos_definiciones').where('adminUid', '==', adminUid).get();
@@ -380,18 +387,30 @@ function poblarFiltrosYCategorias() {
 function cargarIngresos() {
     const user = auth.currentUser;
     if (!user) return;
-    let query = db.collection('ingresos').where('creadoPor', '==', user.uid);
-    if (categoryFilter.value && categoryFilter.value !== 'todos') {
-        query = query.where('categoria', '==', categoryFilter.value);
-    }
-    if (monthFilter.value && monthFilter.value !== 'todos') {
-        const [year, month] = monthFilter.value.split('-').map(Number);
-        const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
-        const endDate = new Date(year, month, 0, 23, 59, 59).toISOString().split('T')[0];
-        query = query.where('fecha', '>=', startDate).where('fecha', '<=', endDate);
-    }
-    query.orderBy('fecha', 'desc').onSnapshot(snapshot => {
-        const ingresos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        mostrarIngresos(ingresos);
-    }, error => console.error("Error al obtener ingresos:", error));
+
+    // Obtenemos el perfil del usuario para sacar el adminUid
+    db.collection('usuarios').where('email', '==', user.email).limit(1).get().then(userProfileQuery => {
+        if (userProfileQuery.empty) return;
+        const adminUid = userProfileQuery.docs[0].data().adminUid;
+        if (!adminUid) return;
+
+        // Construimos la consulta con los filtros de seguridad
+        let query = db.collection('ingresos')
+            .where('adminUid', '==', adminUid)
+            .where('creadorId', '==', userProfileQuery.docs[0].id);
+
+        if (categoryFilter.value && categoryFilter.value !== 'todos') {
+            query = query.where('categoria', '==', categoryFilter.value);
+        }
+        if (monthFilter.value && monthFilter.value !== 'todos') {
+            const [year, month] = monthFilter.value.split('-').map(Number);
+            const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
+            const endDate = new Date(year, month, 0, 23, 59, 59).toISOString().split('T')[0];
+            query = query.where('fecha', '>=', startDate).where('fecha', '<=', endDate);
+        }
+        query.orderBy('fecha', 'desc').onSnapshot(snapshot => {
+            const ingresos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            mostrarIngresos(ingresos);
+        }, error => console.error("Error al obtener ingresos:", error));
+    });
 }
