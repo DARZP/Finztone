@@ -10,7 +10,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
-const storage = firebase.storage(); 
+const storage = firebase.storage();
 
 // --- ELEMENTOS DEL DOM ---
 const addExpenseForm = document.getElementById('add-expense-form');
@@ -32,23 +32,35 @@ const summaryBruto = document.getElementById('summary-bruto');
 const summaryImpuestos = document.getElementById('summary-impuestos');
 const summaryNeto = document.getElementById('summary-neto');
 const formPaymentMethodSelect = document.getElementById('payment-method');
-// Nuevos elementos
-const expensePlaceInput = document.getElementById('expense-place'); 
-const clientSelect = document.getElementById('client-select');      
-const projectSelect = document.getElementById('project-select');       
+const expensePlaceInput = document.getElementById('expense-place');
+const clientSelect = document.getElementById('client-select');
+const projectSelect = document.getElementById('project-select');
 
 let empresasCargadas = [];
 let modoEdicion = false;
 let idGastoEditando = null;
+let adminUidGlobal = null;
 
 // --- LÓGICA DE LA PÁGINA ---
-auth.onAuthStateChanged((user) => {
+auth.onAuthStateChanged(async (user) => {
     if (user) {
-        cargarClientesYProyectos();
-        poblarFiltrosYCategorias();
-        cargarGastos();
-        cargarImpuestosParaSeleccion();
-        recalcularTotales();
+        try {
+            const userProfileQuery = await db.collection('usuarios').where('email', '==', user.email).limit(1).get();
+            if (userProfileQuery.empty) throw "Perfil de usuario no encontrado.";
+            
+            adminUidGlobal = userProfileQuery.docs[0].data().adminUid;
+            if (!adminUidGlobal) throw "El empleado no está vinculado a un administrador.";
+
+            cargarClientesYProyectos();
+            poblarFiltrosYCategorias();
+            cargarGastos();
+            cargarImpuestosParaSeleccion();
+            recalcularTotales();
+
+        } catch (error) {
+            console.error("Error crítico al cargar datos iniciales:", error);
+            alert("No se pudo cargar la información de la página. " + error);
+        }
     } else {
         window.location.href = 'index.html';
     }
@@ -73,6 +85,7 @@ monthFilter.addEventListener('change', cargarGastos);
 // --- LÓGICA PARA SELECTORES DE CLIENTE/PROYECTO ---
 
 async function cargarClientesYProyectos() {
+    if (!adminUidGlobal) return;
     const empresasSnapshot = await db.collection('empresas').orderBy('nombre').get();
     empresasCargadas = empresasSnapshot.docs.map(doc => ({ id: doc.id, nombre: doc.data().nombre }));
 
@@ -83,6 +96,7 @@ async function cargarClientesYProyectos() {
 }
 
 clientSelect.addEventListener('change', async () => {
+    if (!adminUidGlobal) return;
     const empresaId = clientSelect.value;
     projectSelect.innerHTML = '<option value="">Cargando...</option>';
     projectSelect.disabled = true;
@@ -115,6 +129,7 @@ function generarFolio(userId) {
 }
 
 async function cargarImpuestosParaSeleccion() {
+    if (!adminUidGlobal) return;
     const snapshot = await db.collection('impuestos_definiciones').get();
     taxesChecklistContainer.innerHTML = '';
     if (snapshot.empty) {
@@ -363,3 +378,4 @@ function cargarGastos() {
         mostrarGastos(gastos);
     }, error => console.error("Error al obtener gastos:", error));
 }
+
