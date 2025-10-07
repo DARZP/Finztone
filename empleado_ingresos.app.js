@@ -92,7 +92,6 @@ clientSelect.addEventListener('change', async () => {
         .where('status', '==', 'activo')
         .get();
 
-
     if (proyectosSnapshot.empty) {
         projectSelect.innerHTML = '<option value="">Este cliente no tiene proyectos activos</option>';
     } else {
