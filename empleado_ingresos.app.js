@@ -70,6 +70,12 @@ monthFilter.addEventListener('change', cargarIngresos);
 clientSelect.addEventListener('change', async () => {
     const user = auth.currentUser;
     if (!user) return;
+
+    // Para un empleado, necesitamos encontrar a su admin primero
+    const userProfile = await db.collection('usuarios').doc(user.uid).get();
+    const adminUid = userProfile.data()?.adminUid;
+    if (!adminUid) return;
+
     const empresaId = clientSelect.value;
     projectSelect.innerHTML = '<option value="">Cargando...</option>';
     projectSelect.disabled = true;
@@ -80,7 +86,7 @@ clientSelect.addEventListener('change', async () => {
     }
 
     const proyectosSnapshot = await db.collection('proyectos')
-        .where('adminUid', '==', user.uid) // Asegura que solo se vean proyectos del admin
+        .where('adminUid', '==', adminUid)
         .where('empresaId', '==', empresaId)
         .where('status', '==', 'activo')
         .get();
@@ -106,7 +112,10 @@ async function cargarClientesYProyectos() {
     // Para un empleado, necesitamos encontrar a su admin primero
     const userProfile = await db.collection('usuarios').doc(user.uid).get();
     const adminUid = userProfile.data()?.adminUid;
-    if (!adminUid) return;
+    if (!adminUid) {
+        console.error("Empleado no tiene adminUid, no se pueden cargar clientes.");
+        return;
+    };
 
     const empresasSnapshot = await db.collection('empresas').where('adminUid', '==', adminUid).orderBy('nombre').get();
     empresasCargadas = empresasSnapshot.docs.map(doc => ({ id: doc.id, nombre: doc.data().nombre }));
@@ -174,8 +183,26 @@ function cargarIngresoEnFormulario(ingreso) {
     addIncomeForm['income-date'].value = ingreso.fecha || '';
     formPaymentMethodSelect.value = ingreso.metodoPago || 'Efectivo';
     addIncomeForm['income-comments'].value = ingreso.comentarios || '';
-    if (ingreso.datosFactura) { /* ... */ }
-    if (ingreso.impuestos && ingreso.impuestos.length > 0) { /* ... */ }
+    if (ingreso.datosFactura) {
+        isInvoiceCheckbox.checked = true;
+        invoiceDetailsContainer.style.display = 'block';
+        document.getElementById('invoice-rfc').value = ingreso.datosFactura.rfc || '';
+        document.getElementById('invoice-folio').value = ingreso.datosFactura.folioFiscal || '';
+    } else {
+        isInvoiceCheckbox.checked = false;
+        invoiceDetailsContainer.style.display = 'none';
+    }
+    if (ingreso.impuestos && ingreso.impuestos.length > 0) {
+        addTaxesCheckbox.checked = true;
+        taxesDetailsContainer.style.display = 'block';
+        document.querySelectorAll('#taxes-checklist input[type="checkbox"]').forEach(checkbox => {
+            const impuestoData = JSON.parse(checkbox.dataset.impuesto);
+            checkbox.checked = ingreso.impuestos.some(tax => tax.id === impuestoData.id);
+        });
+    } else {
+        addTaxesCheckbox.checked = false;
+        taxesDetailsContainer.style.display = 'none';
+    }
     recalcularTotales();
     saveDraftBtn.textContent = 'Actualizar Borrador';
     sendForApprovalBtn.style.display = 'block';
@@ -285,7 +312,6 @@ async function guardarIngreso(status) {
         sendForApprovalBtn.disabled = false;
     }
 }
-
 
 function mostrarIngresos(ingresos) {
     incomeListContainer.innerHTML = '';
