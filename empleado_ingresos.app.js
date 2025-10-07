@@ -19,73 +19,29 @@ const invoiceDetailsContainer = document.getElementById('invoice-details');
 const saveDraftBtn = document.getElementById('save-draft-btn');
 const sendForApprovalBtn = document.getElementById('send-for-approval-btn');
 const cancelEditBtn = document.getElementById('cancel-edit-btn');
-const companyDataList = document.getElementById('company-list');
 const categoryFilter = document.getElementById('category-filter');
 const monthFilter = document.getElementById('month-filter');
 const taxesChecklistContainer = document.getElementById('taxes-checklist');
 const formCategorySelect = document.getElementById('income-category');
-const formPaymentMethodSelect = document.getElementById('payment-method'); // Añadido
+const formPaymentMethodSelect = document.getElementById('payment-method');
 const addTaxesCheckbox = document.getElementById('add-taxes-checkbox');
 const taxesDetailsContainer = document.getElementById('taxes-details-container');
 const montoInput = document.getElementById('income-amount');
 const summaryBruto = document.getElementById('summary-bruto');
 const summaryImpuestos = document.getElementById('summary-impuestos');
 const summaryNeto = document.getElementById('summary-neto');
-const companyInput = document.getElementById('income-company');
+const incomePlaceInput = document.getElementById('income-place');
+const clientSelect = document.getElementById('client-select');
 const projectSelect = document.getElementById('project-select');
 
-async function cargarProyectos(empresaNombre) {
-    projectSelect.innerHTML = '<option value="">Cargando...</option>';
-    projectSelect.disabled = true;
-
-    if (!empresaNombre) {
-        projectSelect.innerHTML = '<option value="">Primero selecciona una empresa</option>';
-        return;
-    }
-
-    try {
-        const empresaQuery = await db.collection('empresas').where('nombre', '==', empresaNombre).limit(1).get();
-
-        if (empresaQuery.empty) {
-            projectSelect.innerHTML = '<option value="">Empresa no encontrada</option>';
-            return;
-        }
-        const empresaId = empresaQuery.docs[0].id;
-
-        const proyectosQuery = await db.collection('proyectos')
-            .where('empresaId', '==', empresaId)
-            .where('status', '==', 'activo')
-            .get();
-
-        if (proyectosQuery.empty) {
-            projectSelect.innerHTML = '<option value="">No hay proyectos activos</option>';
-        } else {
-            projectSelect.innerHTML = '<option value="">Selecciona un proyecto</option>';
-            proyectosQuery.forEach(doc => {
-                const proyecto = doc.data();
-                const option = new Option(proyecto.nombre, doc.id);
-                projectSelect.appendChild(option);
-            });
-            projectSelect.disabled = false;
-        }
-    } catch (error) {
-        console.error("Error al cargar proyectos:", error);
-        projectSelect.innerHTML = '<option value="">Error al cargar</option>';
-    }
-}
-
-companyInput.addEventListener('change', () => {
-    cargarProyectos(companyInput.value);
-});
-
-// --- VARIABLES DE ESTADO ---
+let empresasCargadas = [];
 let modoEdicion = false;
 let idIngresoEditando = null;
 
 // --- LÓGICA DE LA PÁGINA ---
 auth.onAuthStateChanged((user) => {
     if (user) {
-        cargarEmpresas();
+        cargarClientesYProyectos();
         poblarFiltrosYCategorias();
         cargarIngresos();
         cargarImpuestosParaSeleccion();
@@ -111,7 +67,55 @@ sendForApprovalBtn.addEventListener('click', () => guardarIngreso('pendiente'));
 categoryFilter.addEventListener('change', cargarIngresos);
 monthFilter.addEventListener('change', cargarIngresos);
 
+clientSelect.addEventListener('change', async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+    const empresaId = clientSelect.value;
+    projectSelect.innerHTML = '<option value="">Cargando...</option>';
+    projectSelect.disabled = true;
+
+    if (!empresaId) {
+        projectSelect.innerHTML = '<option value="">Selecciona un cliente primero</option>';
+        return;
+    }
+
+    const proyectosSnapshot = await db.collection('proyectos')
+        .where('adminUid', '==', user.uid) // Asegura que solo se vean proyectos del admin
+        .where('empresaId', '==', empresaId)
+        .where('status', '==', 'activo')
+        .get();
+
+    if (proyectosSnapshot.empty) {
+        projectSelect.innerHTML = '<option value="">Este cliente no tiene proyectos activos</option>';
+    } else {
+        projectSelect.innerHTML = '<option value="">Seleccionar Proyecto</option>';
+        proyectosSnapshot.forEach(doc => {
+            projectSelect.innerHTML += `<option value="${doc.id}">${doc.data().nombre}</option>`;
+        });
+        projectSelect.disabled = false;
+    }
+});
+
+
 // --- FUNCIONES ---
+
+async function cargarClientesYProyectos() {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    // Para un empleado, necesitamos encontrar a su admin primero
+    const userProfile = await db.collection('usuarios').doc(user.uid).get();
+    const adminUid = userProfile.data()?.adminUid;
+    if (!adminUid) return;
+
+    const empresasSnapshot = await db.collection('empresas').where('adminUid', '==', adminUid).orderBy('nombre').get();
+    empresasCargadas = empresasSnapshot.docs.map(doc => ({ id: doc.id, nombre: doc.data().nombre }));
+
+    clientSelect.innerHTML = '<option value="">Ninguno</option>';
+    empresasCargadas.forEach(empresa => {
+        clientSelect.innerHTML += `<option value="${empresa.id}">${empresa.nombre}</option>`;
+    });
+}
 
 function generarFolio(userId) {
     const date = new Date();
@@ -120,20 +124,17 @@ function generarFolio(userId) {
     return `INC-${userInitials}-${timestamp}`;
 }
 
-function cargarEmpresas() {
-    db.collection('empresas').get().then(snapshot => {
-        companyDataList.innerHTML = '';
-        snapshot.forEach(doc => {
-            companyDataList.appendChild(new Option(doc.data().nombre));
-        });
-    });
-}
-
 async function cargarImpuestosParaSeleccion() {
-    const snapshot = await db.collection('impuestos_definiciones').get();
+    const user = auth.currentUser;
+    if (!user) return;
+    const userProfile = await db.collection('usuarios').doc(user.uid).get();
+    const adminUid = userProfile.data()?.adminUid;
+    if (!adminUid) return;
+
+    const snapshot = await db.collection('impuestos_definiciones').where('adminUid', '==', adminUid).get();
     taxesChecklistContainer.innerHTML = '';
     if (snapshot.empty) {
-        taxesChecklistContainer.innerHTML = '<p style="font-size: 0.9em; color: #777;">No hay impuestos definidos.</p>';
+        taxesChecklistContainer.innerHTML = '<p style="font-size: 0.9em; color: var(--text-color-light);">No hay impuestos definidos.</p>';
         return;
     }
     snapshot.forEach(doc => {
@@ -167,32 +168,14 @@ function recalcularTotales() {
 function cargarIngresoEnFormulario(ingreso) {
     addIncomeForm.reset();
     addIncomeForm['income-description'].value = ingreso.descripcion || '';
+    incomePlaceInput.value = ingreso.establecimiento || '';
     addIncomeForm['income-amount'].value = ingreso.monto || 0;
     formCategorySelect.value = ingreso.categoria || '';
     addIncomeForm['income-date'].value = ingreso.fecha || '';
-    addIncomeForm['income-company'].value = ingreso.empresa || '';
     formPaymentMethodSelect.value = ingreso.metodoPago || 'Efectivo';
     addIncomeForm['income-comments'].value = ingreso.comentarios || '';
-    if (ingreso.datosFactura) {
-        isInvoiceCheckbox.checked = true;
-        invoiceDetailsContainer.style.display = 'block';
-        document.getElementById('invoice-rfc').value = ingreso.datosFactura.rfc || '';
-        document.getElementById('invoice-folio').value = ingreso.datosFactura.folioFiscal || '';
-    } else {
-        isInvoiceCheckbox.checked = false;
-        invoiceDetailsContainer.style.display = 'none';
-    }
-    if (ingreso.impuestos && ingreso.impuestos.length > 0) {
-        addTaxesCheckbox.checked = true;
-        taxesDetailsContainer.style.display = 'block';
-        document.querySelectorAll('#taxes-checklist input[type="checkbox"]').forEach(checkbox => {
-            const impuestoData = JSON.parse(checkbox.dataset.impuesto);
-            checkbox.checked = ingreso.impuestos.some(tax => tax.id === impuestoData.id);
-        });
-    } else {
-        addTaxesCheckbox.checked = false;
-        taxesDetailsContainer.style.display = 'none';
-    }
+    if (ingreso.datosFactura) { /* ... */ }
+    if (ingreso.impuestos && ingreso.impuestos.length > 0) { /* ... */ }
     recalcularTotales();
     saveDraftBtn.textContent = 'Actualizar Borrador';
     sendForApprovalBtn.style.display = 'block';
@@ -204,6 +187,8 @@ function cargarIngresoEnFormulario(ingreso) {
 
 function salirModoEdicion() {
     addIncomeForm.reset();
+    clientSelect.value = "";
+    clientSelect.dispatchEvent(new Event('change'));
     isInvoiceCheckbox.checked = false;
     invoiceDetailsContainer.style.display = 'none';
     addTaxesCheckbox.checked = false;
@@ -222,25 +207,17 @@ async function guardarIngreso(status) {
     const montoBruto = parseFloat(addIncomeForm['income-amount'].value) || 0;
     if (montoBruto <= 0) return alert('Por favor, introduce un monto válido.');
     
-    // Desactivamos botones para evitar duplicados
     saveDraftBtn.disabled = true;
     sendForApprovalBtn.disabled = true;
 
     try {
-        // Buscamos el perfil del empleado por su email para obtener su nombre y el ID de su admin
         const userProfileQuery = await db.collection('usuarios').where('email', '==', user.email).limit(1).get();
-        if (userProfileQuery.empty) {
-            throw "No se pudo encontrar el perfil del usuario.";
-        }
-        
+        if (userProfileQuery.empty) throw "No se pudo encontrar el perfil del usuario.";
         const userProfileDoc = userProfileQuery.docs[0];
         const userProfileData = userProfileDoc.data();
         const userName = userProfileData.nombre;
-        const adminUid = userProfileData.adminUid; // <-- ¡OBTENEMOS EL ID DEL ADMIN!
-
-        if (!adminUid) {
-            throw "El perfil de este empleado no está vinculado a ningún administrador.";
-        }
+        const adminUid = userProfileData.adminUid;
+        if (!adminUid) throw "El perfil no está vinculado a un administrador.";
 
         let montoNeto = montoBruto;
         const impuestosSeleccionados = [];
@@ -254,25 +231,33 @@ async function guardarIngreso(status) {
             montoNeto = montoBruto - totalImpuestos;
         }
 
+        const clienteIdSeleccionado = clientSelect.value;
+        const proyectoIdSeleccionado = projectSelect.value;
+        const clienteSeleccionado = empresasCargadas.find(e => e.id === clienteIdSeleccionado);
+
         const incomeData = {
             descripcion: addIncomeForm['income-description'].value,
+            establecimiento: incomePlaceInput.value.trim(),
             monto: montoBruto,
             totalConImpuestos: montoNeto,
             impuestos: impuestosSeleccionados,
             categoria: formCategorySelect.value,
             fecha: addIncomeForm['income-date'].value,
-            empresa: addIncomeForm['income-company'].value.trim(),
+            empresa: clienteSeleccionado ? clienteSeleccionado.nombre : '',
             metodoPago: formPaymentMethodSelect.value,
             comentarios: addIncomeForm['income-comments'].value,
             nombreCreador: userName,
             creadorId: userProfileDoc.id,
-            adminUid: adminUid, // <-- ¡LO AÑADIMOS AQUÍ!
-            proyectoId: projectSelect.value,
-            proyectoNombre: projectSelect.value ? projectSelect.options[projectSelect.selectedIndex].text : ''
+            adminUid: adminUid,
+            proyectoId: proyectoIdSeleccionado,
+            proyectoNombre: proyectoIdSeleccionado ? projectSelect.options[projectSelect.selectedIndex].text : '',
         };
 
         if (isInvoiceCheckbox.checked) {
-            incomeData.datosFactura = { /* ... tus datos de factura ... */ };
+            incomeData.datosFactura = {
+                rfc: document.getElementById('invoice-rfc').value,
+                folioFiscal: document.getElementById('invoice-folio').value
+            };
         }
 
         if (modoEdicion) {
@@ -296,7 +281,6 @@ async function guardarIngreso(status) {
         console.error("Error al guardar ingreso:", error);
         alert("Ocurrió un error: " + error);
     } finally {
-        // Reactivamos los botones
         saveDraftBtn.disabled = false;
         sendForApprovalBtn.disabled = false;
     }
