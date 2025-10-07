@@ -82,19 +82,6 @@ sendForApprovalBtn.addEventListener('click', () => guardarGasto('pendiente'));
 categoryFilter.addEventListener('change', cargarGastos);
 monthFilter.addEventListener('change', cargarGastos);
 
-// --- LÓGICA PARA SELECTORES DE CLIENTE/PROYECTO ---
-
-async function cargarClientesYProyectos() {
-    if (!adminUidGlobal) return;
-    const empresasSnapshot = await db.collection('empresas').orderBy('nombre').get();
-    empresasCargadas = empresasSnapshot.docs.map(doc => ({ id: doc.id, nombre: doc.data().nombre }));
-
-    clientSelect.innerHTML = '<option value="">Ninguno</option>';
-    empresasCargadas.forEach(empresa => {
-        clientSelect.innerHTML += `<option value="${empresa.id}">${empresa.nombre}</option>`;
-    });
-}
-
 clientSelect.addEventListener('change', async () => {
     if (!adminUidGlobal) return;
     const empresaId = clientSelect.value;
@@ -106,7 +93,11 @@ clientSelect.addEventListener('change', async () => {
         return;
     }
 
-    const proyectosSnapshot = await db.collection('proyectos').where('empresaId', '==', empresaId).where('status', '==', 'activo').get();
+    const proyectosSnapshot = await db.collection('proyectos')
+        .where('adminUid', '==', adminUidGlobal)
+        .where('empresaId', '==', empresaId)
+        .where('status', '==', 'activo')
+        .get();
 
     if (proyectosSnapshot.empty) {
         projectSelect.innerHTML = '<option value="">Este cliente no tiene proyectos activos</option>';
@@ -119,7 +110,18 @@ clientSelect.addEventListener('change', async () => {
     }
 });
 
-// --- FUNCIONES PRINCIPALES ---
+// --- FUNCIONES ---
+
+async function cargarClientesYProyectos() {
+    if (!adminUidGlobal) return;
+    const empresasSnapshot = await db.collection('empresas').where('adminUid', '==', adminUidGlobal).orderBy('nombre').get();
+    empresasCargadas = empresasSnapshot.docs.map(doc => ({ id: doc.id, nombre: doc.data().nombre }));
+
+    clientSelect.innerHTML = '<option value="">Ninguno</option>';
+    empresasCargadas.forEach(empresa => {
+        clientSelect.innerHTML += `<option value="${empresa.id}">${empresa.nombre}</option>`;
+    });
+}
 
 function generarFolio(userId) {
     const date = new Date();
@@ -130,7 +132,7 @@ function generarFolio(userId) {
 
 async function cargarImpuestosParaSeleccion() {
     if (!adminUidGlobal) return;
-    const snapshot = await db.collection('impuestos_definiciones').get();
+    const snapshot = await db.collection('impuestos_definiciones').where('adminUid', '==', adminUidGlobal).get();
     taxesChecklistContainer.innerHTML = '';
     if (snapshot.empty) {
         taxesChecklistContainer.innerHTML = '<p style="font-size: 0.9em; color: var(--text-color-light);">No hay impuestos definidos.</p>';
@@ -167,21 +169,46 @@ function recalcularTotales() {
 function cargarGastoEnFormulario(gasto) {
     addExpenseForm.reset();
     addExpenseForm['expense-description'].value = gasto.descripcion || '';
-    addExpenseForm['expense-place'].value = gasto.establecimiento || '';
+    expensePlaceInput.value = gasto.establecimiento || '';
     addExpenseForm['expense-amount'].value = gasto.monto || 0;
     formCategorySelect.value = gasto.categoria || '';
     addExpenseForm['expense-date'].value = gasto.fecha || '';
     addExpenseForm['payment-method'].value = gasto.metodoPago || 'Efectivo';
     addExpenseForm['expense-comments'].value = gasto.comentarios || '';
-    
-    // Lógica para pre-seleccionar cliente y proyecto (puede ser compleja)
-    // Por ahora, lo dejamos simple para evitar errores, pero se podría mejorar
-    if (gasto.proyectoId) {
-        // ... aquí iría la lógica para cargar y seleccionar el cliente y proyecto
+
+    if (gasto.empresa) {
+        const cliente = empresasCargadas.find(e => e.nombre === gasto.empresa);
+        if (cliente) {
+            clientSelect.value = cliente.id;
+            clientSelect.dispatchEvent(new Event('change'));
+            setTimeout(() => {
+                projectSelect.value = gasto.proyectoId || "";
+            }, 500);
+        }
     }
 
-    if (gasto.datosFactura) { /* ... */ }
-    if (gasto.impuestos && gasto.impuestos.length > 0) { /* ... */ }
+    if (gasto.impuestos && gasto.impuestos.length > 0) {
+        addTaxesCheckbox.checked = true;
+        taxesDetailsContainer.style.display = 'block';
+        const idsDeImpuestosDelGasto = gasto.impuestos.map(tax => tax.id);
+        document.querySelectorAll('#taxes-checklist input[type="checkbox"]').forEach(checkbox => {
+            const impuestoData = JSON.parse(checkbox.dataset.impuesto);
+            checkbox.checked = idsDeImpuestosDelGasto.includes(impuestoData.id);
+        });
+    } else {
+        addTaxesCheckbox.checked = false;
+        taxesDetailsContainer.style.display = 'none';
+    }
+    
+    if (gasto.datosFactura) {
+        isInvoiceCheckbox.checked = true;
+        invoiceDetailsContainer.style.display = 'block';
+        document.getElementById('invoice-rfc').value = gasto.datosFactura.rfc || '';
+        document.getElementById('invoice-folio').value = gasto.datosFactura.folioFiscal || '';
+    } else {
+        isInvoiceCheckbox.checked = false;
+        invoiceDetailsContainer.style.display = 'none';
+    }
 
     recalcularTotales();
     saveDraftBtn.textContent = 'Actualizar Borrador';
@@ -210,7 +237,9 @@ function salirModoEdicion() {
 
 async function guardarGasto(status) {
     const user = auth.currentUser;
-    if (!user) return;
+    if (!user || !adminUidGlobal) {
+        return alert("Error de autenticación. No se pudo identificar al administrador.");
+    }
     const montoBruto = parseFloat(montoInput.value) || 0;
     if (montoBruto <= 0) return alert('Por favor, introduce un monto válido.');
 
@@ -231,10 +260,7 @@ async function guardarGasto(status) {
         const userProfileQuery = await db.collection('usuarios').where('email', '==', user.email).limit(1).get();
         if (userProfileQuery.empty) throw "No se pudo encontrar el perfil del usuario.";
         const userProfileDoc = userProfileQuery.docs[0];
-        const userProfileData = userProfileDoc.data();
-        const userName = userProfileData.nombre;
-        const adminUid = userProfileData.adminUid;
-        if (!adminUid) throw "El perfil de este empleado no está vinculado a ningún administrador.";
+        const userName = userProfileDoc.data().nombre;
 
         let montoNeto = montoBruto;
         const impuestosSeleccionados = [];
@@ -267,7 +293,7 @@ async function guardarGasto(status) {
             comentarios: addExpenseForm['expense-comments'].value,
             nombreCreador: userName,
             creadorId: userProfileDoc.id,
-            adminUid: adminUid,
+            adminUid: adminUidGlobal,
             comprobanteURL: comprobanteURL,
         };
         
@@ -280,7 +306,7 @@ async function guardarGasto(status) {
 
         if (modoEdicion) {
             await db.collection('gastos').doc(idGastoEditando).update({ ...expenseData, status: status });
-            alert(status === 'borrador' ? '¡Borrador actualizado!' : '¡Gasto enviado!');
+            alert(status === 'borrador' ? '¡Borrador actualizado!' : '¡Gasto enviado para aprobación!');
         } else {
             await db.collection('gastos').add({
                 ...expenseData,
@@ -290,7 +316,7 @@ async function guardarGasto(status) {
                 fechaDeCreacion: new Date(),
                 status: status
             });
-            alert(status === 'borrador' ? '¡Borrador guardado!' : '¡Gasto enviado!');
+            alert(status === 'borrador' ? '¡Borrador guardado!' : '¡Gasto enviado para aprobación!');
         }
         
         salirModoEdicion();
