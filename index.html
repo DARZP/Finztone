@@ -31,15 +31,25 @@
         
         <div class="login-wrapper">
             <div class="login-box">
-                <div class="tabs">
-                    <button class="tab-link active" onclick="openTab(event, 'Admin')">Administrador</button>
-                    <button class="tab-link" onclick="openTab(event, 'Employee')">Colaborador</button>
-                    <button class="tab-link" onclick="openTab(event, 'Personal')">Personal</button>
-                </div>
-                <div id="Admin" class="tab-content"><form id="admin-login-form"><div class="input-group"><input type="email" id="admin-email" placeholder="Correo de Administrador" required></div><div class="input-group"><input type="password" id="admin-password" placeholder="Contraseña" required></div><button type="submit" class="btn-primary">Acceder</button><a href="#" class="forgot-password">¿Olvidaste tu contraseña?</a></form></div>
-                <div id="Employee" class="tab-content"><form id="employee-login-form"><div class="input-group"><input type="email" id="employee-email" placeholder="Correo de Empleado" required></div><div class="input-group"><input type="password" id="employee-password" placeholder="Contraseña" required></div><button type="submit" class="btn-primary">Acceder</button><a href="#" class="forgot-password">¿Olvidaste tu contraseña?</a></form></div>
-                <div id="Personal" class="tab-content"><form id="personal-login-form"><div class="input-group"><input type="email" id="personal-email" placeholder="Tu Correo" required></div><div class="input-group"><input type="password" id="personal-password" placeholder="Contraseña" required></div><button type="submit" class="btn-primary">Acceder</button><a href="registro.html" class="signup-link">¿No tienes cuenta? Regístrate</a>
-                </form></div>
+                <h2 style="font-weight: 600; color: white; margin-bottom: 25px;">Iniciar Sesión</h2>
+    
+                <form id="admin-login-form">
+                    <div class="input-group">
+                        <input type="email" id="admin-email" placeholder="Correo Electrónico" required> 
+                    </div>  
+                    <div class="input-group">
+                        <input type="password" id="admin-password" placeholder="Contraseña" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Acceder</button>
+                    <a href="#" class="forgot-password">¿Olvidaste tu contraseña?</a>
+                </form>
+    
+                <hr style="border-color: rgba(255,255,255,0.1); margin: 25px 0;">
+    
+                <p style="text-align: center; font-size: 0.9em; color: #cbd5e1;">
+                    ¿Primera vez en FINZTONE? 
+                    <a href="registro.html" class="signup-link" style="font-weight: 600;">Crea tu cuenta aquí.</a>
+                </p>
             </div>
         </div>
     </section>
@@ -100,6 +110,7 @@
     <script src="app.js"></script>
 </body>
 </html>
+
 
 
 
