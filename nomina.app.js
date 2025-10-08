@@ -208,7 +208,7 @@ function poblarFiltroDePeriodos() {
 // Carga los datos de usuarios y pagos para un período específico
 function cargarDatosNomina(user, periodo) {
     // --- CORRECCIÓN DE SEGURIDAD ---
-    db.collection('usuarios').where('adminUid', '==', user.uid).where('rol', '==', 'empleado').orderBy('nombre').get().then(usersSnapshot => {
+    db.collection('usuarios').where('adminUid', '==', user.uid).where('rol', '==', 'empleado').where('status', '==', 'activo').orderBy('nombre').get().then(usersSnapshot => {
         listaDeUsuarios = [];
         usersSnapshot.forEach(doc => listaDeUsuarios.push({ id: doc.id, ...doc.data() }));
 
