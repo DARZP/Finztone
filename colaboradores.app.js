@@ -23,25 +23,73 @@ function mostrarUsuarios(usuarios) {
     }
 
     usuarios.forEach(usuario => {
-        const userElement = document.createElement('a');
-        userElement.href = `perfil_empleado.html?id=${usuario.id}`; 
+        const userElement = document.createElement('div'); // Cambiado de <a> a <div>
         userElement.classList.add('user-item');
-        
+        userElement.dataset.userId = usuario.id; // Guardamos el ID del usuario aquí
+
         const sueldoFormateado = (usuario.sueldoBruto || 0).toLocaleString('es-MX', {
             style: 'currency',
             currency: 'MXN'
         });
 
+        // --- LÓGICA NUEVA PARA EL BOTÓN ---
+        const esActivo = usuario.status !== 'inactivo'; // Asumimos 'activo' si no es 'inactivo'
+        const botonTexto = esActivo ? 'Desactivar' : 'Activar';
+        const botonClass = esActivo ? 'btn-reject' : 'btn-approve'; // Reusamos los colores de los botones
+        
         userElement.innerHTML = `
-            <div class="user-info">
-                <div class="user-name">${usuario.nombre}</div>
-                <div class="user-details">${usuario.cargo || 'Sin cargo'} - ${usuario.email}</div>
-            </div>
-            <div class="user-salary">${sueldoFormateado}</div>
+            <a href="perfil_empleado.html?id=${usuario.id}" class="user-info-link" style="text-decoration: none; color: inherit; flex-grow: 1;">
+                <div class="user-info">
+                    <div class="user-name">${usuario.nombre}</div>
+                    <div class="user-details">${usuario.cargo || 'Sin cargo'} - ${usuario.email}</div>
+                </div>
+                <div class="user-salary">${sueldoFormateado}</div>
+            </a>
+            <button class="btn ${botonClass} status-btn" style="padding: 8px 16px; font-size: 0.9em;">
+                ${botonTexto}
+            </button>
         `;
         userListContainer.appendChild(userElement);
     });
 }
+
+userListContainer.addEventListener('click', async (e) => {
+    // Solo reaccionamos si se hizo clic en un botón con la clase 'status-btn'
+    if (!e.target.classList.contains('status-btn')) {
+        return;
+    }
+
+    const boton = e.target;
+    const userItem = boton.closest('.user-item');
+    const userId = userItem.dataset.userId;
+    
+    // Determinamos cuál será el nuevo estado
+    const esActivoActualmente = boton.classList.contains('btn-reject');
+    const nuevoEstado = esActivoActualmente ? 'inactivo' : 'activo';
+
+    if (!confirm(`¿Estás seguro de que deseas ${boton.textContent.toLowerCase()} a este colaborador?`)) {
+        return;
+    }
+
+    boton.disabled = true;
+    boton.textContent = '...';
+
+    try {
+        // Obtenemos una referencia a nuestra nueva función y la llamamos
+        const actualizarEstado = functions.httpsCallable('actualizarEstadoColaborador');
+        const result = await actualizarEstado({ userId: userId, nuevoEstado: nuevoEstado });
+
+        alert(result.data.message);
+        // La lista se refrescará automáticamente gracias a onSnapshot
+
+    } catch (error) {
+        console.error("Error al actualizar estado:", error);
+        alert("Error: " + error.message);
+        // Revertimos el botón si hay un error
+        boton.disabled = false;
+        boton.textContent = esActivoActualmente ? 'Desactivar' : 'Activar';
+    }
+});
 
 // --- LÓGICA PARA AGREGAR UN NUEVO COLABORADOR ---
 
