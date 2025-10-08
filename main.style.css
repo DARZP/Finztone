@@ -887,3 +887,32 @@ tbody tr:hover {
 .item-details-view h4 { margin-top: 15px; margin-bottom: 10px; color: var(--primary-color); }
 .tax-breakdown { color: #aeb9c5; }
 .tax-line { display: flex; justify-content: space-between; padding: 4px 0; }
+
+/* --- AJUSTES PARA BOTÓN DE ESTADO DE COLABORADOR --- */
+
+/* 1. Hacemos que la información del usuario (el enlace) ocupe todo el espacio sobrante */
+.user-item .user-info-link {
+    flex-grow: 1;
+}
+
+/* 2. El botón ahora tendrá un tamaño más pequeño y no se estirará */
+.user-item .status-btn {
+    flex-shrink: 0; /* Evita que el botón se encoja si no hay espacio */
+    width: 120px;   /* Le damos un ancho fijo para que todos se vean iguales */
+    margin-left: 20px; /* Añadimos un pequeño espacio a su izquierda */
+}
+
+/* 3. En la vista de MÓVIL, evitamos que el botón ocupe el 100% del ancho */
+@media (max-width: 768px) {
+    .user-item {
+        /* Reajustamos la dirección para que en móvil esté el botón a la derecha */
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .user-item .status-btn {
+        width: auto; /* Dejamos que el ancho se ajuste al texto */
+        padding: 6px 12px;
+        font-size: 0.8em;
+    }
+}
