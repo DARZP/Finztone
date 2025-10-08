@@ -236,27 +236,57 @@ function salirModoEdicion() {
 }
 
 async function guardarGasto(status) {
+    // --- 1. VALIDACIONES INICIALES (no cambian) ---
     const user = auth.currentUser;
     if (!user || !adminUidGlobal) {
         return alert("Error de autenticación. No se pudo identificar al administrador.");
     }
     const montoBruto = parseFloat(montoInput.value) || 0;
-    if (montoBruto <= 0) return alert('Por favor, introduce un monto válido.');
+    if (montoBruto <= 0) {
+        return alert('Por favor, introduce un monto válido.');
+    }
 
+    // --- 2. DESHABILITAR BOTONES (no cambia) ---
     saveDraftBtn.disabled = true;
     sendForApprovalBtn.disabled = true;
+    sendForApprovalBtn.textContent = 'Enviando...';
 
     try {
+        // --- 3. LÓGICA DE SUBIDA DE ARCHIVO (LA PARTE NUEVA) ---
         let comprobanteURL = '';
         const file = receiptFileInput.files[0];
+
         if (file) {
-            alert('Subiendo archivo, por favor espera...');
-            const filePath = `comprobantes/${user.uid}/${Date.now()}-${file.name}`;
-            const fileRef = storage.ref(filePath);
-            await fileRef.put(file);
-            comprobanteURL = await fileRef.getDownloadURL();
+            alert('Preparando subida segura del archivo...');
+
+            // a) Llamamos a nuestra Cloud Function para obtener la URL firmada ("el pase de acceso")
+            const generarUrl = functions.httpsCallable('generarUrlDeSubida');
+            const urlResult = await generarUrl({ 
+                fileName: file.name, 
+                contentType: file.type 
+            });
+            
+            const { uploadUrl, filePath } = urlResult.data;
+
+            // b) Usamos esa URL especial para subir el archivo con 'fetch'
+            const uploadResponse = await fetch(uploadUrl, {
+                method: 'PUT',
+                headers: { 'Content-Type': file.type },
+                body: file
+            });
+
+            if (!uploadResponse.ok) {
+                // Si la subida a la URL falla, lanzamos un error
+                throw new Error('La subida del archivo a Cloud Storage falló.');
+            }
+
+            // c) Construimos la URL pública y permanente del archivo para guardarla en Firestore
+            const bucketName = "finztone-app.firebasestorage.app"; // Tu nombre de bucket correcto
+            comprobanteURL = `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(filePath)}?alt=media`;
+            console.log("Archivo subido exitosamente. URL pública:", comprobanteURL);
         }
 
+        // --- 4. RECOPILACIÓN DE DATOS DEL FORMULARIO (lógica que ya teníamos) ---
         const userProfileQuery = await db.collection('usuarios').where('email', '==', user.email).limit(1).get();
         if (userProfileQuery.empty) throw "No se pudo encontrar el perfil del usuario.";
         const userProfileDoc = userProfileQuery.docs[0];
@@ -294,7 +324,7 @@ async function guardarGasto(status) {
             nombreCreador: userName,
             creadorId: userProfileDoc.id,
             adminUid: adminUidGlobal,
-            comprobanteURL: comprobanteURL,
+            comprobanteURL: comprobanteURL, // ¡Aquí guardamos la URL del archivo!
         };
         
         if (isInvoiceCheckbox.checked) {
@@ -304,7 +334,12 @@ async function guardarGasto(status) {
             };
         }
 
+        // --- 5. GUARDAR EN FIRESTORE (no cambia, pero ahora incluye la URL) ---
         if (modoEdicion) {
+            if (!comprobanteURL && idGastoEditando) {
+                const docActual = await db.collection('gastos').doc(idGastoEditando).get();
+                expenseData.comprobanteURL = docActual.data().comprobanteURL || '';
+            }
             await db.collection('gastos').doc(idGastoEditando).update({ ...expenseData, status: status });
             alert(status === 'borrador' ? '¡Borrador actualizado!' : '¡Gasto enviado para aprobación!');
         } else {
@@ -320,12 +355,15 @@ async function guardarGasto(status) {
         }
         
         salirModoEdicion();
+
     } catch (error) {
         console.error("Error al guardar gasto: ", error);
-        alert("Ocurrió un error. " + error);
+        alert("Ocurrió un error: " + error.message);
     } finally {
+        // --- 6. REHABILITAR BOTONES (no cambia) ---
         saveDraftBtn.disabled = false;
         sendForApprovalBtn.disabled = false;
+        sendForApprovalBtn.textContent = 'Enviar para Aprobación';
     }
 }
     
@@ -404,4 +442,5 @@ function cargarGastos() {
         mostrarGastos(gastos);
     }, error => console.error("Error al obtener gastos:", error));
 }
+
 
