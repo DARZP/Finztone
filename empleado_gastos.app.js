@@ -11,7 +11,7 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 const storage = firebase.storage();
-const functions = firebase.functions('us-central1');
+const functions = firebase.app().functions('us-central1');
 
 // --- ELEMENTOS DEL DOM ---
 const addExpenseForm = document.getElementById('add-expense-form');
@@ -443,6 +443,7 @@ function cargarGastos() {
         mostrarGastos(gastos);
     }, error => console.error("Error al obtener gastos:", error));
 }
+
 
 
 
