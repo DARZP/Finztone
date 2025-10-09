@@ -281,8 +281,9 @@ async function guardarGasto(status) {
             }
 
             // c) Guardamos la URL de descarga permanente que nos devolvió la función
-            comprobanteURL = downloadUrl;
-            console.log("Archivo subido exitosamente. URL de descarga:", comprobanteURL);
+            const fileRef = firebase.storage().ref(filePath);
+            comprobanteURL = await fileRef.getDownloadURL();
+            console.log("Archivo subido. URL de descarga obtenida:", comprobanteURL);
         }
 
         // --- 4. RECOPILACIÓN DE DATOS DEL FORMULARIO ---
@@ -441,6 +442,7 @@ function cargarGastos() {
         mostrarGastos(gastos);
     }, error => console.error("Error al obtener gastos:", error));
 }
+
 
 
 
