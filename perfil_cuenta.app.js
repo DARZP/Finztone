@@ -189,7 +189,7 @@ function mostrarMovimientos(movimientos) {
 
     movimientos.forEach(mov => {
         const itemElement = document.createElement('div');
-        itemElement.classList.add('activity-feed-item'); // Reutilizamos un estilo que ya tenemos
+        itemElement.classList.add('activity-feed-item'); 
 
         const esGasto = mov.tipoMovimiento !== 'ingreso';
         const signo = esGasto ? '-' : '+';
@@ -197,10 +197,17 @@ function mostrarMovimientos(movimientos) {
 
         const monto = mov.totalConImpuestos || mov.monto || mov.montoDescontado;
         const fecha = mov.fechaDePago ? mov.fechaDePago.toDate() : new Date(mov.fecha);
+        
+        // --- LÓGICA NUEVA PARA EL ICONO DEL COMPROBANTE ---
+        const iconoComprobante = mov.comprobanteURL 
+            ? `<a href="${mov.comprobanteURL}" target="_blank" title="Ver comprobante" style="text-decoration: none; font-size: 1.2em; margin-left: 10px;">📎</a>` 
+            : '';
 
         itemElement.innerHTML = `
             <div class="item-info">
-                <span class="item-description">${mov.descripcion || `Pago de nómina a ${mov.userName}`}</span>
+                <span class="item-description">
+                    ${mov.descripcion || `Pago de nómina a ${mov.userName}`}
+                    ${iconoComprobante} </span>
                 <span class="item-details">${fecha.toLocaleDateString('es-ES')} - por ${mov.nombreCreador || 'Sistema'}</span>
             </div>
             <span class="item-amount" style="${colorMonto}">${signo}$${(monto || 0).toLocaleString('es-MX')}</span>
