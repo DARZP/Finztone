@@ -299,3 +299,23 @@ gastosCategoryFilter.addEventListener('change', cargarGastosPendientes);
 gastosUserFilter.addEventListener('change', cargarGastosPendientes);
 ingresosCategoryFilter.addEventListener('change', cargarIngresosPendientes);
 ingresosUserFilter.addEventListener('change', cargarIngresosPendientes);
+
+// --- LÓGICA PARA CONTROLAR LAS PESTAÑAS ---
+
+// 1. Obtenemos los botones por su nuevo ID
+const tabGastosBtn = document.getElementById('tab-gastos-btn');
+const tabIngresosBtn = document.getElementById('tab-ingresos-btn');
+
+// 2. Añadimos los "event listeners"
+tabGastosBtn.addEventListener('click', (event) => {
+    openTab(event, 'Gastos');
+});
+
+tabIngresosBtn.addEventListener('click', (event) => {
+    openTab(event, 'Ingresos');
+});
+
+// 3. Simular un clic en la primera pestaña al cargar la página para que se muestre
+document.addEventListener('DOMContentLoaded', () => {
+    tabGastosBtn.click();
+});
