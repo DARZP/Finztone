@@ -237,7 +237,7 @@ function salirModoEdicion() {
 }
 
 async function guardarGasto(status) {
-    // --- 1. VALIDACIONES INICIALES (no cambian) ---
+    // --- 1. VALIDACIONES INICIALES ---
     const user = auth.currentUser;
     if (!user || !adminUidGlobal) {
         return alert("Error de autenticación. No se pudo identificar al administrador.");
@@ -247,29 +247,29 @@ async function guardarGasto(status) {
         return alert('Por favor, introduce un monto válido.');
     }
 
-    // --- 2. DESHABILITAR BOTONES (no cambia) ---
+    // --- 2. DESHABILITAR BOTONES ---
     saveDraftBtn.disabled = true;
     sendForApprovalBtn.disabled = true;
     sendForApprovalBtn.textContent = 'Enviando...';
 
     try {
-        // --- 3. LÓGICA DE SUBIDA DE ARCHIVO (LA PARTE NUEVA) ---
+        // --- 3. LÓGICA DE SUBIDA DE ARCHIVO (MÉTODO PROXY) ---
         let comprobanteURL = '';
         const file = receiptFileInput.files[0];
 
         if (file) {
             alert('Preparando subida segura del archivo...');
 
-            // a) Llamamos a nuestra Cloud Function para obtener la URL firmada ("el pase de acceso")
+            // a) Llamamos a nuestra Cloud Function para obtener las URLs seguras
             const generarUrl = functions.httpsCallable('generarUrlDeSubida');
             const urlResult = await generarUrl({ 
                 fileName: file.name, 
                 contentType: file.type 
             });
             
-            const { uploadUrl, filePath } = urlResult.data;
+            const { uploadUrl, downloadUrl } = urlResult.data;
 
-            // b) Usamos esa URL especial para subir el archivo con 'fetch'
+            // b) Usamos la URL de subida especial para subir el archivo con 'fetch'
             const uploadResponse = await fetch(uploadUrl, {
                 method: 'PUT',
                 headers: { 'Content-Type': file.type },
@@ -277,17 +277,15 @@ async function guardarGasto(status) {
             });
 
             if (!uploadResponse.ok) {
-                // Si la subida a la URL falla, lanzamos un error
                 throw new Error('La subida del archivo a Cloud Storage falló.');
             }
 
-            // c) Construimos la URL pública y permanente del archivo para guardarla en Firestore
-            const bucketName = "finztone-app.firebasestorage.app"; // Tu nombre de bucket correcto
-            comprobanteURL = `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(filePath)}?alt=media`;
-            console.log("Archivo subido exitosamente. URL pública:", comprobanteURL);
+            // c) Guardamos la URL de descarga permanente que nos devolvió la función
+            comprobanteURL = downloadUrl;
+            console.log("Archivo subido exitosamente. URL de descarga:", comprobanteURL);
         }
 
-        // --- 4. RECOPILACIÓN DE DATOS DEL FORMULARIO (lógica que ya teníamos) ---
+        // --- 4. RECOPILACIÓN DE DATOS DEL FORMULARIO ---
         const userProfileQuery = await db.collection('usuarios').where('email', '==', user.email).limit(1).get();
         if (userProfileQuery.empty) throw "No se pudo encontrar el perfil del usuario.";
         const userProfileDoc = userProfileQuery.docs[0];
@@ -325,7 +323,7 @@ async function guardarGasto(status) {
             nombreCreador: userName,
             creadorId: userProfileDoc.id,
             adminUid: adminUidGlobal,
-            comprobanteURL: comprobanteURL, // ¡Aquí guardamos la URL del archivo!
+            comprobanteURL: comprobanteURL,
         };
         
         if (isInvoiceCheckbox.checked) {
@@ -335,7 +333,7 @@ async function guardarGasto(status) {
             };
         }
 
-        // --- 5. GUARDAR EN FIRESTORE (no cambia, pero ahora incluye la URL) ---
+        // --- 5. GUARDAR EN FIRESTORE ---
         if (modoEdicion) {
             if (!comprobanteURL && idGastoEditando) {
                 const docActual = await db.collection('gastos').doc(idGastoEditando).get();
@@ -361,7 +359,7 @@ async function guardarGasto(status) {
         console.error("Error al guardar gasto: ", error);
         alert("Ocurrió un error: " + error.message);
     } finally {
-        // --- 6. REHABILITAR BOTONES (no cambia) ---
+        // --- 6. REHABILITAR BOTONES ---
         saveDraftBtn.disabled = false;
         sendForApprovalBtn.disabled = false;
         sendForApprovalBtn.textContent = 'Enviar para Aprobación';
@@ -443,6 +441,7 @@ function cargarGastos() {
         mostrarGastos(gastos);
     }, error => console.error("Error al obtener gastos:", error));
 }
+
 
 
 
