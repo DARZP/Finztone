@@ -229,6 +229,7 @@ function mostrarGastosPendientes(gastos) {
                 <p><strong>Empresa:</strong> ${gasto.empresa || 'N/A'}</p>
                 <p><strong>Comentarios:</strong> ${gasto.comentarios || 'Ninguno'}</p>
                 ${taxDetailsHTML}
+                ${gasto.comprobanteURL ? `<p><strong>Comprobante:</strong> <a href="${gasto.comprobanteURL}" target="_blank" class="link">Ver Archivo Adjunto</a></p>` : ''}
             </div>`;
         pendingGastosContainer.appendChild(itemElement);
     });
@@ -275,6 +276,7 @@ function mostrarIngresosPendientes(ingresos) {
                 <p><strong>Empresa:</strong> ${ingreso.empresa || 'N/A'}</p>
                 <p><strong>Comentarios:</strong> ${ingreso.comentarios || 'Ninguno'}</p>
                 ${taxDetailsHTML}
+                ${ingreso.comprobanteURL ? `<p><strong>Comprobante:</strong> <a href="${ingreso.comprobanteURL}" target="_blank" class="link">Ver Archivo Adjunto</a></p>` : ''}
             </div>`;
         pendingIngresosContainer.appendChild(itemElement);
     });
