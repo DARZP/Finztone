@@ -1,17 +1,4 @@
-
-const firebaseConfig = {
-  apiKey: "AIzaSyA4zRiQnr2PiG1zQc_k-Of9CmGQQSkVQ84", // Tu API Key está bien
-  authDomain: "finztone-app.firebaseapp.com",
-  projectId: "finztone-app",
-  storageBucket: "finztone-app.appspot.com", // Corregí un pequeño error aquí, era .appspot.com
-  messagingSenderId: "95145879307",
-  appId: "1:95145879307:web:e10017a75edf32f1fde40e",
-  measurementId: "G-T8KMJXNSTP"
-};
-
-// Inicializamos Firebase
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
+import { auth, db } from './firebase-init.js';
 
 // ---- PROTECCIÓN DE LA PÁGINA Y LÓGICA DEL DASHBOARD ----
 
