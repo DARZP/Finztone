@@ -236,18 +236,17 @@ function salirModoEdicion() {
     idGastoEditando = null;
 }
 
+// Esta es la versión final y correcta de guardarGasto
 async function guardarGasto(status) {
-    // --- Validaciones iniciales ---
     const user = auth.currentUser;
     if (!user || !adminUidGlobal) {
         return alert("Error de autenticación.");
     }
     const montoBruto = parseFloat(montoInput.value) || 0;
-    if (montoBruto <= 0 && status !== 'borrador') { // Permite borradores con monto 0
+    if (montoBruto <= 0 && status !== 'borrador') {
         return alert('Por favor, introduce un monto válido.');
     }
 
-    // --- Deshabilitar botones ---
     saveDraftBtn.disabled = true;
     sendForApprovalBtn.disabled = true;
     sendForApprovalBtn.textContent = 'Enviando...';
@@ -256,18 +255,19 @@ async function guardarGasto(status) {
         let comprobanteURL = '';
         const file = receiptFileInput.files[0];
 
-        // --- LÓGICA DE SUBIDA (CORREGIDA) ---
         if (file) {
             alert('Subiendo archivo...');
-
-            const generarUrl = functions.httpsCallable('generarUrlDeSubida');
-            const urlResult = await generarUrl({
-                fileName: file.name,
-                contentType: file.type
-            });
             
+            // 1. Llamamos a la función para obtener la URL de subida y la ruta del archivo
+            const generarUrl = functions.httpsCallable('generarUrlDeSubida');
+            const urlResult = await generarUrl({ fileName: file.name, contentType: file.type });
             const { uploadUrl, filePath } = urlResult.data;
 
+            if (!filePath) {
+                throw new Error("La Cloud Function no devolvió la ruta del archivo (filePath).");
+            }
+
+            // 2. Subimos el archivo a la URL de subida
             const uploadResponse = await fetch(uploadUrl, {
                 method: 'PUT',
                 headers: { 'Content-Type': file.type },
@@ -278,17 +278,18 @@ async function guardarGasto(status) {
                 throw new Error('La subida del archivo a Cloud Storage falló.');
             }
             
-            // La corrección clave: Pedimos la URL de descarga final.
+            // 3. AHORA SÍ: Usamos el filePath devuelto para obtener la URL de descarga final
             const fileRef = firebase.storage().ref(filePath);
             comprobanteURL = await fileRef.getDownloadURL();
         }
 
-        // --- Recopilación de datos (sin cambios) ---
+        // --- El resto de la función para guardar en Firestore no cambia ---
         const userProfileQuery = await db.collection('usuarios').where('email', '==', user.email).limit(1).get();
         if (userProfileQuery.empty) throw "No se pudo encontrar el perfil del usuario.";
         const userProfileDoc = userProfileQuery.docs[0];
         const userName = userProfileDoc.data().nombre;
 
+        // ... (El resto del código que recopila los datos del formulario no cambia) ...
         let montoNeto = montoBruto;
         const impuestosSeleccionados = [];
         if (addTaxesCheckbox.checked) {
@@ -300,11 +301,9 @@ async function guardarGasto(status) {
             });
             montoNeto = montoBruto + totalImpuestos;
         }
-        
         const clienteIdSeleccionado = clientSelect.value;
         const proyectoIdSeleccionado = projectSelect.value;
         const clienteSeleccionado = empresasCargadas.find(e => e.id === clienteIdSeleccionado);
-
         const expenseData = {
             descripcion: addExpenseForm['expense-description'].value,
             establecimiento: expensePlaceInput.value.trim(),
@@ -323,14 +322,12 @@ async function guardarGasto(status) {
             adminUid: adminUidGlobal,
             comprobanteURL: comprobanteURL, 
         };
-        
         if (isInvoiceCheckbox.checked) {
             expenseData.datosFactura = {
                 rfc: document.getElementById('invoice-rfc').value,
                 folioFiscal: document.getElementById('invoice-folio').value
             };
         }
-
         if (modoEdicion) {
             if (!comprobanteURL && idGastoEditando) {
                 const docActual = await db.collection('gastos').doc(idGastoEditando).get();
@@ -349,14 +346,12 @@ async function guardarGasto(status) {
             });
             alert(status === 'borrador' ? '¡Borrador guardado!' : '¡Gasto enviado para aprobación!');
         }
-        
         salirModoEdicion();
 
     } catch (error) {
         console.error("Error al guardar gasto: ", error);
         alert("Ocurrió un error: " + error.message);
     } finally {
-        // --- Rehabilitar botones ---
         saveDraftBtn.disabled = false;
         sendForApprovalBtn.disabled = false;
         sendForApprovalBtn.textContent = 'Enviar para Aprobación';
@@ -438,6 +433,7 @@ function cargarGastos() {
         mostrarGastos(gastos);
     }, error => console.error("Error al obtener gastos:", error));
 }
+
 
 
 
