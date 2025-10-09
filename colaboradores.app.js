@@ -1,16 +1,4 @@
-const firebaseConfig = {
-    apiKey: "AIzaSyA4zRiQnr2PiG1zQc_k-Of9CmGQQSkVQ84",
-    authDomain: "finztone-app.firebaseapp.com",
-    projectId: "finztone-app",
-    storageBucket: "finztone-app.appspot.com",
-    messagingSenderId: "95145879307",
-    appId: "1:95145879307:web:e10017a75edf32f1fde40e",
-    measurementId: "G-T8KMJXNSTP"
-};
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
-const functions = firebase.app().functions('us-central1');
+import { auth, db, functions } from './firebase-init.js';
 
 const addUserForm = document.getElementById('add-user-form');
 const userListContainer = document.getElementById('user-list');
