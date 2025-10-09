@@ -1,4 +1,4 @@
-import { auth, db } from './firebase-init.js';
+import { auth, db, functions, storage } from './firebase-init.js';
 
 // --- ELEMENTOS DEL DOM ---
 const addExpenseForm = document.getElementById('add-expense-form');
@@ -18,6 +18,7 @@ const paymentMethodSelect = document.getElementById('payment-method');
 const expensePlaceInput = document.getElementById('expense-place');
 const clientSelect = document.getElementById('client-select');
 const projectSelect = document.getElementById('project-select');
+const receiptFileInput = document.getElementById('receipt-file');
 
 let todasLasCuentas = [];
 let empresasCargadas = [];
@@ -174,63 +175,87 @@ async function guardarGastoAdmin(status) {
     const montoBruto = parseFloat(document.getElementById('expense-amount').value) || 0;
     if (montoBruto <= 0) return alert('Por favor, introduce un monto válido.');
 
-    let montoNeto = montoBruto;
-    const impuestosSeleccionados = [];
-    if (addTaxesCheckbox.checked) {
-        let totalImpuestos = 0;
-        document.querySelectorAll('#taxes-checklist input[type="checkbox"]:checked').forEach(checkbox => {
-            const impuesto = JSON.parse(checkbox.dataset.impuesto);
-            impuestosSeleccionados.push(impuesto);
-            totalImpuestos += impuesto.tipo === 'porcentaje' ? (montoBruto * impuesto.valor) / 100 : impuesto.valor;
-        });
-        montoNeto = montoBruto + totalImpuestos;
-    }
-    
-    const clienteIdSeleccionado = clientSelect.value;
-    const proyectoIdSeleccionado = projectSelect.value;
-    const clienteSeleccionado = empresasCargadas.find(e => e.id === clienteIdSeleccionado);
+    try {
+        // --- LÓGICA DE SUBIDA DE ARCHIVO ---
+        let comprobanteURL = '';
+        const file = receiptFileInput.files[0];
+        if (file) {
+            alert('Subiendo archivo...');
+            const generarUrl = functions.httpsCallable('generarUrlDeSubida');
+            const urlResult = await generarUrl({ fileName: file.name, contentType: file.type });
+            const { uploadUrl, filePath } = urlResult.data;
 
-    const expenseData = {
-        descripcion: addExpenseForm['expense-description'].value,
-        establecimiento: expensePlaceInput.value.trim(),
-        monto: montoBruto,
-        totalConImpuestos: montoNeto,
-        impuestos: impuestosSeleccionados,
-        categoria: formCategorySelect.value,
-        fecha: addExpenseForm['expense-date'].value,
-        empresa: clienteSeleccionado ? clienteSeleccionado.nombre : '',
-        metodoPago: addExpenseForm['payment-method'].value,
-        comentarios: addExpenseForm['expense-comments'].value,
-        folio: generarFolio(user.uid),
-        creadoPor: user.uid,
-        emailCreador: user.email,
-        nombreCreador: "Administrador",
-        adminUid: user.uid,
-        fechaDeCreacion: new Date(),
-        status: status,
-        cuentaId: cuentaId,
-        cuentaNombre: cuentaId ? accountSelect.options[accountSelect.selectedIndex].text.split(' (')[0] : '',
-        proyectoId: proyectoIdSeleccionado,
-        proyectoNombre: proyectoIdSeleccionado ? projectSelect.options[projectSelect.selectedIndex].text : ''
-    };
+            const uploadResponse = await fetch(uploadUrl, {
+                method: 'PUT',
+                headers: { 'Content-Type': file.type },
+                body: file
+            });
 
-    if (isInvoiceCheckbox.checked) {
-        expenseData.datosFactura = {
-            rfc: document.getElementById('invoice-rfc').value,
-            folioFiscal: document.getElementById('invoice-folio').value
+            if (!uploadResponse.ok) throw new Error('La subida del archivo falló.');
+
+            const fileRef = storage.ref(filePath);
+            comprobanteURL = await fileRef.getDownloadURL();
+        }
+
+        // --- Lógica para guardar el registro en Firestore ---
+        let montoNeto = montoBruto;
+        const impuestosSeleccionados = [];
+        if (addTaxesCheckbox.checked) {
+            let totalImpuestos = 0;
+            document.querySelectorAll('#taxes-checklist input[type="checkbox"]:checked').forEach(checkbox => {
+                const impuesto = JSON.parse(checkbox.dataset.impuesto);
+                impuestosSeleccionados.push(impuesto);
+                totalImpuestos += impuesto.tipo === 'porcentaje' ? (montoBruto * impuesto.valor) / 100 : impuesto.valor;
+            });
+            montoNeto = montoBruto + totalImpuestos;
+        }
+
+        const clienteIdSeleccionado = clientSelect.value;
+        const proyectoIdSeleccionado = projectSelect.value;
+        const clienteSeleccionado = empresasCargadas.find(e => e.id === clienteIdSeleccionado);
+
+        const expenseData = {
+            descripcion: addExpenseForm['expense-description'].value,
+            establecimiento: expensePlaceInput.value.trim(),
+            monto: montoBruto,
+            totalConImpuestos: montoNeto,
+            impuestos: impuestosSeleccionados,
+            categoria: formCategorySelect.value,
+            fecha: addExpenseForm['expense-date'].value,
+            empresa: clienteSeleccionado ? clienteSeleccionado.nombre : '',
+            metodoPago: addExpenseForm['payment-method'].value,
+            comentarios: addExpenseForm['expense-comments'].value,
+            folio: generarFolio(user.uid),
+            creadoPor: user.uid,
+            emailCreador: user.email,
+            nombreCreador: "Administrador",
+            adminUid: user.uid,
+            fechaDeCreacion: new Date(),
+            status: status,
+            cuentaId: cuentaId,
+            cuentaNombre: cuentaId ? accountSelect.options[accountSelect.selectedIndex].text.split(' (')[0] : '',
+            proyectoId: proyectoIdSeleccionado,
+            proyectoNombre: proyectoIdSeleccionado ? projectSelect.options[projectSelect.selectedIndex].text : '',
+            comprobanteURL: comprobanteURL // Guardamos la URL
         };
-    }
 
-    if (status === 'borrador') {
-        return db.collection('gastos').add(expenseData).then(() => {
+        if (isInvoiceCheckbox.checked) {
+            expenseData.datosFactura = {
+                rfc: document.getElementById('invoice-rfc').value,
+                folioFiscal: document.getElementById('invoice-folio').value
+            };
+        }
+
+        if (status === 'borrador') {
+            await db.collection('gastos').add(expenseData);
             alert('¡Borrador guardado!');
             addExpenseForm.reset();
-        });
-    }
+            return;
+        }
 
-    const cuentaRef = db.collection('cuentas').doc(cuentaId);
-    const newExpenseRef = db.collection('gastos').doc();
-    try {
+        const cuentaRef = db.collection('cuentas').doc(cuentaId);
+        const newExpenseRef = db.collection('gastos').doc();
+
         await db.runTransaction(async (transaction) => {
             const cuentaDoc = await transaction.get(cuentaRef);
             if (!cuentaDoc.exists) throw "La cuenta no existe.";
@@ -261,12 +286,11 @@ async function guardarGastoAdmin(status) {
         addExpenseForm.reset();
         clientSelect.dispatchEvent(new Event('change'));
         isInvoiceCheckbox.checked = false;
-        invoiceDetailsContainer.style.display = 'none';
-        addTaxesCheckbox.checked = false;
         taxesDetailsContainer.style.display = 'none';
+
     } catch (error) {
         console.error("Error en la transacción: ", error);
-        alert("Error: " + error);
+        alert("Error: " + error.message);
     }
 }
 
