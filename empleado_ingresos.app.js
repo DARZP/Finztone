@@ -1,4 +1,4 @@
-import { auth, db, functions } from './firebase-init.js';
+import { auth, db, functions, storage } from './firebase-init.js';
 
 // --- ELEMENTOS DEL DOM ---
 const addIncomeForm = document.getElementById('add-income-form');
