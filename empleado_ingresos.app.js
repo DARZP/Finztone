@@ -22,6 +22,7 @@ const summaryNeto = document.getElementById('summary-neto');
 const incomePlaceInput = document.getElementById('income-place');
 const clientSelect = document.getElementById('client-select');
 const projectSelect = document.getElementById('project-select');
+const receiptFileInput = document.getElementById('receipt-file');
 
 let empresasCargadas = [];
 let modoEdicion = false;
@@ -204,21 +205,45 @@ function salirModoEdicion() {
 
 async function guardarIngreso(status) {
     const user = auth.currentUser;
-    if (!user) return;
+    if (!user) return alert("Error de autenticación.");
     const montoBruto = parseFloat(addIncomeForm['income-amount'].value) || 0;
     if (montoBruto <= 0) return alert('Por favor, introduce un monto válido.');
-    
+
     saveDraftBtn.disabled = true;
     sendForApprovalBtn.disabled = true;
+    sendForApprovalBtn.textContent = 'Enviando...';
 
     try {
+        // --- LÓGICA DE SUBIDA DE ARCHIVO ---
+        let comprobanteURL = '';
+        const file = receiptFileInput.files[0];
+
+        if (file) {
+            alert('Subiendo archivo...');
+
+            const generarUrl = functions.httpsCallable('generarUrlDeSubida');
+            const urlResult = await generarUrl({ fileName: file.name, contentType: file.type });
+            const { uploadUrl, filePath } = urlResult.data;
+
+            const uploadResponse = await fetch(uploadUrl, {
+                method: 'PUT',
+                headers: { 'Content-Type': file.type },
+                body: file
+            });
+
+            if (!uploadResponse.ok) throw new Error('La subida del archivo falló.');
+
+            const fileRef = storage.ref(filePath);
+            comprobanteURL = await fileRef.getDownloadURL();
+        }
+
+        // --- Lógica para guardar el registro en Firestore (no cambia) ---
         const userProfileQuery = await db.collection('usuarios').where('email', '==', user.email).limit(1).get();
-        if (userProfileQuery.empty) throw "No se pudo encontrar el perfil del usuario.";
+        if (userProfileQuery.empty) throw new Error("No se pudo encontrar el perfil del usuario.");
         const userProfileDoc = userProfileQuery.docs[0];
         const userProfileData = userProfileDoc.data();
         const userName = userProfileData.nombre;
         const adminUid = userProfileData.adminUid;
-        if (!adminUid) throw "El perfil no está vinculado a un administrador.";
 
         let montoNeto = montoBruto;
         const impuestosSeleccionados = [];
@@ -252,6 +277,7 @@ async function guardarIngreso(status) {
             adminUid: adminUid,
             proyectoId: proyectoIdSeleccionado,
             proyectoNombre: proyectoIdSeleccionado ? projectSelect.options[projectSelect.selectedIndex].text : '',
+            comprobanteURL: comprobanteURL, // Guardamos la URL
         };
 
         if (isInvoiceCheckbox.checked) {
@@ -275,15 +301,16 @@ async function guardarIngreso(status) {
             });
             alert(status === 'borrador' ? '¡Borrador guardado!' : '¡Ingreso enviado!');
         }
-        
+
         salirModoEdicion();
-    
+
     } catch (error) {
         console.error("Error al guardar ingreso:", error);
-        alert("Ocurrió un error: " + error);
+        alert("Ocurrió un error: " + error.message);
     } finally {
         saveDraftBtn.disabled = false;
         sendForApprovalBtn.disabled = false;
+        sendForApprovalBtn.textContent = 'Enviar para Aprobación';
     }
 }
 
