@@ -5,29 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Perfil de Cuenta - FINZTONE</title>
     <link rel="stylesheet" href="main.style.css">
-    <style>
-        /* Estilos específicos para esta página */
-        .balance-display {
-            text-align: center;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-        .balance-amount {
-            font-size: 3em;
-            font-weight: 600;
-            color: var(--primary-color);
-        }
-        .balance-label {
-            font-size: 1.2em;
-            color: #aeb9c5;
-        }
-        .credit-details {
-            display: flex;
-            justify-content: space-around;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-    </style>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -39,52 +16,59 @@
 
         <main>
             <div class="card">
-                <div class="card-header" style="border: none;">
-                    <h2 id="account-name-title">Cargando...</h2>
+                <h2 id="account-name-title">Cargando...</h2>
+                
+                <div id="debit-details" style="display: none;">
+                    <div class="balance-display">
+                        <div class="balance-label">Saldo Actual</div>
+                        <div id="debit-balance" class="balance-amount">$0.00</div>
+                    </div>
+                </div>
+
+                <div id="credit-details-section" style="display: none;">
+                    <div class="credit-summary-grid">
+                        <div class="summary-item">
+                            <div class="balance-label">Deuda del Período Actual</div>
+                            <div id="current-period-debt" class="balance-amount" style="color: #ff8a80;">$0.00</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="balance-label">Deuda Total</div>
+                            <div id="total-debt-display" class="balance-amount" style="font-size: 2.2em;">$0.00</div>
+                        </div>
+                    </div>
+                    
+                    <div class="credit-timeline">
+                        <div>
+                            <div class="balance-label">Próximo Corte</div>
+                            <div id="cutoff-day" class="timeline-value">Día 00</div>
+                        </div>
+                        <div>
+                            <div class="balance-label">Días Restantes</div>
+                            <div id="days-until-cutoff" class="timeline-value">Calculando...</div>
+                        </div>
                     </div>
 
-                <div id="account-details">
-                    <div id="debit-details" style="display: none;">
-                        <div class="balance-display">
-                            <div class="balance-label">Saldo Actual</div>
-                            <div id="debit-balance" class="balance-amount">$0.00</div>
-                        </div>
-                    </div>
-
-                    <div id="credit-details-section" style="display: none;">
-                        <div class="balance-display">
-                            <div class="balance-label">Deuda del Período</div>
-                            <div id="credit-debt" class="balance-amount" style="color: #ff8a80;">$0.00</div>
-                        </div>
-                        <div class="credit-details">
-                            <div>
-                                <div class="balance-label">Deuda Total</div>
-                                <div id="total-debt-display" style="font-size: 1.5em; font-weight: 500;">$0.00</div>    
-                            </div>
-                            <div>
-                                <div class="balance-label">Próximo Corte</div>
-                                <div id="cutoff-day" style="font-size: 1.5em; font-weight: 500;">Día 00</div>
-                            </div>
-                        </div>
-                        <button class="btn-primary" style="width:100%; margin-top: 20px;" id="pay-card-btn">Realizar un Pago (Próximamente)</button>
-                    </div>
+                    <button class="btn-primary" style="width:100%; margin-top: 20px;" id="pay-card-btn">Realizar un Pago al Período Actual</button>
                 </div>
             </div>
 
             <div class="list-card">
-                <h2>Movimientos Recientes</h2>
-                <div id="movements-list">
+                <div class="card-header-filters">
+                    <h2>Historial de Movimientos</h2>
+                    <div class="filters-container" id="period-controls" style="display: none;">
+                        <div class="filter-group">
+                            <label for="period-selector">Período:</label>
+                            <select id="period-selector"></select>
+                        </div>
+                        <button id="pay-period-btn" class="btn-secondary" style="display: none;">Pagar Período</button>
                     </div>
+                </div>
+                <div id="movements-list"></div>
             </div>
         </main>
     </div>
-
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-functions.js"></script>
     
+    <script type="module" src="firebase-init.js"></script>
     <script type="module" src="perfil_cuenta.app.js"></script>
 </body>
 </html>
