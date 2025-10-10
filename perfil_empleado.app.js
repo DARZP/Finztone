@@ -111,6 +111,7 @@ async function cargarActividad() {
             itemElement.classList.add('activity-feed-item');
             const signo = (mov.tipo === 'Gasto' || mov.tipo === 'Nómina') ? '-' : '+';
 
+            // --- LÓGICA PARA EL ICONO DEL COMPROBANTE ---
             const iconoComprobante = mov.comprobanteURL 
                 ? `<a href="${mov.comprobanteURL}" target="_blank" title="Ver comprobante" style="text-decoration: none; font-size: 1.1em; margin-left: 8px;">📎</a>` 
                 : '';
