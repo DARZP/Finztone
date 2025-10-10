@@ -347,11 +347,20 @@ function mostrarGastosAprobados(gastos) {
         itemContainer.classList.add('expense-item');
         itemContainer.dataset.id = gasto.id;
         const fechaFormateada = new Date(gasto.fecha.replace(/-/g, '/')).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
-        const creadorLink = gasto.nombreCreador !== "Administrador" ? `<a href="perfil_empleado.html?id=${gasto.creadoPor}">${gasto.nombreCreador}</a>` : "Administrador";
+        const creadorLink = gasto.nombreCreador !== "Administrador" ? `<a href="perfil_empleado.html?id=${gasto.creadorId}">${gasto.nombreCreador}</a>` : "Administrador";
+        
+        // --- LÓGICA PARA EL ICONO DEL COMPROBANTE ---
+        const iconoComprobante = gasto.comprobanteURL 
+            ? `<a href="${gasto.comprobanteURL}" target="_blank" title="Ver comprobante" style="text-decoration: none; font-size: 1.1em; margin-left: 8px;">📎</a>` 
+            : '';
+
         itemContainer.innerHTML = `
             <div class="item-summary">
                 <div class="expense-info">
-                    <span class="expense-description">${gasto.descripcion}</span>
+                    <span class="expense-description">
+                        ${gasto.descripcion}
+                        ${iconoComprobante} 
+                    </span>
                     <span class="expense-details">Registrado por: ${creadorLink} | ${gasto.categoria} - ${fechaFormateada}</span>
                 </div>
                 <span class="expense-amount">$${(gasto.totalConImpuestos || gasto.monto).toLocaleString('es-MX')}</span>
