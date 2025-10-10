@@ -114,7 +114,7 @@ async function cargarDatosPerfil() {
         });
 
         const sueldoNeto = sueldoBruto - totalDeducciones;
-        profileDeductionsList.innerHTML = deduccionesHTML;
+        profileDeductionsList.innerTML = deduccionesHTML;
         profileNetSalary.textContent = `$${sueldoNeto.toLocaleString('es-MX')}`;
 
         cargarActividad(currentUserData.email);
@@ -128,13 +128,14 @@ async function cargarActividad(userEmail) {
     const admin = auth.currentUser; 
     if (!userId || !userEmail || !admin) return;
 
-    const gastosPromise = db.collection('gastos').where('adminUid', '==', admin.uid).where('emailCreador', '==', userEmail).get();
-    const ingresosPromise = db.collection('ingresos').where('adminUid', '==', admin.uid).where('emailCreador', '==', userEmail).get();
+    // --- CORRECCIÓN: Usamos el ID del usuario, no el email, para una búsqueda más precisa ---
+    const gastosPromise = db.collection('gastos').where('adminUid', '==', admin.uid).where('creadorId', '==', userId).get();
+    const ingresosPromise = db.collection('ingresos').where('adminUid', '==', admin.uid).where('creadorId', '==', userId).get();
     const nominaPromise = db.collection('pagos_nomina').where('adminUid', '==', admin.uid).where('userId', '==', userId).get();
 
     try {
         const [gastosSnapshot, ingresosSnapshot, nominaSnapshot] = await Promise.all([
-            gastosPromise, ingresosPromise, nominaPromise
+            gastosPromise, ingresosSnapshot, nominaSnapshot
         ]);
 
         let todosLosMovimientos = [];
@@ -163,10 +164,18 @@ async function cargarActividad(userEmail) {
             const itemElement = document.createElement('div');
             itemElement.classList.add('activity-feed-item');
             const signo = (mov.tipo === 'Gasto' || mov.tipo === 'Nómina') ? '-' : '+';
+
+            // --- LÓGICA PARA EL ICONO DEL COMPROBANTE ---
+            const iconoComprobante = mov.comprobanteURL 
+                ? `<a href="${mov.comprobanteURL}" target="_blank" title="Ver comprobante" style="text-decoration: none; font-size: 1.1em; margin-left: 8px;">📎</a>` 
+                : '';
             
             itemElement.innerHTML = `
                 <div class="item-info">
-                    <span class="item-description">${descripcion} (${mov.tipo})</span>
+                    <span class="item-description">
+                        ${descripcion} (${mov.tipo})
+                        ${iconoComprobante}
+                    </span>
                     <span class="item-details">${fecha} - Estado: ${mov.status || 'Pagado'}</span>
                 </div>
                 <span class="item-amount">${signo}$${monto.toLocaleString('es-MX')}</span>
