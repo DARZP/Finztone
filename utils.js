@@ -1,6 +1,6 @@
 // utils.js
 
-function exportToCSV(data, fileName) {
+export function exportToCSV(data, fileName) {
     if (data.length === 0) {
         alert("No se encontraron registros para exportar.");
         return;
