@@ -41,7 +41,7 @@ function generarSelectorDeCuentas() {
 }
 
 async function marcarPago(userId, userName, amount) {
-    const user = auth.currentUser; // Obtenemos el usuario admin actual
+    const user = auth.currentUser;
     if (!user) return alert('Error de autenticación');
 
     const userItemElement = userListContainer.querySelector(`[data-user-id="${userId}"]`);
@@ -52,15 +52,14 @@ async function marcarPago(userId, userName, amount) {
     if (!cuentaId) {
         return alert(`Por favor, selecciona una cuenta de origen para ${userName}.`);
     }
+    
     const cuentaNombre = accountSelector.options[accountSelector.selectedIndex].text;
     const tipoDeDescuento = document.querySelector('input[name="payment-type"]:checked').value;
-
     if (!confirm(`Confirmas el pago a ${userName} desde la cuenta ${cuentaNombre}?`)) return;
 
     const accountRef = db.collection('cuentas').doc(cuentaId);
     const newPaymentRef = db.collection('pagos_nomina').doc();
     const userRef = db.collection('usuarios').doc(userId);
-    let montoADescontar;
     
     try {
         await db.runTransaction(async (transaction) => {
@@ -68,52 +67,43 @@ async function marcarPago(userId, userName, amount) {
             const userDoc = await transaction.get(userRef);
             if (!accountDoc.exists || !userDoc.exists) throw "La cuenta o el usuario no existen.";
 
-            const saldoActual = accountDoc.data().saldoActual;
+            const cuentaData = accountDoc.data();
             const sueldoBruto = userDoc.data().sueldoBruto || 0;
             const deducciones = userDoc.data().deducciones || [];
 
             let totalDeducciones = 0;
             deducciones.forEach(ded => {
-                let montoDeducido = ded.tipo === 'porcentaje' ? (sueldoBruto * ded.valor) / 100 : ded.valor;
-                totalDeducciones += montoDeducido;
+                totalDeducciones += ded.tipo === 'porcentaje' ? (sueldoBruto * ded.valor) / 100 : ded.valor;
             });
             
             const sueldoNeto = sueldoBruto - totalDeducciones;
-            montoADescontar = tipoDeDescuento === 'neto' ? sueldoNeto : sueldoBruto;
-            const nuevoSaldo = saldoActual - montoADescontar;
-            if(nuevoSaldo < 0) throw new Error("Saldo insuficiente en la cuenta de origen.");
+            const montoADescontar = tipoDeDescuento === 'neto' ? sueldoNeto : sueldoBruto;
+
+            if (cuentaData.tipo === 'credito') {
+                const nuevaDeudaActual = (cuentaData.deudaActual || 0) + montoADescontar;
+                const nuevaDeudaTotal = (cuentaData.deudaTotal || 0) + montoADescontar;
+                transaction.update(accountRef, { deudaActual: nuevaDeudaActual, deudaTotal: nuevaDeudaTotal });
+            } else { // Débito
+                const nuevoSaldo = (cuentaData.saldoActual || 0) - montoADescontar;
+                if(nuevoSaldo < 0) throw new Error("Saldo insuficiente.");
+                transaction.update(accountRef, { saldoActual: nuevoSaldo });
+            }
 
             transaction.set(newPaymentRef, {
-                userId: userId,
-                userName: userName,
-                periodo: periodo,
-                montoBruto: sueldoBruto,
-                montoNeto: sueldoNeto,
-                montoDescontado: montoADescontar,
-                fechaDePago: new Date(),
-                cuentaId: cuentaId,
-                cuentaNombre: cuentaNombre,
-                adminUid: user.uid // <-- LÍNEA AÑADIDA
+                userId, userName, periodo, montoBruto, sueldoNeto, montoDescontado: montoADescontar,
+                fechaDePago: new Date(), cuentaId, cuentaNombre, adminUid: user.uid
             });
-            
             const estadoImpuesto = tipoDeDescuento === 'neto' ? 'pagado (retenido)' : 'pendiente de pago';
             deducciones.forEach(ded => {
                 let montoDeducido = ded.tipo === 'porcentaje' ? (sueldoBruto * ded.valor) / 100 : ded.valor;
                 const newTaxMovementRef = db.collection('movimientos_impuestos').doc();
                 transaction.set(newTaxMovementRef, {
-                    origen: `Nómina - ${userName}`,
-                    pagoId: newPaymentRef.id,
-                    tipoImpuesto: ded.nombre,
-                    monto: montoDeducido,
-                    fecha: new Date(),
-                    status: estadoImpuesto,
-                    adminUid: user.uid // <-- LÍNEA AÑADIDA
+                    origen: `Nómina - ${userName}`, pagoId: newPaymentRef.id, tipoImpuesto: ded.nombre,
+                    monto: montoDeducido, fecha: new Date(), status: estadoImpuesto, adminUid: user.uid
                 });
             });
-
-            transaction.update(accountRef, { saldoActual: nuevoSaldo });
         });
-        alert(`¡Pago para ${userName} registrado y deducciones generadas!`);
+        alert(`¡Pago para ${userName} registrado!`);
         cargarCuentas(user);
     } catch (error) {
         console.error("Error en la transacción: ", error);
