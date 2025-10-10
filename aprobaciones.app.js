@@ -84,9 +84,10 @@ async function aprobarDocumento(coleccion, docId, tipo) {
 
             if (tipo === 'gasto') {
                 if (cuentaData.tipo === 'credito') {
-                    const nuevaDeuda = (cuentaData.deudaActual || 0) + montoTotal;
-                    transaction.update(accountRef, { deudaActual: nuevaDeuda });
-                } else {
+                    const nuevaDeudaActual = (cuentaData.deudaActual || 0) + montoTotal;
+                    const nuevaDeudaTotal = (cuentaData.deudaTotal || 0) + montoTotal;
+                    transaction.update(accountRef, { deudaActual: nuevaDeudaActual, deudaTotal: nuevaDeudaTotal });
+                } else {                    
                     const nuevoSaldo = (cuentaData.saldoActual || 0) - montoTotal;
                     if (nuevoSaldo < 0) throw "Saldo insuficiente en la cuenta.";
                     transaction.update(accountRef, { saldoActual: nuevoSaldo });
