@@ -83,8 +83,10 @@ addAccountForm.addEventListener('submit', (e) => {
         const currentPeriodDebt = parseFloat(addAccountForm['current-period-debt'].value) || 0;
 
         accountData.diaCorte = parseInt(addAccountForm['cutoff-date'].value);
-        accountData.deudaTotal = totalDebt;
-        accountData.deudaActual = currentPeriodDebt; // 'deudaActual' ahora representa la del período
+        // --- LA CORRECCIÓN ESTÁ AQUÍ ---
+        // La deuda total ahora es la suma de la deuda de períodos pasados MÁS la del período actual.
+        accountData.deudaTotal = totalDebt + currentPeriodDebt; 
+        accountData.deudaActual = currentPeriodDebt;
     }
 
     db.collection('cuentas').add(accountData)
