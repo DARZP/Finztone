@@ -261,8 +261,9 @@ async function guardarGastoAdmin(status) {
             if (!cuentaDoc.exists) throw "La cuenta no existe.";
             const cuentaData = cuentaDoc.data();
             if (cuentaData.tipo === 'credito') {
-                const nuevaDeuda = (cuentaData.deudaActual || 0) + montoNeto;
-                transaction.update(cuentaRef, { deudaActual: nuevaDeuda });
+                const nuevaDeudaActual = (cuentaData.deudaActual || 0) + montoNeto;
+                const nuevaDeudaTotal = (cuentaData.deudaTotal || 0) + montoNeto;
+                transaction.update(cuentaRef, { deudaActual: nuevaDeudaActual, deudaTotal: nuevaDeudaTotal });
             } else {
                 const nuevoSaldo = (cuentaData.saldoActual || 0) - montoNeto;
                 if (nuevoSaldo < 0) throw "Saldo insuficiente en la cuenta seleccionada.";
