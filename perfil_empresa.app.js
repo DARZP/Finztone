@@ -121,8 +121,11 @@ async function cargarHistorialDeProyecto(proyectoId) {
     }
 
     try {
-        const gastosPromise = db.collection('gastos').where('proyectoId', '==', proyectoId).get();
-        const ingresosPromise = db.collection('ingresos').where('proyectoId', '==', proyectoId).get();
+        const user = auth.currentUser; // Nos aseguramos de tener el usuario
+        if (!user) return; // Salimos si no hay usuario
+
+        const gastosPromise = db.collection('gastos').where('adminUid', '==', user.uid).where('proyectoId', '==', proyectoId).get();
+        const ingresosPromise = db.collection('ingresos').where('adminUid', '==', user.uid).where('proyectoId', '==', proyectoId).get();
         const [gastosSnapshot, ingresosSnapshot] = await Promise.all([gastosPromise, ingresosPromise]);
 
         let movimientosHTML = '';
