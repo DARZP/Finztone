@@ -7,17 +7,17 @@ const initialBalanceGroup = document.getElementById('initial-balance-group');
 const cutoffDateGroup = document.getElementById('cutoff-date-group');
 
 accountTypeSelect.addEventListener('change', () => {
-    if (accountTypeSelect.value === 'credito') {
-        initialBalanceGroup.style.display = 'none';
-        document.getElementById('initial-balance').required = false;
-        cutoffDateGroup.style.display = 'block';
-        document.getElementById('cutoff-date').required = true;
-    } else {
-        initialBalanceGroup.style.display = 'block';
-        document.getElementById('initial-balance').required = true;
-        cutoffDateGroup.style.display = 'none';
-        document.getElementById('cutoff-date').required = false;
-    }
+    const isCredit = accountTypeSelect.value === 'credito';
+
+    // Grupos de campos
+    initialBalanceGroup.style.display = isCredit ? 'none' : 'block';
+    cutoffDateGroup.style.display = isCredit ? 'block' : 'none';
+    document.getElementById('total-debt-group').style.display = isCredit ? 'block' : 'none';
+    document.getElementById('current-period-debt-group').style.display = isCredit ? 'block' : 'none';
+
+    // Campos requeridos
+    document.getElementById('initial-balance').required = !isCredit;
+    document.getElementById('cutoff-date').required = isCredit;
 });
 
 async function descargarRegistrosCuenta(cuentaId, cuentaNombre) {
@@ -77,19 +77,21 @@ addAccountForm.addEventListener('submit', (e) => {
     };
 
     if (accountType === 'debito') {
-        const initialBalance = parseFloat(addAccountForm['initial-balance'].value);
-        accountData.saldoActual = initialBalance;
+        accountData.saldoActual = parseFloat(addAccountForm['initial-balance'].value) || 0;
     } else { // Es de tipo 'credito'
-        const cutoffDate = parseInt(addAccountForm['cutoff-date'].value);
-        accountData.diaCorte = cutoffDate;
-        accountData.deudaActual = 0; // Las tarjetas de crédito empiezan sin deuda
+        const totalDebt = parseFloat(addAccountForm['total-debt'].value) || 0;
+        const currentPeriodDebt = parseFloat(addAccountForm['current-period-debt'].value) || 0;
+
+        accountData.diaCorte = parseInt(addAccountForm['cutoff-date'].value);
+        accountData.deudaTotal = totalDebt;
+        accountData.deudaActual = currentPeriodDebt; // 'deudaActual' ahora representa la del período
     }
 
     db.collection('cuentas').add(accountData)
     .then(() => {
         alert(`¡La cuenta "${accountName}" ha sido creada exitosamente!`);
         addAccountForm.reset();
-        accountTypeSelect.dispatchEvent(new Event('change')); // Resetea la vista del form
+        accountTypeSelect.dispatchEvent(new Event('change'));
     })
     .catch(error => console.error("Error al crear la cuenta: ", error));
 });
