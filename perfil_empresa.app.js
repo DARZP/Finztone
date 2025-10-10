@@ -1,4 +1,5 @@
-<script type="module" src="gastos.app.js"></script> 
+import { auth, db } from './firebase-init.js';
+import { exportToCSV } from './utils.js';
 
 const urlParams = new URLSearchParams(window.location.search);
 const empresaId = urlParams.get('id');
@@ -205,12 +206,15 @@ async function cargarHistorialDeProyecto(proyectoId) {
 addProjectForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const projectName = addProjectForm['project-name'].value;
+    const user = auth.currentUser;
+    if(!user) return;
 
     db.collection('proyectos').add({
         nombre: projectName,
         empresaId: empresaId,
         status: 'activo',
-        fechaDeCreacion: new Date()
+        fechaDeCreacion: new Date(),
+        adminUid: user.uid // Asegurarse de guardar el adminUid
     }).then(() => {
         addProjectForm.reset();
     }).catch(error => console.error("Error al agregar proyecto:", error));
