@@ -212,35 +212,32 @@ async function realizarPago(cuentaCreditoData, tipoPago) {
     if (!user) return;
 
     let montoAPagar;
+    let periodoPagadoKey = null; // Guardaremos la clave del período que se paga
+
     if (tipoPago === 'periodo') {
-        const periodoKey = periodSelector.value;
-        montoAPagar = periodosCalculados[periodoKey].total;
+        periodoPagadoKey = periodSelector.value;
+        montoAPagar = periodosCalculados[periodoPagadoKey].total;
         if (!confirm(`Vas a pagar el total del período seleccionado: $${montoAPagar.toLocaleString('es-MX')}. ¿Continuar?`)) return;
     } else { // Pago al período actual
         const montoStr = prompt("¿Qué monto deseas abonar al período actual?", cuentaCreditoData.deudaActual.toString());
         montoAPagar = parseFloat(montoStr);
-        if (isNaN(montoAPagar) || montoAPagar <= 0) {
-            return alert("Monto inválido. Operación cancelada.");
-        }
+        if (isNaN(montoAPagar) || montoAPagar <= 0) return alert("Monto inválido.");
     }
-    
-    // ... (El resto de la lógica para seleccionar la cuenta de débito es similar)
+
+    // ... (La lógica para seleccionar la cuenta de débito no cambia) ...
     const cuentasDebitoSnapshot = await db.collection('cuentas').where('adminUid', '==', user.uid).where('tipo', '==', 'debito').get();
     if (cuentasDebitoSnapshot.empty) return alert("No tienes cuentas de débito para realizar el pago.");
-    
     const cuentasDebito = cuentasDebitoSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     let promptMessage = "Selecciona la cuenta de origen para el pago:\n";
     cuentasDebito.forEach((cuenta, index) => {
-        promptMessage += `${index + 1}: ${cuenta.nombre} (Saldo: $${cuenta.saldoActual.toLocaleString()})\n`;
+        promptMessage += `${index + 1}: ${cuenta.nombre} (Saldo: $${(cuenta.saldoActual || 0).toLocaleString()})\n`;
     });
     const eleccionStr = prompt(promptMessage);
     const eleccionIndex = parseInt(eleccionStr) - 1;
-    if (isNaN(eleccionIndex) || eleccionIndex < 0 || eleccionIndex >= cuentasDebito.length) {
-        return alert("Selección inválida. Operación cancelada.");
-    }
+    if (isNaN(eleccionIndex) || eleccionIndex < 0 || eleccionIndex >= cuentasDebito.length) return alert("Selección inválida.");
     const cuentaDebitoSeleccionada = cuentasDebito[eleccionIndex];
 
-    // Transacción
+    // --- TRANSACCIÓN MEJORADA ---
     const cuentaCreditoRef = db.collection('cuentas').doc(cuentaId);
     const cuentaDebitoRef = db.collection('cuentas').doc(cuentaDebitoSeleccionada.id);
     const fechaActualISO = new Date().toISOString().split('T')[0];
@@ -255,22 +252,20 @@ async function realizarPago(cuentaCreditoData, tipoPago) {
 
             let nuevaDeudaActual = credDoc.data().deudaActual;
             let nuevaDeudaTotal = credDoc.data().deudaTotal;
-            
-            if (tipoPago === 'periodo') {
-                nuevaDeudaTotal -= montoAPagar;
-            } else { // Lógica para pago al período actual
-                const abonoAlPeriodo = Math.min(montoAPagar, nuevaDeudaActual);
-                const abonoAdicional = montoAPagar - abonoAlPeriodo;
-                nuevaDeudaActual -= abonoAlPeriodo;
-                nuevaDeudaTotal -= montoAPagar;
+
+            // La deuda total siempre se reduce por el monto del pago
+            nuevaDeudaTotal -= montoAPagar;
+
+            // Si es un pago al período actual, también reducimos la deuda actual
+            if (tipoPago === 'actual') {
+                nuevaDeudaActual -= montoAPagar;
             }
 
             const nuevoSaldoDebito = debDoc.data().saldoActual - montoAPagar;
-            
+
             transaction.update(cuentaCreditoRef, { deudaActual: nuevaDeudaActual, deudaTotal: nuevaDeudaTotal });
             transaction.update(cuentaDebitoRef, { saldoActual: nuevoSaldoDebito });
 
-            // Crear registros de gasto e ingreso
             const gastoRef = db.collection('gastos').doc();
             transaction.set(gastoRef, {
                 descripcion: `Pago a tarjeta ${credDoc.data().nombre}`,
@@ -279,13 +274,17 @@ async function realizarPago(cuentaCreditoData, tipoPago) {
                 adminUid: user.uid, creadoPor: user.uid, nombreCreador: "Sistema", fechaDeCreacion: new Date()
             });
 
-            const ingresoRef = db.collection('ingresos').doc();
-            transaction.set(ingresoRef, {
+            const ingresoData = {
                 descripcion: `Pago recibido desde ${debDoc.data().nombre}`,
                 monto: montoAPagar, totalConImpuestos: montoAPagar, categoria: 'Pagos', fecha: fechaActualISO,
                 status: 'aprobado', cuentaId: cuentaId, cuentaNombre: cuentaCreditoData.nombre,
-                adminUid: user.uid, creadoPor: user.uid, nombreCreador: "Sistema", fechaDeCreacion: new Date()
-            });
+                adminUid: user.uid, creadoPor: user.uid, nombreCreador: "Sistema", fechaDeCreacion: new Date(),
+                esPagoDePeriodo: tipoPago === 'periodo', // Etiqueta para identificar el tipo de pago
+                periodoPagado: periodoPagadoKey // Etiqueta con el período pagado (ej: '2025-09')
+            };
+
+            const ingresoRef = db.collection('ingresos').doc();
+            transaction.set(ingresoRef, ingresoData);
         });
         alert(`¡Pago de $${montoAPagar.toLocaleString()} realizado exitosamente!`);
     } catch (error) {
