@@ -78,13 +78,13 @@ addAccountForm.addEventListener('submit', (e) => {
 
     if (accountType === 'debito') {
         accountData.saldoActual = parseFloat(addAccountForm['initial-balance'].value) || 0;
-    } else { // Es de tipo 'credito'
+    } else { // Crédito
         const totalDebt = parseFloat(addAccountForm['total-debt'].value) || 0;
         const currentPeriodDebt = parseFloat(addAccountForm['current-period-debt'].value) || 0;
 
         accountData.diaCorte = parseInt(addAccountForm['cutoff-date'].value);
-        // --- LA CORRECCIÓN ESTÁ AQUÍ ---
-        // La deuda total ahora es la suma de la deuda de períodos pasados MÁS la del período actual.
+        // --- LA CORRECCIÓN CLAVE ---
+        // La deuda total ES la suma de la deuda pre-existente MÁS la del período actual que se está registrando.
         accountData.deudaTotal = totalDebt + currentPeriodDebt; 
         accountData.deudaActual = currentPeriodDebt;
     }
