@@ -1,5 +1,5 @@
 import { auth, db } from './firebase-init.js';
-import { exportToCSV } from './utils.js'; // Asumimos que utils.js exporta la función
+import { exportToCSV } from './utils.js';
 
 // --- VARIABLES GLOBALES Y ELEMENTOS DEL DOM ---
 const urlParams = new URLSearchParams(window.location.search);
@@ -64,7 +64,7 @@ async function cargarDatosPerfil() {
         profileDeductionsList.innerHTML = deduccionesHTML;
         profileNetSalary.textContent = sueldoNeto.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
 
-        cargarActividad(); // Ya no necesita pasar el email
+        cargarActividad();
 
     } else {
         profileName.textContent = "Usuario no encontrado";
@@ -75,12 +75,11 @@ async function cargarActividad() {
     const admin = auth.currentUser; 
     if (!userId || !admin) return;
 
-    // --- ESTAS LÍNEAS ESTABAN DECLARADAS EN EL LUGAR INCORRECTO ---
-    const gastosPromise = db.collection('gastos').where('adminUid', '==', admin.uid).where('creadorId', '==', userId).get();
-    const ingresosPromise = db.collection('ingresos').where('adminUid', '==', admin.uid).where('creadorId', '==', userId).get();
-    const nominaPromise = db.collection('pagos_nomina').where('adminUid', '==', admin.uid).where('userId', '==', userId).get();
-
     try {
+        const gastosPromise = db.collection('gastos').where('adminUid', '==', admin.uid).where('creadorId', '==', userId).get();
+        const ingresosPromise = db.collection('ingresos').where('adminUid', '==', admin.uid).where('creadorId', '==', userId).get();
+        const nominaPromise = db.collection('pagos_nomina').where('adminUid', '==', admin.uid).where('userId', '==', userId).get();
+
         const [gastosSnapshot, ingresosSnapshot, nominaSnapshot] = await Promise.all([
             gastosPromise, ingresosPromise, nominaSnapshot
         ]);
@@ -92,8 +91,8 @@ async function cargarActividad() {
         nominaSnapshot.forEach(doc => todosLosMovimientos.push({ tipo: 'Nómina', ...doc.data() }));
 
         todosLosMovimientos.sort((a, b) => {
-            const dateA = a.fechaDePago?.toDate() || a.fechaDeCreacion?.toDate() || new Date(a.fecha.replace(/-/g, '/')) || 0;
-            const dateB = b.fechaDePago?.toDate() || b.fechaDeCreacion?.toDate() || new Date(b.fecha.replace(/-/g, '/')) || 0;
+            const dateA = a.fechaDePago?.toDate() || a.fechaDeCreacion?.toDate() || new Date(a.fecha?.replace(/-/g, '/')) || 0;
+            const dateB = b.fechaDePago?.toDate() || b.fechaDeCreacion?.toDate() || new Date(b.fecha?.replace(/-/g, '/')) || 0;
             return dateB - dateA;
         });
 
