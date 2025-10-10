@@ -99,44 +99,54 @@ async function cargarTodosLosMovimientos(cuentaData) {
 }
 
 function agruparMovimientosPorPeriodo(diaCorte) {
-    periodosCalculados = { 'actual': { movimientos: [], total: 0 } };
+    periodosCalculados = { 'actual': { movimientos: [], total: 0, pagos: 0 } };
+    const pagosDePeriodos = todosLosMovimientos.filter(m => m.esPagoDePeriodo);
 
     todosLosMovimientos.forEach(mov => {
+        if(mov.esPagoDePeriodo) return; // Ignoramos los pagos en la primera pasada
+
         const fechaMov = mov.fechaDePago ? mov.fechaDePago.toDate() : new Date(mov.fecha.replace(/-/g, '/'));
         const hoy = new Date();
-
         let fechaCorteEsteMes = new Date(hoy.getFullYear(), hoy.getMonth(), diaCorte);
-        
-        if (fechaMov > fechaCorteEsteMes) { // Pertenece al período actual
+
+        if (fechaMov > fechaCorteEsteMes) {
             periodosCalculados['actual'].movimientos.push(mov);
-        } else { // Pertenece a un período pasado
+        } else {
             let mesPeriodo = fechaMov.getMonth();
             let anioPeriodo = fechaMov.getFullYear();
 
             if(fechaMov.getDate() > diaCorte) {
                 mesPeriodo += 1;
-                if(mesPeriodo > 11) {
-                    mesPeriodo = 0;
-                    anioPeriodo += 1;
-                }
+                if(mesPeriodo > 11) { mesPeriodo = 0; anioPeriodo += 1; }
             }
-            
+
             const keyPeriodo = `${anioPeriodo}-${String(mesPeriodo + 1).padStart(2, '0')}`;
             if (!periodosCalculados[keyPeriodo]) {
-                periodosCalculados[keyPeriodo] = { movimientos: [], total: 0 };
+                periodosCalculados[keyPeriodo] = { movimientos: [], total: 0, pagos: 0 };
             }
             periodosCalculados[keyPeriodo].movimientos.push(mov);
         }
     });
 
-    // Calcular totales de cada período
+    // Ahora, asignamos los pagos a sus períodos correspondientes
+    pagosDePeriodos.forEach(pago => {
+        if(pago.periodoPagado && periodosCalculados[pago.periodoPagado]) {
+            periodosCalculados[pago.periodoPagado].movimientos.push(pago);
+            periodosCalculados[pago.periodoPagado].pagos += pago.monto;
+        }
+    });
+
+    // Finalmente, calculamos los totales de cada período
     for (const key in periodosCalculados) {
-        let total = 0;
+        let totalGastos = 0;
         periodosCalculados[key].movimientos.forEach(mov => {
+            if (mov.esPagoDePeriodo) return; // No sumar los pagos al total de deuda
             const monto = mov.totalConImpuestos || mov.monto || mov.montoDescontado;
-            total += (mov.tipoMovimiento === 'gasto' || mov.tipoMovimiento === 'nomina') ? monto : -monto;
+            if (mov.tipoMovimiento === 'gasto' || mov.tipoMovimiento === 'nomina') {
+                totalGastos += monto;
+            }
         });
-        periodosCalculados[key].total = total;
+        periodosCalculados[key].total = totalGastos - periodosCalculados[key].pagos;
     }
 }
 
