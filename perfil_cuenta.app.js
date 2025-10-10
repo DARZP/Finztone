@@ -10,6 +10,7 @@ const cutoffDay = document.getElementById('cutoff-day');
 const paymentDue = document.getElementById('payment-due');
 const movementsList = document.getElementById('movements-list');
 const payCardBtn = document.getElementById('pay-card-btn');
+const totalDebtDisplay = document.getElementById('total-debt-display');
 
 // Obtenemos el ID de la cuenta desde la URL
 const urlParams = new URLSearchParams(window.location.search);
@@ -115,7 +116,11 @@ auth.onAuthStateChanged((user) => {
 async function cargarDatosDeCuenta(id) {
     const cuentaRef = db.collection('cuentas').doc(id);
     cuentaRef.onSnapshot(async (doc) => {
-        if (!doc.exists) { /* ... */ return; }
+        if (!doc.exists) { 
+            alert("Cuenta no encontrada.");
+            window.location.href = 'cuentas.html';
+            return; 
+        }
         const cuentaData = doc.data();
         accountNameTitle.textContent = cuentaData.nombre;
 
@@ -124,14 +129,13 @@ async function cargarDatosDeCuenta(id) {
             creditDetailsSection.style.display = 'block';
 
             creditDebt.textContent = `$${(cuentaData.deudaActual || 0).toLocaleString('es-MX')}`;
+            totalDebtDisplay.textContent = `$${(cuentaData.deudaTotal || 0).toLocaleString('es-MX')}`;
             cutoffDay.textContent = `Día ${cuentaData.diaCorte} de cada mes`;
-            paymentDue.textContent = `$${(cuentaData.deudaActual || 0).toLocaleString('es-MX')}`;
 
-            // Activamos el botón de pago y le pasamos los datos necesarios
             payCardBtn.textContent = "Realizar un Pago";
             payCardBtn.disabled = false;
             payCardBtn.onclick = () => realizarPagoTarjeta(id, cuentaData);
-            
+
         } else { // Es de tipo 'debito'
             creditDetailsSection.style.display = 'none';
             debitDetails.style.display = 'block';
