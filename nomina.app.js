@@ -68,7 +68,7 @@ async function marcarPago(userId, userName, amount) {
             if (!accountDoc.exists || !userDoc.exists) throw "La cuenta o el usuario no existen.";
 
             const cuentaData = accountDoc.data();
-            const sueldoBruto = userDoc.data().sueldoBruto || 0;
+            const sueldoBruto = userDoc.data().sueldoBruto || 0; // La variable correcta es 'sueldoBruto'
             const deducciones = userDoc.data().deducciones || [];
 
             let totalDeducciones = 0;
@@ -90,9 +90,18 @@ async function marcarPago(userId, userName, amount) {
             }
 
             transaction.set(newPaymentRef, {
-                userId, userName, periodo, montoBruto, sueldoNeto, montoDescontado: montoADescontar,
-                fechaDePago: new Date(), cuentaId, cuentaNombre, adminUid: user.uid
+                userId, 
+                userName, 
+                periodo, 
+                montoBruto: sueldoBruto, // <-- ¡AQUÍ ESTABA EL ERROR! Corregido para usar sueldoBruto
+                sueldoNeto, 
+                montoDescontado: montoADescontar,
+                fechaDePago: new Date(), 
+                cuentaId, 
+                cuentaNombre, 
+                adminUid: user.uid
             });
+
             const estadoImpuesto = tipoDeDescuento === 'neto' ? 'pagado (retenido)' : 'pendiente de pago';
             deducciones.forEach(ded => {
                 let montoDeducido = ded.tipo === 'porcentaje' ? (sueldoBruto * ded.valor) / 100 : ded.valor;
