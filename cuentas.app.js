@@ -1,4 +1,5 @@
 import { auth, db } from './firebase-init.js';
+import { exportToCSV } from './utils.js';
 
 const addAccountForm = document.getElementById('add-account-form');
 const accountsListContainer = document.getElementById('accounts-list');
