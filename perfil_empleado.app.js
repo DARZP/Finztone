@@ -141,12 +141,14 @@ async function descargarRegistrosColaborador() {
     alert(`Preparando la descarga de todos los registros de ${currentUserData.nombre}. Esto puede tardar...`);
 
     try {
-        const gastosPromise = db.collection('gastos').where('creadorId', '==', userId).get();
-        const ingresosPromise = db.collection('ingresos').where('creadorId', '==', userId).get();
-        const nominaPromise = db.collection('pagos_nomina').where('userId', '==', userId).get();
+        const user = auth.currentUser; // Obtenemos el admin actual
+        if (!user) return alert("Error de autenticación");
 
-        // --- LA CORRECCIÓN ESTÁ EN LA SIGUIENTE LÍNEA ---
-        // Se usa 'nominaPromise' en lugar de 'nominaSnapshot'
+        // --- CORRECCIÓN: Añadimos .where('adminUid', '==', user.uid) a cada consulta ---
+        const gastosPromise = db.collection('gastos').where('adminUid', '==', user.uid).where('creadorId', '==', userId).get();
+        const ingresosPromise = db.collection('ingresos').where('adminUid', '==', user.uid).where('creadorId', '==', userId).get();
+        const nominaPromise = db.collection('pagos_nomina').where('adminUid', '==', user.uid).where('userId', '==', userId).get();
+
         const [gastosSnapshot, ingresosSnapshot, nominaSnapshot] = await Promise.all([
             gastosPromise, 
             ingresosPromise, 
@@ -189,7 +191,11 @@ async function descargarRegistrosColaborador() {
             return alert("Este colaborador no tiene registros para descargar.");
         }
 
-        registros.sort((a, b) => new Date(a.Fecha.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$3-$2-$1')) - new Date(b.Fecha.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$3-$2-$1')));
+        registros.sort((a, b) => {
+            const dateA = new Date(a.Fecha.includes('/') ? a.Fecha.split('/').reverse().join('-') : a.Fecha);
+            const dateB = new Date(b.Fecha.includes('/') ? b.Fecha.split('/').reverse().join('-') : b.Fecha);
+            return dateA - dateB;
+        });
         exportToCSV(registros, `Registros-${currentUserData.nombre.replace(/ /g, '_')}`);
 
     } catch (error) {
