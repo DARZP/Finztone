@@ -145,8 +145,12 @@ async function descargarRegistrosColaborador() {
         const ingresosPromise = db.collection('ingresos').where('creadorId', '==', userId).get();
         const nominaPromise = db.collection('pagos_nomina').where('userId', '==', userId).get();
 
+        // --- LA CORRECCIÓN ESTÁ EN LA SIGUIENTE LÍNEA ---
+        // Se usa 'nominaPromise' en lugar de 'nominaSnapshot'
         const [gastosSnapshot, ingresosSnapshot, nominaSnapshot] = await Promise.all([
-            gastosPromise, ingresosPromise, nominaSnapshot 
+            gastosPromise, 
+            ingresosPromise, 
+            nominaPromise 
         ]);
 
         const registros = [];
@@ -181,7 +185,11 @@ async function descargarRegistrosColaborador() {
             });
         });
 
-        registros.sort((a, b) => new Date(a.Fecha) - new Date(b.Fecha));
+        if (registros.length === 0) {
+            return alert("Este colaborador no tiene registros para descargar.");
+        }
+
+        registros.sort((a, b) => new Date(a.Fecha.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$3-$2-$1')) - new Date(b.Fecha.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$3-$2-$1')));
         exportToCSV(registros, `Registros-${currentUserData.nombre.replace(/ /g, '_')}`);
 
     } catch (error) {
