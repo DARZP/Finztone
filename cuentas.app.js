@@ -21,13 +21,16 @@ accountTypeSelect.addEventListener('change', () => {
 });
 
 async function descargarRegistrosCuenta(cuentaId, cuentaNombre) {
-    if (!cuentaId) return;
+    const user = auth.currentUser;
+    if (!user || !cuentaId) return;
+
     alert(`Preparando la descarga de todos los registros de la cuenta: ${cuentaNombre}...`);
 
     try {
-        const gastosPromise = db.collection('gastos').where('cuentaId', '==', cuentaId).get();
-        const ingresosPromise = db.collection('ingresos').where('cuentaId', '==', cuentaId).get();
-        const nominaPromise = db.collection('pagos_nomina').where('cuentaId', '==', cuentaId).get();
+        // --- CORRECCIÓN: Añadimos .where('adminUid', '==', user.uid) a cada consulta ---
+        const gastosPromise = db.collection('gastos').where('adminUid', '==', user.uid).where('cuentaId', '==', cuentaId).get();
+        const ingresosPromise = db.collection('ingresos').where('adminUid', '==', user.uid).where('cuentaId', '==', cuentaId).get();
+        const nominaPromise = db.collection('pagos_nomina').where('adminUid', '==', user.uid).where('cuentaId', '==', cuentaId).get();
 
         const [gastosSnapshot, ingresosSnapshot, nominaSnapshot] = await Promise.all([
             gastosPromise, ingresosPromise, nominaPromise
@@ -46,6 +49,10 @@ async function descargarRegistrosCuenta(cuentaId, cuentaNombre) {
             const data = doc.data();
             registros.push({ Fecha: data.fechaDePago.toDate().toISOString().split('T')[0], Tipo: 'Nómina', Concepto: `Pago a ${data.userName}`, Monto: -data.montoDescontado, Creador: 'Sistema' });
         });
+
+        if (registros.length === 0) {
+            return alert("No se encontraron registros para esta cuenta.");
+        }
 
         registros.sort((a, b) => new Date(a.Fecha) - new Date(b.Fecha));
         exportToCSV(registros, `Registros-Cuenta-${cuentaNombre.replace(/ /g, '_')}`);
