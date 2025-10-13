@@ -1,4 +1,5 @@
 import { auth, db } from './firebase-init.js';
+import { exportToCSV } from './utils.js';
 
 // --- ELEMENTOS DEL DOM ---
 const generateBtn = document.getElementById('generate-spreadsheet-btn');
