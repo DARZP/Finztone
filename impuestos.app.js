@@ -1,4 +1,5 @@
 import { auth, db } from './firebase-init.js';
+import { exportToCSV } from './utils.js';
 
 // --- Elementos del DOM ---
 const addTaxForm = document.getElementById('add-tax-form');
