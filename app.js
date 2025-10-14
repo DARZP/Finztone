@@ -1,3 +1,16 @@
+// --- VERIFICADOR DE SESIÓN ACTIVA ---
+auth.onAuthStateChanged((user) => {
+  if (user) {
+    // Si el observador detecta un usuario activo al cargar la página...
+    console.log("Usuario ya logueado detectado:", user.email);
+    // ...lo mandamos directamente a la función que decide a qué dashboard enviarlo.
+    handleLoginSuccess(user);
+  } else {
+    // Si no hay usuario, no hacemos nada y dejamos que se muestre la página de login.
+    console.log("No hay sesión activa, mostrando página de login.");
+  }
+});
+
 import { auth, db } from './firebase-init.js';
 
 console.log("¡Firebase conectado exitosamente!");
