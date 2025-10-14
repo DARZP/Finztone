@@ -1,38 +1,34 @@
-import { auth, db } from './firebase-init.js';
+import { auth, db } from './firebase-init.js'; // Usamos nuestro archivo central
 
-// ---- PROTECCIÓN DE LA PÁGINA Y LÓGICA DEL DASHBOARD ----
-
-const userEmailElement = document.getElementById('user-email');
+const userDisplayElement = document.getElementById('user-email'); // El elemento que vamos a cambiar
 const logoutButton = document.getElementById('logout-button');
 
-// 1. Verificamos el estado de la autenticación
-auth.onAuthStateChanged((user) => {
+auth.onAuthStateChanged(async (user) => {
     if (user) {
-        // Si el usuario ha iniciado sesión...
-        console.log('Usuario autenticado:', user.email);
-        // Mostramos su correo en la barra de navegación
-        userEmailElement.textContent = user.email;
+        try {
+            // Buscamos el perfil del usuario en Firestore usando su UID
+            const userDoc = await db.collection('usuarios').doc(user.uid).get();
+            
+            if (userDoc.exists) {
+                const userData = userDoc.data();
+                // Mostramos el nombre del usuario en lugar del email
+                userDisplayElement.textContent = userData.nombre || 'Administrador';
+            } else {
+                // Si por alguna razón no se encuentra, mostramos un texto genérico
+                userDisplayElement.textContent = 'Administrador';
+            }
+        } catch (error) {
+            console.error("Error al obtener el perfil del usuario:", error);
+            userDisplayElement.textContent = user.email; // Como respaldo, mostramos el email
+        }
     } else {
-        // Si el usuario no ha iniciado sesión...
-        console.log('No hay usuario autenticado. Redirigiendo a la página de inicio.');
-        // Lo redirigimos a la página de inicio de sesión
         window.location.href = 'index.html';
     }
 });
 
-// 2. Lógica para el botón de cerrar sesión
 logoutButton.addEventListener('click', () => {
-    auth.signOut()
-        .then(() => {
-            // Cierre de sesión exitoso
-            console.log('El usuario ha cerrado sesión.');
-            alert('Has cerrado sesión exitosamente.');
-            // Redirigimos al usuario a la página de inicio de sesión
-            window.location.href = 'index.html';
-        })
-        .catch((error) => {
-            // Ocurrió un error
-            console.error('Error al cerrar sesión:', error);
-            alert('Ocurrió un error al intentar cerrar sesión.');
-        });
+    auth.signOut().then(() => {
+        window.location.href = 'index.html';
+    });
 });
+
