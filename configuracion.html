@@ -5,27 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Configuración de Cuenta - FINZTONE</title>
     <link rel="stylesheet" href="main.style.css">
-    <style>
-        /* Estilos específicos para esta página */
-        .usage-metric { margin-bottom: 20px; }
-        .usage-bar {
-            background-color: rgba(0, 0, 0, 0.3);
-            border-radius: 8px;
-            overflow: hidden;
-            height: 25px;
-            margin-top: 8px;
-        }
-        .usage-bar-fill {
-            background-color: var(--primary-color);
-            height: 100%;
-            width: 0%; /* Se actualizará con JS */
-            transition: width 0.5s ease-in-out;
-            text-align: center;
-            line-height: 25px;
-            font-weight: 500;
-            font-size: 0.9em;
-        }
-    </style>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -37,18 +16,9 @@
 
         <main>
             <div class="card">
-                <h2>Configuración de la Cuenta</h2>
-                
+                <h2>Mi Suscripción</h2>
                 <div class="plan-info">
-                    <h3>Plan Actual</h3>
-                    <p>Estás en el <strong id="plan-nombre" style="color: var(--primary-color);">Cargando...</strong></p>
-                    <p><strong>Estado:</strong> <span id="plan-estado">Cargando...</span></p>
-                </div>
-
-                <hr style="border-color: rgba(255,255,255,0.1); margin: 25px 0;">
-
-                <div class="usage-info">
-                    <h3>Uso de Cuenta</h3>
+                    <h3>Uso Actual</h3>
                     <div class="usage-metric">
                         <label>Colaboradores</label>
                         <div class="usage-bar">
@@ -57,13 +27,38 @@
                         <span id="usage-text" style="font-size: 0.9em; color: #aeb9c5;">Calculando...</span>
                     </div>
                 </div>
+            </div>
 
-                <hr style="border-color: rgba(255,255,255,0.1); margin: 25px 0;">
-
-                <div class="manage-plan">
-                    <h3>Administrar Suscripción</h3>
-                    <p>¿Necesitas añadir más colaboradores? Actualiza tu plan.</p>
-                    <button class="btn-primary" style="width: 100%;">Administrar Plan (Próximamente)</button>
+            <div class="card">
+                <h2>Planes Disponibles</h2>
+                <div class="plans-container">
+                    <div class="plan-card" id="plan-gratuito">
+                        <h3>Gratuito</h3>
+                        <div class="price">$0 <span>/ mes</span></div>
+                        <ul>
+                            <li>✓ Hasta 2 colaboradores</li>
+                            <li>✓ Funcionalidades básicas</li>
+                        </ul>
+                        <button class="btn-primary" data-plan="gratuito">Seleccionar</button>
+                    </div>
+                    <div class="plan-card" id="plan-familiar">
+                        <h3>Familiar</h3>
+                        <div class="price">$150 MXN <span>/ mes</span></div>
+                        <ul>
+                            <li>✓ Hasta 6 colaboradores</li>
+                            <li>✓ Soporte por correo</li>
+                        </ul>
+                        <button class="btn-primary" data-plan="familiar">Actualizar</button>
+                    </div>
+                    <div class="plan-card" id="plan-empresarial">
+                        <h3>Empresarial</h3>
+                        <div class="price">$350 MXN <span>/ mes</span></div>
+                        <ul>
+                            <li>✓ Colaboradores ilimitados</li>
+                            <li>✓ Soporte prioritario</li>
+                        </ul>
+                        <button class="btn-primary" data-plan="empresarial">Actualizar</button>
+                    </div>
                 </div>
             </div>
         </main>
@@ -72,7 +67,6 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-functions.js"></script>
 
     <script type="module" src="configuracion.app.js"></script>
