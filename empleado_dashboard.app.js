@@ -1,17 +1,23 @@
-import { auth, db } from './firebase-init.js';
+import { auth, db } from './firebase-init.js'; // Usamos nuestro archivo central
 
 const welcomeMessage = document.getElementById('welcome-message');
 const logoutButton = document.getElementById('logout-button');
 
-auth.onAuthStateChanged((user) => {
+auth.onAuthStateChanged(async (user) => {
     if (user) {
-        // Buscamos el nombre del empleado en la base de datos
-        db.collection('usuarios').where('email', '==', user.email).get().then(snapshot => {
-            if (!snapshot.empty) {
-                const userData = snapshot.docs[0].data();
+        try {
+            // Buscamos el perfil del empleado usando su UID
+            const userDoc = await db.collection('usuarios').doc(user.uid).get();
+            if (userDoc.exists) {
+                const userData = userDoc.data();
                 welcomeMessage.textContent = `¡Hola, ${userData.nombre}!`;
+            } else {
+                 welcomeMessage.textContent = '¡Hola!';
             }
-        });
+        } catch (error) {
+            console.error("Error al obtener el perfil del empleado:", error);
+            welcomeMessage.textContent = '¡Bienvenido!';
+        }
     } else {
         window.location.href = 'index.html';
     }
