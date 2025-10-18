@@ -127,7 +127,14 @@ addUserForm.addEventListener('submit', async (e) => {
         
 auth.onAuthStateChanged((user) => {
     if (user) {
-        // Esta es la consulta correcta para cargar y mostrar la lista al entrar a la página
+        // Obtenemos el perfil del usuario actual
+        const userDoc = await db.collection('usuarios').doc(user.uid).get();
+        if (userDoc.exists && userDoc.data().rol === 'coadmin') {
+            // Si es CoAdmin, ocultamos el formulario de creación
+            document.getElementById('add-user-form').style.display = 'none';
+        }
+
+        // El resto de la función que carga la lista de usuarios no cambia...
         db.collection('usuarios')
             .where('adminUid', '==', user.uid)
             .where('rol', '==', 'empleado')
