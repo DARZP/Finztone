@@ -40,38 +40,49 @@ document.addEventListener('DOMContentLoaded', (event) => {
 });
 
 function handleLoginSuccess(user) {
-    db.collection('usuarios').where('email', '==', user.email).get()
-        .then((querySnapshot) => {
-            
-            if (querySnapshot.empty) {
-                // --- ¡NUEVA LÓGICA! ---
+    // Búsqueda más eficiente: directamente por el UID del usuario.
+    const userDocRef = db.collection('usuarios').doc(user.uid);
+
+    userDocRef.get()
+        .then((doc) => {
+            if (!doc.exists) {
                 // El usuario existe en Authentication pero no en Firestore.
-                // Asumimos que es un Administrador y le creamos su perfil.
+                // Asumimos que es un nuevo Administrador y le creamos su perfil.
                 console.log('Administrador sin perfil detectado. Creando perfil...');
                 
-                // Usamos el UID de Authentication como ID del documento para una fácil referencia
-                const userRef = db.collection('usuarios').doc(user.uid); 
-                
-                userRef.set({
+                const newAdminData = {
                     email: user.email,
                     nombre: "Administrador", // Nombre por defecto
                     rol: 'admin',
-                    telefono: "",
-                    clabe: "",
-                    rfc: "",
+                    status: 'activo', // Añadimos el status por consistencia
                     fechaDeCreacion: new Date()
-                }).then(() => {
-                    console.log('Perfil de administrador creado. Redirigiendo...');
+                };
+
+                // Creamos el perfil y la suscripción gratuita por defecto
+                const profilePromise = userDocRef.set(newAdminData);
+                const subPromise = db.collection('suscripciones').doc(user.uid).set({
+                    planNombre: 'Gratuito',
+                    limiteColaboradores: 2,
+                    estado: 'activo',
+                    fechaDeInicio: new Date()
+                });
+
+                // Esperamos a que todo se guarde antes de redirigir
+                return Promise.all([profilePromise, subPromise]).then(() => {
+                    console.log('Perfil de administrador y suscripción creados. Redirigiendo...');
                     window.location.href = 'dashboard.html';
                 });
 
             } else {
-                // El perfil ya existe, procedemos como antes.
-                const userData = querySnapshot.docs[0].data();
+                // El perfil ya existe, redirigimos según el rol.
+                const userData = doc.data();
                 if (userData.rol === 'empleado') {
                     console.log('Usuario es Empleado, redirigiendo...');
                     window.location.href = 'empleado_dashboard.html';
-                } else {
+                } else if (userData.rol === 'coadmin') { // <-- ¡NUEVA LÓGICA!
+                    console.log('Usuario es Co-Administrador, redirigiendo...');
+                    window.location.href = 'coadmin_dashboard.html';
+                } else { // El rol es 'admin' o no está definido (se asume admin)
                     console.log('Usuario es Administrador, redirigiendo...');
                     window.location.href = 'dashboard.html';
                 }
