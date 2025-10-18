@@ -127,44 +127,46 @@ addUserForm.addEventListener('submit', async (e) => {
         
 auth.onAuthStateChanged(async (user) => {
     if (user) {
-        // --- 1. CONFIGURAR EL BOTÓN DE VOLVER (Lógica nueva) ---
+        // --- 1. CONFIGURAR EL BOTÓN DE VOLVER ---
         const backButton = document.getElementById('back-button');
         try {
-            // --- 2. OBTENER EL PERFIL DEL USUARIO (Reutilizamos esta búsqueda para todo) ---
+            // --- 2. OBTENER EL PERFIL DEL USUARIO ---
             const userDoc = await db.collection('usuarios').doc(user.uid).get();
             const userData = userDoc.exists ? userDoc.data() : {};
 
-            // Asignamos la URL correcta al botón de volver
+            // Asignar la URL al botón de volver y ajustar la vista para el Co-Admin
             if (userData.rol === 'coadmin') {
                 backButton.href = 'coadmin_dashboard.html';
-                // Si es Co-Admin, también ocultamos el formulario de creación
                 document.getElementById('add-user-form').style.display = 'none';
-                // y cambiamos el título
                 const listCardTitle = document.querySelector('.list-card h2');
                 if (listCardTitle) {
                     listCardTitle.textContent = 'Equipo de Colaboradores';
                 }
             } else {
-                // Si es admin o cualquier otro caso, vuelve al dashboard principal
                 backButton.href = 'dashboard.html';
             }
 
-            // --- 3. CARGAR LA LISTA DE COLABORADORES (Lógica que ya tenías) ---
-            // Obtenemos el adminUid del usuario actual (sea admin o coadmin)
+            // --- 3. CARGAR LA LISTA DE COLABORADORES (Lógica Simplificada) ---
             const adminUid = userData.adminUid || user.uid;
 
-            // Cargamos la lista de colaboradores que pertenecen a ese admin
             db.collection('usuarios')
                 .where('adminUid', '==', adminUid)
-                // Omitimos al propio usuario de la lista si es un CoAdmin
-                .where(db.FieldPath.documentId(), '!=', user.uid) 
-                .orderBy(db.FieldPath.documentId()) // Necesario por la desigualdad
+                .orderBy('nombre')
                 .onSnapshot(snapshot => {
                     let usuarios = [];
-                    snapshot.forEach(doc => usuarios.push({ id: doc.id, ...doc.data() }));
-                    // Ordenamos por nombre después de recibir los datos
-                    usuarios.sort((a, b) => a.nombre.localeCompare(b.nombre));
+                    snapshot.forEach(doc => {
+                        // Añadimos a todos los usuarios que pertenecen al admin
+                        usuarios.push({ id: doc.id, ...doc.data() });
+                    });
+                    
+                    // --- LA CORRECCIÓN CLAVE ESTÁ AQUÍ ---
+                    // Si el usuario es un coadmin, lo filtramos de la lista después de recibirla.
+                    if (userData.rol === 'coadmin') {
+                        usuarios = usuarios.filter(u => u.id !== user.uid);
+                    }
+
                     mostrarUsuarios(usuarios);
+
                 }, error => {
                     console.error("Error al obtener usuarios:", error);
                     alert("Ocurrió un error al cargar la lista. Revisa la consola (F12).");
@@ -172,7 +174,6 @@ auth.onAuthStateChanged(async (user) => {
 
         } catch (error) {
             console.error("Error al verificar el rol del usuario:", error);
-            // En caso de error, el botón de volver apunta al dashboard principal por seguridad
             backButton.href = 'dashboard.html';
         }
     } else {
