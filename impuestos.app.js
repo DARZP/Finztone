@@ -50,10 +50,21 @@ async function descargarRegistrosImpuesto(nombreImpuesto) {
     }
 }
 
-// --- LÓGICA PRINCIPAL DE LA PÁGINA ---
-
-auth.onAuthStateChanged(async (user) => {
+auth.onAuthStateChanged(async (user) => { // <-- Se añade 'async'
     if (user) {
+        // --- INICIA LA NUEVA LÓGICA PARA EL BOTÓN DE VOLVER ---
+        const backButton = document.getElementById('back-button');
+        try {
+            const userDoc = await db.collection('usuarios').doc(user.uid).get();
+            if (userDoc.exists && userDoc.data().rol === 'coadmin') {
+                backButton.href = 'coadmin_dashboard.html';
+            } else {
+                backButton.href = 'dashboard.html';
+            }
+        } catch (error) {
+            console.error("Error al obtener perfil para configurar el botón de volver:", error);
+            backButton.href = 'dashboard.html'; // Ruta por defecto en caso de error
+        }
         cargarImpuestosDefinidos();
         await poblarFiltros(); 
         cargarCuentasEnSelector();
