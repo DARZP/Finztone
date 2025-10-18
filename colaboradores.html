@@ -36,6 +36,15 @@
                         <label for="user-salary">Sueldo Bruto Mensual ($)</label>
                         <input type="number" id="user-salary" required>
                     </div>
+                    <div class="input-group">
+                        <label>Rol del Usuario</label>
+                        <div class="role-selector">
+                            <input type="radio" id="role-empleado" name="user-role" value="empleado" checked>
+                            <label for="role-empleado">Colaborador</label>
+                            <input type="radio" id="role-coadmin" name="user-role" value="coadmin">
+                            <label for="role-coadmin">Co-Administrador</label>
+                        </div>
+                    </div>
                     <button type="submit" class="btn-primary">Agregar Colaborador</button>
                 </form>
             </div>
