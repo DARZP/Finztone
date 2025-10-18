@@ -1,21 +1,84 @@
-import { auth, db } from './firebase-init.js';
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - FINZTONE</title>
+    
+    <link rel="stylesheet" href="main.style.css">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
 
-const userDisplayElement = document.getElementById('user-email');
-const logoutButton = document.getElementById('logout-button');
+    <div class="page-wrapper">
+        <header class="main-header">
+            <img src="images/nombre.png" alt="FINZTONE" class="logo-header">
+            <div class="user-info">
+                <span id="user-email">cargando...</span>
+                <button id="logout-button">Cerrar Sesión</button>
+            </div>
+        </header>
+    
+        <main class="dashboard-container">
+            <h2>Herramientas Principales</h2>
+            <div class="tools-grid">
+    
+                <a href="ingresos.html" class="tool-card">
+                    <div class="tool-icon" id="icon-ingresos">💰</div>
+                    <span>Ingresos</span>
+                </a>
+    
+                <a href="gastos.html" class="tool-card">
+                    <div class="tool-icon" id="icon-gastos">💸</div>
+                    <span>Gastos</span>
+                </a>
+    
+                <a href="nomina.html" class="tool-card">
+                    <div class="tool-icon">👥</div>
+                    <span>Nómina</span>
+                </a>
+    
+                <a href="reportes.html" class="tool-card">
+                    <div class="tool-icon" id="icon-reportes">📊</div>
+                    <span>Reportes</span>
+                </a>
+               
+                <a href="colaboradores.html" class="tool-card">
+                    <div class="tool-icon">💼</div>
+                    <span>Colaboradores</span>
+                </a>
+    
+                <a href="empresas.html" class="tool-card">
+                    <div class="tool-icon">🏢</div>
+                    <span>Empresas</span>
+                </a>
+    
+                <a href="cuentas.html" class="tool-card">
+                    <div class="tool-icon">🏦</div>
+                    <span>Cuentas</span>
+                </a>
+    
+                <a href="impuestos.html" class="tool-card">
+                    <div class="tool-icon">⚖️</div>
+                    <span>Impuestos</span>
+                </a>
+    
+                <a href="mi_perfil.html" class="tool-card">
+                    <div class="tool-icon" id="icon-perfil">👤</div>
+                    <span>Mi Perfil</span>
+                </a>
+            </div>
+        </main>
+    </div>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-functions.js"></script>
 
-auth.onAuthStateChanged(async (user) => {
-    if (user) {
-        const userDoc = await db.collection('usuarios').doc(user.uid).get();
-        if (userDoc.exists) {
-            userDisplayElement.textContent = userDoc.data().nombre || 'Co-Admin';
-        } else {
-            userDisplayElement.textContent = 'Co-Admin';
-        }
-    } else {
-        window.location.href = 'index.html';
-    }
-});
+    <script type="module" src="dashboard.app.js"></script>
 
-logoutButton.addEventListener('click', () => {
-    auth.signOut().then(() => { window.location.href = 'index.html'; });
-});
+</body>
+</html>
