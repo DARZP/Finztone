@@ -79,69 +79,52 @@ userListContainer.addEventListener('click', async (e) => {
     }
 });
 
-// --- LÓGICA PARA AGREGAR UN NUEVO COLABORADOR ---
-
 addUserForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const user = auth.currentUser;
-    if (!user) {
-        return alert("Error de autenticación. Por favor, inicia sesión de nuevo.");
-    }
+    if (!user) return alert("Error de autenticación.");
 
-    // Deshabilitamos el botón para evitar múltiples envíos
     const submitButton = addUserForm.querySelector('button[type="submit"]');
     submitButton.disabled = true;
     submitButton.textContent = 'Procesando...';
 
     try {
-        // 1. Verificamos el plan y el límite de colaboradores (esta lógica no cambia)
+        // ... (la lógica de verificar el plan no cambia) ...
         const subRef = db.collection('suscripciones').doc(user.uid);
         const subDoc = await subRef.get();
-
-        if (!subDoc.exists) {
-            throw new Error("No se pudo verificar tu plan de suscripción.");
+        if (!subDoc.exists) throw new Error("No se pudo verificar tu plan.");
+        const limiteColaboradores = subDoc.data().limiteColaboradores;
+        const colaboradoresQuery = await db.collection('usuarios').where('adminUid', '==', user.uid).where('status', '==', 'activo').get();
+        if (colaboradoresQuery.size >= limiteColaboradores) {
+            throw new Error(`Has alcanzado el límite de ${limiteColaboradores} colaboradores.`);
         }
-        const subData = subDoc.data();
-        const limiteColaboradores = subData.limiteColaboradores;
 
-        const colaboradoresQuery = await db.collection('usuarios')
-            .where('adminUid', '==', user.uid)
-            .where('rol', '==', 'empleado')
-            .where('status', '==', 'activo'); // <-- Usamos el nuevo campo 'status'
-
-        const colaboradoresActuales = (await colaboradoresQuery.get()).size;
-
-        if (colaboradoresActuales >= limiteColaboradores) {
-            throw new Error(`Has alcanzado el límite de ${limiteColaboradores} colaboradores para tu plan.`);
-        }
+        // Obtenemos el rol seleccionado de los radio buttons
+        const selectedRole = document.querySelector('input[name="user-role"]:checked').value;
 
         const dataToSend = {
             nombre: addUserForm['user-name'].value,
             email: addUserForm['user-email'].value,
             cargo: addUserForm['user-position'].value,
             sueldoBruto: parseFloat(addUserForm['user-salary'].value),
+            rol: selectedRole, // <--- Lo añadimos aquí
         };
 
-        // 3. Obtenemos una referencia a nuestra función y la llamamos
         const crearColaborador = functions.httpsCallable('crearColaborador');
         const result = await crearColaborador(dataToSend);
 
-        // 4. Mostramos el mensaje de éxito que nos devuelve la función
         alert(result.data.message);
         addUserForm.reset();
 
     } catch (error) {
-        // Si la función devuelve un error, lo mostramos
         console.error('Error al agregar colaborador: ', error);
         alert("Ocurrió un error: " + error.message);
     } finally {
-        // Volvemos a habilitar el botón
         submitButton.disabled = false;
         submitButton.textContent = 'Agregar Colaborador';
     }
 });
         
-
 auth.onAuthStateChanged((user) => {
     if (user) {
         // Esta es la consulta correcta para cargar y mostrar la lista al entrar a la página
