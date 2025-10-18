@@ -57,66 +57,96 @@ async function marcarPago(userId, userName, amount) {
     const tipoDeDescuento = document.querySelector('input[name="payment-type"]:checked').value;
     if (!confirm(`Confirmas el pago a ${userName} desde la cuenta ${cuentaNombre}?`)) return;
 
-    const accountRef = db.collection('cuentas').doc(cuentaId);
-    const newPaymentRef = db.collection('pagos_nomina').doc();
-    const userRef = db.collection('usuarios').doc(userId);
-    
+    const button = userItemElement.querySelector('.btn-pay');
+    button.disabled = true;
+    button.textContent = 'Procesando...';
+
     try {
-        await db.runTransaction(async (transaction) => {
-            const accountDoc = await transaction.get(accountRef);
-            const userDoc = await transaction.get(userRef);
-            if (!accountDoc.exists || !userDoc.exists) throw "La cuenta o el usuario no existen.";
+        // --- 1. VERIFICAR ROL DEL USUARIO ACTUAL ---
+        const currentUserDoc = await db.collection('usuarios').doc(user.uid).get();
+        const currentUserData = currentUserDoc.exists ? currentUserDoc.data() : { rol: 'admin', nombre: 'Administrador' };
+        
+        // --- 2. OBTENER DATOS Y HACER CÁLCULOS ---
+        const userToPayRef = db.collection('usuarios').doc(userId);
+        const userToPayDoc = await userToPayRef.get();
+        if (!userToPayDoc.exists) throw new Error("El colaborador a pagar no fue encontrado.");
+        
+        const userToPayData = userToPayDoc.data();
+        const sueldoBruto = userToPayData.sueldoBruto || 0;
+        const deducciones = userToPayData.deducciones || [];
 
-            const cuentaData = accountDoc.data();
-            const sueldoBruto = userDoc.data().sueldoBruto || 0; // La variable correcta es 'sueldoBruto'
-            const deducciones = userDoc.data().deducciones || [];
+        let totalDeducciones = 0;
+        deducciones.forEach(ded => {
+            totalDeducciones += ded.tipo === 'porcentaje' ? (sueldoBruto * ded.valor) / 100 : ded.valor;
+        });
+        
+        const sueldoNeto = sueldoBruto - totalDeducciones;
+        const montoADescontar = tipoDeDescuento === 'neto' ? sueldoNeto : sueldoBruto;
 
-            let totalDeducciones = 0;
-            deducciones.forEach(ded => {
-                totalDeducciones += ded.tipo === 'porcentaje' ? (sueldoBruto * ded.valor) / 100 : ded.valor;
-            });
-            
-            const sueldoNeto = sueldoBruto - totalDeducciones;
-            const montoADescontar = tipoDeDescuento === 'neto' ? sueldoNeto : sueldoBruto;
-
-            if (cuentaData.tipo === 'credito') {
-                const nuevaDeudaActual = (cuentaData.deudaActual || 0) + montoADescontar;
-                const nuevaDeudaTotal = (cuentaData.deudaTotal || 0) + montoADescontar;
-                transaction.update(accountRef, { deudaActual: nuevaDeudaActual, deudaTotal: nuevaDeudaTotal });
-            } else { // Débito
-                const nuevoSaldo = (cuentaData.saldoActual || 0) - montoADescontar;
-                if(nuevoSaldo < 0) throw new Error("Saldo insuficiente.");
-                transaction.update(accountRef, { saldoActual: nuevoSaldo });
-            }
-
-            transaction.set(newPaymentRef, {
-                userId, 
-                userName, 
-                periodo, 
-                montoBruto: sueldoBruto, // <-- ¡AQUÍ ESTABA EL ERROR! Corregido para usar sueldoBruto
-                sueldoNeto, 
+        // --- 3. LÓGICA CONDICIONAL BASADA EN EL ROL ---
+        if (currentUserData.rol === 'coadmin') {
+            // Si es Co-Admin, solo crea una solicitud pendiente.
+            await db.collection('pagos_nomina').add({
+                userId,
+                userName,
+                periodo,
+                montoBruto: sueldoBruto,
+                sueldoNeto,
                 montoDescontado: montoADescontar,
-                fechaDePago: new Date(), 
-                cuentaId, 
-                cuentaNombre, 
-                adminUid: user.uid
+                fechaDeCreacion: new Date(),
+                cuentaId,
+                cuentaNombre,
+                adminUid: currentUserData.adminUid || user.uid, // Usa el adminUid del co-admin
+                creadoPor: user.uid,
+                nombreCreador: currentUserData.nombre,
+                status: 'pendiente' // El estado clave
             });
+            alert(`¡Solicitud de pago para ${userName} enviada para aprobación!`);
+        } else {
+            // Si es Admin, ejecuta la transacción completa.
+            const accountRef = db.collection('cuentas').doc(cuentaId);
+            const newPaymentRef = db.collection('pagos_nomina').doc();
+            
+            await db.runTransaction(async (transaction) => {
+                const accountDoc = await transaction.get(accountRef);
+                if (!accountDoc.exists) throw "La cuenta de origen no existe.";
+                const cuentaData = accountDoc.data();
 
-            const estadoImpuesto = tipoDeDescuento === 'neto' ? 'pagado (retenido)' : 'pendiente de pago';
-            deducciones.forEach(ded => {
-                let montoDeducido = ded.tipo === 'porcentaje' ? (sueldoBruto * ded.valor) / 100 : ded.valor;
-                const newTaxMovementRef = db.collection('movimientos_impuestos').doc();
-                transaction.set(newTaxMovementRef, {
-                    origen: `Nómina - ${userName}`, pagoId: newPaymentRef.id, tipoImpuesto: ded.nombre,
-                    monto: montoDeducido, fecha: new Date(), status: estadoImpuesto, adminUid: user.uid
+                if (cuentaData.tipo === 'credito') {
+                    const nuevaDeudaActual = (cuentaData.deudaActual || 0) + montoADescontar;
+                    const nuevaDeudaTotal = (cuentaData.deudaTotal || 0) + montoADescontar;
+                    transaction.update(accountRef, { deudaActual: nuevaDeudaActual, deudaTotal: nuevaDeudaTotal });
+                } else { // Débito
+                    const nuevoSaldo = (cuentaData.saldoActual || 0) - montoADescontar;
+                    if(nuevoSaldo < 0) throw new Error("Saldo insuficiente.");
+                    transaction.update(accountRef, { saldoActual: nuevoSaldo });
+                }
+
+                transaction.set(newPaymentRef, {
+                    userId, userName, periodo, montoBruto: sueldoBruto, sueldoNeto, montoDescontado: montoADescontar,
+                    fechaDePago: new Date(), cuentaId, cuentaNombre, adminUid: user.uid, status: 'aprobado'
+                });
+
+                const estadoImpuesto = tipoDeDescuento === 'neto' ? 'pagado (retenido)' : 'pendiente de pago';
+                deducciones.forEach(ded => {
+                    let montoDeducido = ded.tipo === 'porcentaje' ? (sueldoBruto * ded.valor) / 100 : ded.valor;
+                    const newTaxMovementRef = db.collection('movimientos_impuestos').doc();
+                    transaction.set(newTaxMovementRef, {
+                        origen: `Nómina - ${userName}`, pagoId: newPaymentRef.id, tipoImpuesto: ded.nombre,
+                        monto: montoDeducido, fecha: new Date(), status: estadoImpuesto, adminUid: user.uid
+                    });
                 });
             });
-        });
-        alert(`¡Pago para ${userName} registrado!`);
-        cargarCuentas(user);
+            alert(`¡Pago para ${userName} registrado!`);
+        }
+        
+        cargarCuentas(user); // Recargamos las cuentas para ver el saldo actualizado si aplica.
+
     } catch (error) {
-        console.error("Error en la transacción: ", error);
+        console.error("Error en la transacción de nómina: ", error);
         alert("Ocurrió un error: " + error.message);
+        button.disabled = false; // Rehabilitamos el botón si hay error
+        button.textContent = 'Marcar como Pagado';
     }
 }
 
