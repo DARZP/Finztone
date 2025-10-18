@@ -26,8 +26,16 @@ const receiptFileInput = document.getElementById('receipt-file');
 let empresasCargadas = [];
 
 // --- LÓGICA DE LA PÁGINA ---
-auth.onAuthStateChanged((user) => {
+auth.onAuthStateChanged(async (user) => { // Añadimos async
     if (user) {
+        // --- LÓGICA PARA EL BOTÓN DE VOLVER ---
+        const backButton = document.getElementById('back-button');
+        const userDoc = await db.collection('usuarios').doc(user.uid).get();
+        if (userDoc.exists && userDoc.data().rol === 'coadmin') {
+            backButton.href = 'coadmin_dashboard.html';
+        } else {
+            backButton.href = 'dashboard.html';
+        }
         cargarClientesYProyectos();
         poblarFiltrosYCategorias();
         cargarCuentasEnSelector();
