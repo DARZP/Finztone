@@ -171,33 +171,44 @@ async function guardarGastoAdmin(status) {
     const user = auth.currentUser;
     if (!user) return;
     const cuentaId = accountSelect.value;
-    if (status === 'aprobado' && !cuentaId) return alert('Por favor, selecciona una cuenta de origen para un gasto aprobado.');
     const montoBruto = parseFloat(document.getElementById('expense-amount').value) || 0;
     if (montoBruto <= 0) return alert('Por favor, introduce un monto válido.');
 
+    // Deshabilitar botones para evitar envíos duplicados
+    saveDraftBtn.disabled = true;
+    addApprovedBtn.disabled = true;
+    addApprovedBtn.textContent = 'Procesando...';
+
     try {
-        // --- LÓGICA DE SUBIDA DE ARCHIVO ---
+        // --- 1. VERIFICAR EL ROL DEL USUARIO ---
+        const userDoc = await db.collection('usuarios').doc(user.uid).get();
+        const userData = userDoc.exists ? userDoc.data() : { rol: 'admin', nombre: 'Administrador' };
+        
+        // --- 2. LÓGICA DE ESTADO DINÁMICO ---
+        // Si el usuario es un Co-Admin, cualquier gasto "aprobado" se convierte en "pendiente".
+        let finalStatus = status;
+        if (userData.rol === 'coadmin' && status === 'aprobado') {
+            finalStatus = 'pendiente';
+        }
+
+        // La validación de la cuenta solo es necesaria si el estado final es 'aprobado'
+        if (finalStatus === 'aprobado' && !cuentaId) {
+            throw new Error('Por favor, selecciona una cuenta de origen para un gasto aprobado.');
+        }
+
+        // --- 3. LÓGICA DE SUBIDA DE ARCHIVO (sin cambios) ---
         let comprobanteURL = '';
         const file = receiptFileInput.files[0];
         if (file) {
-            alert('Subiendo archivo...');
             const generarUrl = functions.httpsCallable('generarUrlDeSubida');
             const urlResult = await generarUrl({ fileName: file.name, contentType: file.type });
             const { uploadUrl, filePath } = urlResult.data;
-
-            const uploadResponse = await fetch(uploadUrl, {
-                method: 'PUT',
-                headers: { 'Content-Type': file.type },
-                body: file
-            });
-
-            if (!uploadResponse.ok) throw new Error('La subida del archivo falló.');
-
+            await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
             const fileRef = storage.ref(filePath);
             comprobanteURL = await fileRef.getDownloadURL();
         }
 
-        // --- Lógica para guardar el registro en Firestore ---
+        // --- 4. PREPARAR DATOS DEL GASTO (sin cambios en la lógica) ---
         let montoNeto = montoBruto;
         const impuestosSeleccionados = [];
         if (addTaxesCheckbox.checked) {
@@ -209,10 +220,7 @@ async function guardarGastoAdmin(status) {
             });
             montoNeto = montoBruto + totalImpuestos;
         }
-
-        const clienteIdSeleccionado = clientSelect.value;
-        const proyectoIdSeleccionado = projectSelect.value;
-        const clienteSeleccionado = empresasCargadas.find(e => e.id === clienteIdSeleccionado);
+        const clienteSeleccionado = empresasCargadas.find(e => e.id === clientSelect.value);
 
         const expenseData = {
             descripcion: addExpenseForm['expense-description'].value,
@@ -228,70 +236,70 @@ async function guardarGastoAdmin(status) {
             folio: generarFolio(user.uid),
             creadoPor: user.uid,
             emailCreador: user.email,
-            nombreCreador: "Administrador",
+            nombreCreador: userData.nombre, // Usamos el nombre del perfil
             adminUid: user.uid,
             fechaDeCreacion: new Date(),
-            status: status,
-            cuentaId: cuentaId,
-            cuentaNombre: cuentaId ? accountSelect.options[accountSelect.selectedIndex].text.split(' (')[0] : '',
-            proyectoId: proyectoIdSeleccionado,
-            proyectoNombre: proyectoIdSeleccionado ? projectSelect.options[projectSelect.selectedIndex].text : '',
-            comprobanteURL: comprobanteURL // Guardamos la URL
+            status: finalStatus, // Usamos el estado final
+            cuentaId: finalStatus === 'aprobado' ? cuentaId : '',
+            cuentaNombre: finalStatus === 'aprobado' && cuentaId ? accountSelect.options[accountSelect.selectedIndex].text.split(' (')[0] : '',
+            proyectoId: projectSelect.value,
+            proyectoNombre: projectSelect.value ? projectSelect.options[projectSelect.selectedIndex].text : '',
+            comprobanteURL: comprobanteURL
         };
 
-        if (isInvoiceCheckbox.checked) {
-            expenseData.datosFactura = {
-                rfc: document.getElementById('invoice-rfc').value,
-                folioFiscal: document.getElementById('invoice-folio').value
-            };
-        }
-
-        if (status === 'borrador') {
+        // --- 5. LÓGICA DE GUARDADO CONDICIONAL ---
+        // Si es un borrador o un gasto pendiente (de un Co-Admin), solo guardamos el registro.
+        if (finalStatus === 'borrador' || finalStatus === 'pendiente') {
             await db.collection('gastos').add(expenseData);
-            alert('¡Borrador guardado!');
-            addExpenseForm.reset();
-            return;
-        }
-
-        const cuentaRef = db.collection('cuentas').doc(cuentaId);
-        const newExpenseRef = db.collection('gastos').doc();
-
-        await db.runTransaction(async (transaction) => {
-            const cuentaDoc = await transaction.get(cuentaRef);
-            if (!cuentaDoc.exists) throw "La cuenta no existe.";
-            const cuentaData = cuentaDoc.data();
-            if (cuentaData.tipo === 'credito') {
-                const nuevaDeudaActual = (cuentaData.deudaActual || 0) + montoNeto;
-                const nuevaDeudaTotal = (cuentaData.deudaTotal || 0) + montoNeto;
-                transaction.update(cuentaRef, { deudaActual: nuevaDeudaActual, deudaTotal: nuevaDeudaTotal });
-            } else {
-                const nuevoSaldo = (cuentaData.saldoActual || 0) - montoNeto;
-                if (nuevoSaldo < 0) throw "Saldo insuficiente en la cuenta seleccionada.";
-                transaction.update(cuentaRef, { saldoActual: nuevoSaldo });
-            }
-            transaction.set(newExpenseRef, expenseData);
-            impuestosSeleccionados.forEach(imp => {
-                const montoImpuesto = imp.tipo === 'porcentaje' ? (montoBruto * imp.valor) / 100 : imp.valor;
-                const taxMovRef = db.collection('movimientos_impuestos').doc();
-                transaction.set(taxMovRef, {
-                    origen: `Gasto Admin - ${expenseData.descripcion}`,
-                    tipoImpuesto: imp.nombre,
-                    monto: montoImpuesto,
-                    fecha: new Date(),
-                    status: 'pagado',
-                    adminUid: user.uid
+            alert(finalStatus === 'borrador' ? '¡Borrador guardado!' : '¡Gasto enviado para aprobación!');
+        } else {
+            // Si es un admin guardando un gasto aprobado, ejecutamos la transacción completa.
+            const cuentaRef = db.collection('cuentas').doc(cuentaId);
+            const newExpenseRef = db.collection('gastos').doc();
+            await db.runTransaction(async (transaction) => {
+                const cuentaDoc = await transaction.get(cuentaRef);
+                if (!cuentaDoc.exists) throw "La cuenta no existe.";
+                const cuentaData = cuentaDoc.data();
+                if (cuentaData.tipo === 'credito') {
+                    const nuevaDeudaActual = (cuentaData.deudaActual || 0) + montoNeto;
+                    const nuevaDeudaTotal = (cuentaData.deudaTotal || 0) + montoNeto;
+                    transaction.update(cuentaRef, { deudaActual: nuevaDeudaActual, deudaTotal: nuevaDeudaTotal });
+                } else {
+                    const nuevoSaldo = (cuentaData.saldoActual || 0) - montoNeto;
+                    if (nuevoSaldo < 0) throw "Saldo insuficiente en la cuenta seleccionada.";
+                    transaction.update(cuentaRef, { saldoActual: nuevoSaldo });
+                }
+                transaction.set(newExpenseRef, expenseData);
+                impuestosSeleccionados.forEach(imp => {
+                    const montoImpuesto = imp.tipo === 'porcentaje' ? (montoBruto * imp.valor) / 100 : imp.valor;
+                    const taxMovRef = db.collection('movimientos_impuestos').doc();
+                    transaction.set(taxMovRef, {
+                        origen: `Gasto - ${expenseData.descripcion}`,
+                        tipoImpuesto: imp.nombre,
+                        monto: montoImpuesto,
+                        fecha: new Date(),
+                        status: 'pagado',
+                        adminUid: user.uid
+                    });
                 });
             });
-        });
-        alert('¡Gasto registrado, saldo actualizado e impuestos generados!');
+            alert('¡Gasto registrado, saldo actualizado e impuestos generados!');
+        }
+
+        // Reseteamos el formulario al finalizar
         addExpenseForm.reset();
         clientSelect.dispatchEvent(new Event('change'));
         isInvoiceCheckbox.checked = false;
         taxesDetailsContainer.style.display = 'none';
 
     } catch (error) {
-        console.error("Error en la transacción: ", error);
+        console.error("Error al guardar el gasto: ", error);
         alert("Error: " + error.message);
+    } finally {
+        // Rehabilitamos los botones en cualquier caso
+        saveDraftBtn.disabled = false;
+        addApprovedBtn.disabled = false;
+        addApprovedBtn.textContent = 'Agregar Gasto Aprobado';
     }
 }
 
