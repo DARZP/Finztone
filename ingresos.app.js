@@ -276,50 +276,56 @@ function poblarFiltrosYCategorias() {
     formCategorySelect.innerHTML = formOptionsHTML;
 }
 
-// --- FUNCIÓN CORREGIDA ---
 async function cargarIngresosAprobados(adminUid, currentUserId) {
-    if (!adminUid) return;
+    if (!adminUid || !currentUserId) return;
 
-    const userDoc = await db.collection('usuarios').doc(currentUserId).get();
-    const currentUserRole = userDoc.exists ? userDoc.data().rol : 'admin';
+    try {
+        const userDoc = await db.collection('usuarios').doc(currentUserId).get();
+        const currentUserRole = userDoc.exists ? userDoc.data().rol : 'admin';
 
-    let query;
-    if (currentUserRole === 'coadmin') {
-        // Un Co-Admin solo ve su propio historial
-        query = db.collection('ingresos')
-            .where('adminUid', '==', adminUid)
-            .where('creadoPor', '==', currentUserId)
-            .where('status', '==', 'aprobado');
-    } else {
-        // El Admin ve todo el historial de la cuenta
-        query = db.collection('ingresos')
-            .where('adminUid', '==', adminUid)
-            .where('status', '==', 'aprobado');
+        let query;
+        if (currentUserRole === 'coadmin') {
+            // --- LA CORRECIÓN CLAVE ESTÁ AQUÍ ---
+            // Ahora la consulta es súper específica:
+            // "Tráeme los ingresos que pertenecen a mi jefe Y que además cree yo".
+            query = db.collection('ingresos')
+                .where('adminUid', '==', adminUid)
+                .where('creadoPor', '==', currentUserId)
+                .where('status', '==', 'aprobado');
+        } else {
+            // La consulta para el Admin no cambia
+            query = db.collection('ingresos')
+                .where('adminUid', '==', adminUid)
+                .where('status', '==', 'aprobado');
+        }
+
+        const selectedCategory = categoryFilter.value;
+        if (selectedCategory && selectedCategory !== 'todos') {
+            query = query.where('categoria', '==', selectedCategory);
+        }
+
+        const selectedMonth = monthFilter.value;
+        if (selectedMonth && selectedMonth !== 'todos') {
+            const [year, month] = selectedMonth.split('-').map(Number);
+            const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
+            const endDate = new Date(year, month, 1).toISOString().split('T')[0];
+            query = query.where('fecha', '>=', startDate).where('fecha', '<', endDate);
+        }
+        
+        query = query.orderBy('fecha', 'desc');
+
+        query.onSnapshot(snapshot => {
+            const ingresos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            mostrarIngresosAprobados(ingresos);
+        }, error => {
+            console.error("Error al obtener ingresos:", error);
+            // Si el error indica que falta un índice, el enlace estará en la consola.
+            alert("Error al cargar el historial. Revisa la consola (F12) para ver si necesitas crear un índice en Firestore.");
+        });
+
+    } catch (error) {
+        console.error("Error en la lógica de carga de ingresos:", error);
     }
-
-    const selectedCategory = categoryFilter.value;
-    if (selectedCategory && selectedCategory !== 'todos') {
-        query = query.where('categoria', '==', selectedCategory);
-    }
-
-    const selectedMonth = monthFilter.value;
-    if (selectedMonth && selectedMonth !== 'todos') {
-        const [year, month] = selectedMonth.split('-').map(Number);
-        const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
-        const endDate = new Date(year, month, 1).toISOString().split('T')[0];
-        query = query.where('fecha', '>=', startDate).where('fecha', '<', endDate);
-    }
-    
-    query = query.orderBy('fecha', 'desc');
-
-    query.onSnapshot(snapshot => {
-        const ingresos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        mostrarIngresosAprobados(ingresos);
-    }, error => {
-        console.error("Error al obtener ingresos:", error);
-        // Si el error indica que falta un índice, el enlace estará en la consola.
-        alert("Error al cargar el historial. Revisa la consola (F12) para ver si necesitas crear un índice en Firestore.");
-    });
 }
 
 function mostrarIngresosAprobados(ingresos) {
