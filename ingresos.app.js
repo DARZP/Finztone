@@ -51,13 +51,14 @@ auth.onAuthStateChanged(async (user) => {
         poblarFiltrosYCategorias();
         cargarCuentasEnSelector(adminUid);
         cargarImpuestosParaSeleccion(adminUid);
-        cargarIngresosAprobados(adminUid, user.uid); // Pasamos ambos UIDs
+        
+        cargarIngresosAprobados(adminUid, userData.rol);
         recalcularTotales();
 
-        // Re-asignar listeners de filtros aquí para asegurar que tengan el adminUid
-        categoryFilter.onchange = () => cargarIngresosAprobados(adminUid, user.uid);
-        monthFilter.onchange = () => cargarIngresosAprobados(adminUid, user.uid);
-
+        // Listeners para los filtros
+        categoryFilter.onchange = () => cargarIngresosAprobados(adminUid, userData.rol);
+        monthFilter.onchange = () => cargarIngresosAprobados(adminUid, userData.rol);
+        
     } else {
         window.location.href = 'index.html';
     }
@@ -276,55 +277,35 @@ function poblarFiltrosYCategorias() {
     formCategorySelect.innerHTML = formOptionsHTML;
 }
 
-async function cargarIngresosAprobados(adminUid, currentUserId) {
-    if (!adminUid || !currentUserId) return;
+async function cargarIngresosAprobados(adminUid, rol) {
+    if (!adminUid) return;
 
     try {
-        const userDoc = await db.collection('usuarios').doc(currentUserId).get();
-        const currentUserRole = userDoc.exists ? userDoc.data().rol : 'admin';
+        // Obtenemos una referencia a nuestra nueva Cloud Function
+        const obtenerHistorial = functions.httpsCallable('obtenerHistorialIngresos');
+        
+        // La llamamos pasándole la información necesaria
+        const resultado = await obtenerHistorial({ adminUid: adminUid, rol: rol });
+        
+        let ingresos = resultado.data.ingresos;
 
-        let query;
-        if (currentUserRole === 'coadmin') {
-            // --- LA CORRECIÓN CLAVE ESTÁ AQUÍ ---
-            // Ahora la consulta es súper específica:
-            // "Tráeme los ingresos que pertenecen a mi jefe Y que además cree yo".
-            query = db.collection('ingresos')
-                .where('adminUid', '==', adminUid)
-                .where('creadoPor', '==', currentUserId)
-                .where('status', '==', 'aprobado');
-        } else {
-            // La consulta para el Admin no cambia
-            query = db.collection('ingresos')
-                .where('adminUid', '==', adminUid)
-                .where('status', '==', 'aprobado');
-        }
-
+        // Filtramos por categoría y mes en el lado del cliente (esto es muy rápido)
         const selectedCategory = categoryFilter.value;
         if (selectedCategory && selectedCategory !== 'todos') {
-            query = query.where('categoria', '==', selectedCategory);
+            ingresos = ingresos.filter(ing => ing.categoria === selectedCategory);
         }
 
         const selectedMonth = monthFilter.value;
         if (selectedMonth && selectedMonth !== 'todos') {
-            const [year, month] = selectedMonth.split('-').map(Number);
-            const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
-            const endDate = new Date(year, month, 1).toISOString().split('T')[0];
-            query = query.where('fecha', '>=', startDate).where('fecha', '<', endDate);
+            ingresos = ingresos.filter(ing => ing.fecha.startsWith(selectedMonth));
         }
         
-        query = query.orderBy('fecha', 'desc');
-
-        query.onSnapshot(snapshot => {
-            const ingresos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            mostrarIngresosAprobados(ingresos);
-        }, error => {
-            console.error("Error al obtener ingresos:", error);
-            // Si el error indica que falta un índice, el enlace estará en la consola.
-            alert("Error al cargar el historial. Revisa la consola (F12) para ver si necesitas crear un índice en Firestore.");
-        });
+        mostrarIngresosAprobados(ingresos);
 
     } catch (error) {
-        console.error("Error en la lógica de carga de ingresos:", error);
+        console.error("Error al llamar a la función obtenerHistorialIngresos:", error);
+        alert("Error al cargar el historial: " + error.message);
+        incomeListContainer.innerHTML = `<p class="error">No se pudo cargar el historial. ${error.message}</p>`;
     }
 }
 
