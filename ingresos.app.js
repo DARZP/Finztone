@@ -3,12 +3,12 @@ import { auth, db, functions, storage } from './firebase-init.js';
 // --- ELEMENTOS DEL DOM ---
 const addIncomeForm = document.getElementById('add-income-form');
 const incomeListContainer = document.getElementById('income-list');
+const accountSelectGroup = document.getElementById('account-select-group');
 const isInvoiceCheckbox = document.getElementById('is-invoice');
 const invoiceDetailsContainer = document.getElementById('invoice-details');
 const categoryFilter = document.getElementById('category-filter');
 const monthFilter = document.getElementById('month-filter');
 const accountSelect = document.getElementById('account-select');
-const accountSelectGroup = document.getElementById('account-select-group');
 const taxesChecklistContainer = document.getElementById('taxes-checklist');
 const saveDraftBtn = document.getElementById('save-draft-btn');
 const addApprovedBtn = document.getElementById('add-approved-btn');
@@ -30,38 +30,33 @@ let empresasCargadas = [];
 // --- LÓGICA DE LA PÁGINA ---
 auth.onAuthStateChanged(async (user) => {
     if (user) {
-        // 1. Obtenemos el perfil del usuario logueado
         const userDoc = await db.collection('usuarios').doc(user.uid).get();
         const userData = userDoc.exists ? userDoc.data() : {};
-        
-        // 2. Determinamos el UID del administrador principal
         const adminUid = userData.rol === 'admin' ? user.uid : userData.adminUid;
+
         if (!adminUid) {
-            alert("Error: No se pudo identificar al administrador principal de tu cuenta.");
+            alert("Error: No se pudo identificar al administrador principal.");
             return;
         }
 
-        // 3. Ajustamos la vista según el rol
         if (userData.rol === 'coadmin') {
             backButton.href = 'coadmin_dashboard.html';
-            // Ocultamos el selector de cuenta porque los co-admins envían a aprobación
-            if (accountSelectGroup) {
-                accountSelectGroup.style.display = 'none';
-            }
-            if (accountSelect) {
-                accountSelect.required = false;
-            }
+            if (accountSelectGroup) accountSelectGroup.style.display = 'none';
+            if (accountSelect) accountSelect.required = false;
         } else {
             backButton.href = 'dashboard.html';
         }
 
-        // 4. Cargamos los datos compartidos usando el UID del admin principal
         cargarClientesYProyectos(adminUid);
         poblarFiltrosYCategorias();
-        cargarCuentasEnSelector(adminUid); // Solo para admins
+        cargarCuentasEnSelector(adminUid);
         cargarImpuestosParaSeleccion(adminUid);
-        cargarIngresosAprobados(adminUid); // El historial sí lo ven ambos
+        cargarIngresosAprobados(adminUid, user.uid); // Pasamos ambos UIDs
         recalcularTotales();
+
+        // Re-asignar listeners de filtros aquí para asegurar que tengan el adminUid
+        categoryFilter.onchange = () => cargarIngresosAprobados(adminUid, user.uid);
+        monthFilter.onchange = () => cargarIngresosAprobados(adminUid, user.uid);
 
     } else {
         window.location.href = 'index.html';
@@ -70,46 +65,33 @@ auth.onAuthStateChanged(async (user) => {
 
 
 // --- LISTENERS ---
-addTaxesCheckbox.addEventListener('change', () => {
-    taxesDetailsContainer.style.display = addTaxesCheckbox.checked ? 'block' : 'none';
-    recalcularTotales();
-});
-isInvoiceCheckbox.addEventListener('change', () => {
-    invoiceDetailsContainer.style.display = isInvoiceCheckbox.checked ? 'block' : 'none';
-});
+addTaxesCheckbox.addEventListener('change', recalcularTotales);
+isInvoiceCheckbox.addEventListener('change', () => { invoiceDetailsContainer.style.display = isInvoiceCheckbox.checked ? 'block' : 'none'; });
 montoInput.addEventListener('input', recalcularTotales);
 taxesChecklistContainer.addEventListener('change', recalcularTotales);
 saveDraftBtn.addEventListener('click', () => guardarIngresoAdmin('borrador'));
 addApprovedBtn.addEventListener('click', () => guardarIngresoAdmin('aprobado'));
-categoryFilter.addEventListener('change', () => auth.onAuthStateChanged(user => user && cargarIngresosAprobados(user.uid)));
-monthFilter.addEventListener('change', () => auth.onAuthStateChanged(user => user && cargarIngresosAprobados(user.uid)));
 
 clientSelect.addEventListener('change', async () => {
     const user = auth.currentUser;
     if (!user) return;
-
     const userDoc = await db.collection('usuarios').doc(user.uid).get();
     const adminUid = userDoc.exists ? (userDoc.data().adminUid || user.uid) : user.uid;
 
     const empresaId = clientSelect.value;
     projectSelect.innerHTML = '<option value="">Cargando...</option>';
     projectSelect.disabled = true;
+
     if (!empresaId) {
         projectSelect.innerHTML = '<option value="">Selecciona un cliente primero</option>';
         return;
     }
-    const proyectosSnapshot = await db.collection('proyectos')
-        .where('empresaId', '==', empresaId)
-        .where('status', '==', 'activo')
-        .where('adminUid', '==', adminUid)
-        .get();
+    const proyectosSnapshot = await db.collection('proyectos').where('empresaId', '==', empresaId).where('status', '==', 'activo').where('adminUid', '==', adminUid).get();
     if (proyectosSnapshot.empty) {
         projectSelect.innerHTML = '<option value="">Este cliente no tiene proyectos activos</option>';
     } else {
         projectSelect.innerHTML = '<option value="">Seleccionar Proyecto</option>';
-        proyectosSnapshot.forEach(doc => {
-            projectSelect.innerHTML += `<option value="${doc.id}">${doc.data().nombre}</option>`;
-        });
+        proyectosSnapshot.forEach(doc => { projectSelect.innerHTML += `<option value="${doc.id}">${doc.data().nombre}</option>`; });
         projectSelect.disabled = false;
     }
 });
@@ -120,22 +102,15 @@ async function cargarClientesYProyectos(adminUid) {
     const empresasSnapshot = await db.collection('empresas').where('adminUid', '==', adminUid).orderBy('nombre').get();
     empresasCargadas = empresasSnapshot.docs.map(doc => ({ id: doc.id, nombre: doc.data().nombre }));
     clientSelect.innerHTML = '<option value="">Ninguno</option>';
-    empresasCargadas.forEach(empresa => {
-        clientSelect.innerHTML += `<option value="${empresa.id}">${empresa.nombre}</option>`;
-    });
+    empresasCargadas.forEach(empresa => { clientSelect.innerHTML += `<option value="${empresa.id}">${empresa.nombre}</option>`; });
 }
 
-function generarFolio(userId) {
-    const date = new Date();
-    const userInitials = userId.substring(0, 4).toUpperCase();
-    const timestamp = date.getTime();
-    return `INC-ADM-${userInitials}-${timestamp}`;
-}
+function generarFolio(userId) { return `INC-ADM-${userId.substring(0, 4).toUpperCase()}-${Date.now()}`; }
 
 function cargarCuentasEnSelector(adminUid) {
     db.collection('cuentas').where('adminUid', '==', adminUid).where('tipo', '==', 'debito').orderBy('nombre').onSnapshot(snapshot => {
         const selectedValue = accountSelect.value;
-        accountSelect.innerHTML = '<option value="" disabled selected>Selecciona una cuenta de destino</option>';
+        accountSelect.innerHTML = '<option value="" disabled selected>Selecciona una cuenta</option>';
         snapshot.forEach(doc => {
             const cuenta = doc.data();
             accountSelect.appendChild(new Option(`${cuenta.nombre} (Saldo: $${(cuenta.saldoActual || 0).toLocaleString('es-MX')})`, doc.id));
@@ -250,10 +225,7 @@ async function guardarIngresoAdmin(status) {
         };
 
         if (isInvoiceCheckbox.checked) {
-            incomeData.datosFactura = {
-                rfc: document.getElementById('invoice-rfc').value,
-                folioFiscal: document.getElementById('invoice-folio').value
-            };
+            incomeData.datosFactura = { rfc: document.getElementById('invoice-rfc').value, folioFiscal: document.getElementById('invoice-folio').value };
         }
 
         if (finalStatus === 'borrador' || finalStatus === 'pendiente') {
@@ -261,37 +233,21 @@ async function guardarIngresoAdmin(status) {
             alert(finalStatus === 'borrador' ? '¡Borrador guardado!' : '¡Ingreso enviado para aprobación!');
         } else {
             const cuentaRef = db.collection('cuentas').doc(cuentaId);
-            const newIncomeRef = db.collection('ingresos').doc();
             await db.runTransaction(async (transaction) => {
                 const cuentaDoc = await transaction.get(cuentaRef);
                 if (!cuentaDoc.exists) throw "La cuenta no existe.";
-                const saldoActual = cuentaDoc.data().saldoActual;
-                const nuevoSaldo = saldoActual + montoNeto;
+                const nuevoSaldo = (cuentaDoc.data().saldoActual || 0) + montoNeto;
+                const newIncomeRef = db.collection('ingresos').doc();
                 transaction.set(newIncomeRef, incomeData);
                 transaction.update(cuentaRef, { saldoActual: nuevoSaldo });
-                impuestosSeleccionados.forEach(imp => {
-                    const montoImpuesto = imp.tipo === 'porcentaje' ? (montoBruto * imp.valor) / 100 : imp.valor;
-                    const taxMovRef = db.collection('movimientos_impuestos').doc();
-                    transaction.set(taxMovRef, {
-                        origen: `Ingreso - ${incomeData.descripcion}`,
-                        tipoImpuesto: imp.nombre,
-                        monto: montoImpuesto,
-                        fecha: new Date(),
-                        status: 'pagado (retenido)',
-                        adminUid: user.uid
-                    });
-                });
             });
-            alert('¡Ingreso registrado, saldo actualizado e impuestos generados!');
+            alert('¡Ingreso registrado!');
         }
-
         addIncomeForm.reset();
         clientSelect.dispatchEvent(new Event('change'));
-        isInvoiceCheckbox.checked = false;
-        taxesDetailsContainer.style.display = 'none';
         
     } catch (error) {
-        console.error("Error al guardar el ingreso: ", error);
+        console.error("Error al guardar:", error);
         alert("Error: " + error.message);
     } finally {
         saveDraftBtn.disabled = false;
@@ -320,24 +276,50 @@ function poblarFiltrosYCategorias() {
     formCategorySelect.innerHTML = formOptionsHTML;
 }
 
-function cargarIngresosAprobados(adminUid) {
+// --- FUNCIÓN CORREGIDA ---
+async function cargarIngresosAprobados(adminUid, currentUserId) {
+    if (!adminUid) return;
+
+    const userDoc = await db.collection('usuarios').doc(currentUserId).get();
+    const currentUserRole = userDoc.exists ? userDoc.data().rol : 'admin';
+
+    let query;
+    if (currentUserRole === 'coadmin') {
+        // Un Co-Admin solo ve su propio historial
+        query = db.collection('ingresos')
+            .where('adminUid', '==', adminUid)
+            .where('creadoPor', '==', currentUserId)
+            .where('status', '==', 'aprobado');
+    } else {
+        // El Admin ve todo el historial de la cuenta
+        query = db.collection('ingresos')
+            .where('adminUid', '==', adminUid)
+            .where('status', '==', 'aprobado');
+    }
+
     const selectedCategory = categoryFilter.value;
-    const selectedMonth = monthFilter.value;
-    let query = db.collection('ingresos').where('adminUid', '==', adminUid).where('status', '==', 'aprobado');
     if (selectedCategory && selectedCategory !== 'todos') {
         query = query.where('categoria', '==', selectedCategory);
     }
+
+    const selectedMonth = monthFilter.value;
     if (selectedMonth && selectedMonth !== 'todos') {
         const [year, month] = selectedMonth.split('-').map(Number);
         const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
-        const endDate = new Date(year, month, 0, 23, 59, 59).toISOString().split('T')[0];
-        query = query.where('fecha', '>=', startDate).where('fecha', '<=', endDate);
+        const endDate = new Date(year, month, 1).toISOString().split('T')[0];
+        query = query.where('fecha', '>=', startDate).where('fecha', '<', endDate);
     }
+    
     query = query.orderBy('fecha', 'desc');
+
     query.onSnapshot(snapshot => {
         const ingresos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         mostrarIngresosAprobados(ingresos);
-    }, error => console.error("Error al obtener ingresos:", error));
+    }, error => {
+        console.error("Error al obtener ingresos:", error);
+        // Si el error indica que falta un índice, el enlace estará en la consola.
+        alert("Error al cargar el historial. Revisa la consola (F12) para ver si necesitas crear un índice en Firestore.");
+    });
 }
 
 function mostrarIngresosAprobados(ingresos) {
@@ -351,35 +333,19 @@ function mostrarIngresosAprobados(ingresos) {
         itemContainer.classList.add('expense-item');
         itemContainer.dataset.id = ingreso.id;
         const fechaFormateada = new Date(ingreso.fecha.replace(/-/g, '/')).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
-        const creadorLink = ingreso.nombreCreador !== "Administrador" ? `<a href="perfil_empleado.html?id=${ingreso.creadorId}">${ingreso.nombreCreador}</a>` : "Administrador";
-        const iconoComprobante = ingreso.comprobanteURL 
-            ? `<a href="${ingreso.comprobanteURL}" target="_blank" title="Ver comprobante" style="text-decoration: none; font-size: 1.1em; margin-left: 8px;">📎</a>` 
-            : '';
+        const creadorLink = (ingreso.nombreCreador !== "Administrador" && ingreso.creadorId) ? `<a href="perfil_empleado.html?id=${ingreso.creadorId}">${ingreso.nombreCreador}</a>` : (ingreso.nombreCreador || "Sistema");
+        const iconoComprobante = ingreso.comprobanteURL ? `<a href="${ingreso.comprobanteURL}" target="_blank" title="Ver comprobante" style="text-decoration: none; font-size: 1.1em; margin-left: 8px;">📎</a>` : '';
 
         itemContainer.innerHTML = `
             <div class="item-summary">
                 <div class="expense-info">
-                    <span class="expense-description">
-                        ${ingreso.descripcion}
-                        ${iconoComprobante}
-                    </span>
+                    <span class="expense-description">${ingreso.descripcion}${iconoComprobante}</span>
                     <span class="expense-details">Registrado por: ${creadorLink} | ${ingreso.categoria} - ${fechaFormateada}</span>
                 </div>
                 <span class="expense-amount">$${(ingreso.totalConImpuestos || ingreso.monto).toLocaleString('es-MX')}</span>
             </div>
             <div class="item-details" style="display: none;">
-                <p><strong>Folio:</strong> ${ingreso.folio || 'N/A'}</p>
-                <p><strong>Establecimiento:</strong> ${ingreso.establecimiento || 'No especificado'}</p>
-                <p><strong>Cliente Asociado:</strong> ${ingreso.empresa || 'Ninguno'}</p>
-                <p><strong>Proyecto:</strong> ${ingreso.proyectoNombre || 'Ninguno'}</p>
-                <p><strong>Cuenta:</strong> ${ingreso.cuentaNombre || 'No especificada'}</p>
-                <p><strong>Comentarios:</strong> ${ingreso.comentarios || 'Ninguno'}</p>
-                ${ingreso.impuestos && ingreso.impuestos.length > 0 ? '<h4>Impuestos Desglosados</h4>' : ''}
-                ${ingreso.impuestos?.map(imp => {
-                    const montoImpuesto = imp.tipo === 'porcentaje' ? (ingreso.monto * imp.valor / 100) : imp.valor;
-                    return `<p>- ${imp.nombre}: $${montoImpuesto.toLocaleString('es-MX')}</p>`;
-                }).join('') || ''}
-            </div>`;
+                </div>`;
         incomeListContainer.appendChild(itemContainer);
     });
 }
@@ -389,6 +355,6 @@ incomeListContainer.addEventListener('click', (e) => {
     const item = e.target.closest('.expense-item');
     if (item) {
         const details = item.querySelector('.item-details');
-        details.style.display = details.style.display === 'block' ? 'none' : 'block';
+        if(details) details.style.display = details.style.display === 'block' ? 'none' : 'block';
     }
 });
