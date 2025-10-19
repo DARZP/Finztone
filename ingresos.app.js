@@ -8,6 +8,7 @@ const invoiceDetailsContainer = document.getElementById('invoice-details');
 const categoryFilter = document.getElementById('category-filter');
 const monthFilter = document.getElementById('month-filter');
 const accountSelect = document.getElementById('account-select');
+const accountSelectGroup = document.getElementById('account-select-group');
 const taxesChecklistContainer = document.getElementById('taxes-checklist');
 const saveDraftBtn = document.getElementById('save-draft-btn');
 const addApprovedBtn = document.getElementById('add-approved-btn');
@@ -22,30 +23,51 @@ const incomePlaceInput = document.getElementById('income-place');
 const clientSelect = document.getElementById('client-select');
 const projectSelect = document.getElementById('project-select');
 const receiptFileInput = document.getElementById('receipt-file');
+const backButton = document.getElementById('back-button');
 
 let empresasCargadas = [];
 
 // --- LÓGICA DE LA PÁGINA ---
-auth.onAuthStateChanged(async (user) => { // Añadimos async
+auth.onAuthStateChanged(async (user) => {
     if (user) {
-        // --- LÓGICA PARA EL BOTÓN DE VOLVER ---
-        const backButton = document.getElementById('back-button');
+        // 1. Obtenemos el perfil del usuario logueado
         const userDoc = await db.collection('usuarios').doc(user.uid).get();
-        if (userDoc.exists && userDoc.data().rol === 'coadmin') {
+        const userData = userDoc.exists ? userDoc.data() : {};
+        
+        // 2. Determinamos el UID del administrador principal
+        const adminUid = userData.rol === 'admin' ? user.uid : userData.adminUid;
+        if (!adminUid) {
+            alert("Error: No se pudo identificar al administrador principal de tu cuenta.");
+            return;
+        }
+
+        // 3. Ajustamos la vista según el rol
+        if (userData.rol === 'coadmin') {
             backButton.href = 'coadmin_dashboard.html';
+            // Ocultamos el selector de cuenta porque los co-admins envían a aprobación
+            if (accountSelectGroup) {
+                accountSelectGroup.style.display = 'none';
+            }
+            if (accountSelect) {
+                accountSelect.required = false;
+            }
         } else {
             backButton.href = 'dashboard.html';
         }
-        cargarClientesYProyectos();
+
+        // 4. Cargamos los datos compartidos usando el UID del admin principal
+        cargarClientesYProyectos(adminUid);
         poblarFiltrosYCategorias();
-        cargarCuentasEnSelector();
-        cargarImpuestosParaSeleccion();
-        cargarIngresosAprobados();
+        cargarCuentasEnSelector(adminUid); // Solo para admins
+        cargarImpuestosParaSeleccion(adminUid);
+        cargarIngresosAprobados(adminUid); // El historial sí lo ven ambos
         recalcularTotales();
+
     } else {
         window.location.href = 'index.html';
     }
 });
+
 
 // --- LISTENERS ---
 addTaxesCheckbox.addEventListener('change', () => {
@@ -59,12 +81,16 @@ montoInput.addEventListener('input', recalcularTotales);
 taxesChecklistContainer.addEventListener('change', recalcularTotales);
 saveDraftBtn.addEventListener('click', () => guardarIngresoAdmin('borrador'));
 addApprovedBtn.addEventListener('click', () => guardarIngresoAdmin('aprobado'));
-categoryFilter.addEventListener('change', cargarIngresosAprobados);
-monthFilter.addEventListener('change', cargarIngresosAprobados);
+categoryFilter.addEventListener('change', () => auth.onAuthStateChanged(user => user && cargarIngresosAprobados(user.uid)));
+monthFilter.addEventListener('change', () => auth.onAuthStateChanged(user => user && cargarIngresosAprobados(user.uid)));
 
 clientSelect.addEventListener('change', async () => {
     const user = auth.currentUser;
     if (!user) return;
+
+    const userDoc = await db.collection('usuarios').doc(user.uid).get();
+    const adminUid = userDoc.exists ? (userDoc.data().adminUid || user.uid) : user.uid;
+
     const empresaId = clientSelect.value;
     projectSelect.innerHTML = '<option value="">Cargando...</option>';
     projectSelect.disabled = true;
@@ -75,7 +101,7 @@ clientSelect.addEventListener('change', async () => {
     const proyectosSnapshot = await db.collection('proyectos')
         .where('empresaId', '==', empresaId)
         .where('status', '==', 'activo')
-        .where('adminUid', '==', user.uid)
+        .where('adminUid', '==', adminUid)
         .get();
     if (proyectosSnapshot.empty) {
         projectSelect.innerHTML = '<option value="">Este cliente no tiene proyectos activos</option>';
@@ -90,13 +116,8 @@ clientSelect.addEventListener('change', async () => {
 
 // --- FUNCIONES ---
 
-async function cargarClientesYProyectos() {
-    const user = auth.currentUser;
-    if (!user) return;
-    
-    // --- CORRECCIÓN --- Añadimos .where() para filtrar por admin
-    const empresasSnapshot = await db.collection('empresas').where('adminUid', '==', user.uid).orderBy('nombre').get();
-    
+async function cargarClientesYProyectos(adminUid) {
+    const empresasSnapshot = await db.collection('empresas').where('adminUid', '==', adminUid).orderBy('nombre').get();
     empresasCargadas = empresasSnapshot.docs.map(doc => ({ id: doc.id, nombre: doc.data().nombre }));
     clientSelect.innerHTML = '<option value="">Ninguno</option>';
     empresasCargadas.forEach(empresa => {
@@ -111,10 +132,8 @@ function generarFolio(userId) {
     return `INC-ADM-${userInitials}-${timestamp}`;
 }
 
-function cargarCuentasEnSelector() {
-    const user = auth.currentUser;
-    if(!user) return;
-    db.collection('cuentas').where('adminUid', '==', user.uid).where('tipo', '==', 'debito').orderBy('nombre').onSnapshot(snapshot => {
+function cargarCuentasEnSelector(adminUid) {
+    db.collection('cuentas').where('adminUid', '==', adminUid).where('tipo', '==', 'debito').orderBy('nombre').onSnapshot(snapshot => {
         const selectedValue = accountSelect.value;
         accountSelect.innerHTML = '<option value="" disabled selected>Selecciona una cuenta de destino</option>';
         snapshot.forEach(doc => {
@@ -125,12 +144,8 @@ function cargarCuentasEnSelector() {
     });
 }
 
-async function cargarImpuestosParaSeleccion() {
-    const user = auth.currentUser;
-    if (!user) return;
-    const snapshot = await db.collection('impuestos_definiciones')
-        .where('adminUid', '==', user.uid)
-        .get();
+async function cargarImpuestosParaSeleccion(adminUid) {
+    const snapshot = await db.collection('impuestos_definiciones').where('adminUid', '==', adminUid).get();
     taxesChecklistContainer.innerHTML = '';
     snapshot.forEach(doc => {
         const impuesto = { id: doc.id, ...doc.data() };
@@ -162,34 +177,29 @@ function recalcularTotales() {
 
 async function guardarIngresoAdmin(status) {
     const user = auth.currentUser;
-    if (!user) return;
-    const cuentaId = accountSelect.value;
+    if (!user) return alert("Error de autenticación");
+
     const montoBruto = parseFloat(montoInput.value) || 0;
     if (montoBruto <= 0) return alert('Por favor, introduce un monto válido.');
 
-    // Deshabilitar botones
     saveDraftBtn.disabled = true;
     addApprovedBtn.disabled = true;
     addApprovedBtn.textContent = 'Procesando...';
 
     try {
-        // --- 1. VERIFICAR EL ROL DEL USUARIO ---
         const userDoc = await db.collection('usuarios').doc(user.uid).get();
         const userData = userDoc.exists ? userDoc.data() : { rol: 'admin', nombre: 'Administrador' };
         
-        // --- 2. LÓGICA DE ESTADO DINÁMICO ---
-        // Si el usuario es Co-Admin, cualquier ingreso "aprobado" se convierte en "pendiente".
         let finalStatus = status;
         if (userData.rol === 'coadmin' && status === 'aprobado') {
             finalStatus = 'pendiente';
         }
 
-        // La validación de la cuenta solo es necesaria si el estado final es 'aprobado'
+        const cuentaId = accountSelect.value;
         if (finalStatus === 'aprobado' && !cuentaId) {
             throw new Error('Por favor, selecciona una cuenta de destino para un ingreso aprobado.');
         }
 
-        // --- 3. LÓGICA DE SUBIDA DE ARCHIVO (sin cambios) ---
         let comprobanteURL = '';
         const file = receiptFileInput.files[0];
         if (file) {
@@ -201,7 +211,6 @@ async function guardarIngresoAdmin(status) {
             comprobanteURL = await fileRef.getDownloadURL();
         }
 
-        // --- 4. PREPARAR DATOS DEL INGRESO ---
         let montoNeto = montoBruto;
         const impuestosSeleccionados = [];
         if (addTaxesCheckbox.checked) {
@@ -229,10 +238,10 @@ async function guardarIngresoAdmin(status) {
             folio: generarFolio(user.uid),
             creadoPor: user.uid,
             emailCreador: user.email,
-            nombreCreador: userData.nombre, // Usamos el nombre del perfil
-            adminUid: user.uid,
+            nombreCreador: userData.nombre,
+            adminUid: userData.adminUid || user.uid,
             fechaDeCreacion: new Date(),
-            status: finalStatus, // Usamos el estado final
+            status: finalStatus,
             cuentaId: finalStatus === 'aprobado' ? cuentaId : '',
             cuentaNombre: finalStatus === 'aprobado' && cuentaId ? accountSelect.options[accountSelect.selectedIndex].text.split(' (')[0] : '',
             proyectoId: projectSelect.value,
@@ -240,7 +249,13 @@ async function guardarIngresoAdmin(status) {
             comprobanteURL: comprobanteURL
         };
 
-        // --- 5. LÓGICA DE GUARDADO CONDICIONAL ---
+        if (isInvoiceCheckbox.checked) {
+            incomeData.datosFactura = {
+                rfc: document.getElementById('invoice-rfc').value,
+                folioFiscal: document.getElementById('invoice-folio').value
+            };
+        }
+
         if (finalStatus === 'borrador' || finalStatus === 'pendiente') {
             await db.collection('ingresos').add(incomeData);
             alert(finalStatus === 'borrador' ? '¡Borrador guardado!' : '¡Ingreso enviado para aprobación!');
@@ -270,7 +285,6 @@ async function guardarIngresoAdmin(status) {
             alert('¡Ingreso registrado, saldo actualizado e impuestos generados!');
         }
 
-        // Resetear formulario
         addIncomeForm.reset();
         clientSelect.dispatchEvent(new Event('change'));
         isInvoiceCheckbox.checked = false;
@@ -280,7 +294,6 @@ async function guardarIngresoAdmin(status) {
         console.error("Error al guardar el ingreso: ", error);
         alert("Error: " + error.message);
     } finally {
-        // Rehabilitar botones
         saveDraftBtn.disabled = false;
         addApprovedBtn.disabled = false;
         addApprovedBtn.textContent = 'Agregar Ingreso Aprobado';
@@ -307,12 +320,10 @@ function poblarFiltrosYCategorias() {
     formCategorySelect.innerHTML = formOptionsHTML;
 }
 
-function cargarIngresosAprobados() {
-    const user = auth.currentUser;
-    if(!user) return;
+function cargarIngresosAprobados(adminUid) {
     const selectedCategory = categoryFilter.value;
     const selectedMonth = monthFilter.value;
-    let query = db.collection('ingresos').where('adminUid', '==', user.uid).where('status', '==', 'aprobado');
+    let query = db.collection('ingresos').where('adminUid', '==', adminUid).where('status', '==', 'aprobado');
     if (selectedCategory && selectedCategory !== 'todos') {
         query = query.where('categoria', '==', selectedCategory);
     }
@@ -341,8 +352,6 @@ function mostrarIngresosAprobados(ingresos) {
         itemContainer.dataset.id = ingreso.id;
         const fechaFormateada = new Date(ingreso.fecha.replace(/-/g, '/')).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
         const creadorLink = ingreso.nombreCreador !== "Administrador" ? `<a href="perfil_empleado.html?id=${ingreso.creadorId}">${ingreso.nombreCreador}</a>` : "Administrador";
-        
-        // --- LÓGICA PARA EL ICONO DEL COMPROBANTE ---
         const iconoComprobante = ingreso.comprobanteURL 
             ? `<a href="${ingreso.comprobanteURL}" target="_blank" title="Ver comprobante" style="text-decoration: none; font-size: 1.1em; margin-left: 8px;">📎</a>` 
             : '';
