@@ -29,18 +29,16 @@ let empresasCargadas = [];
 
 auth.onAuthStateChanged(async (user) => {
     if (user) {
-        // 1. Obtenemos el perfil del usuario logueado
         const userDoc = await db.collection('usuarios').doc(user.uid).get();
         const userData = userDoc.exists ? userDoc.data() : {};
-        
-        // 2. Determinamos el UID del administrador principal
         const adminUid = userData.rol === 'admin' ? user.uid : userData.adminUid;
+
         if (!adminUid) {
-            alert("Error: No se pudo identificar al administrador principal de tu cuenta.");
+            alert("Error: No se pudo identificar al administrador principal.");
             return;
         }
 
-        // 3. Ajustamos la vista según el rol
+        const backButton = document.getElementById('back-button');
         if (userData.rol === 'coadmin') {
             backButton.href = 'coadmin_dashboard.html';
             if (accountSelectGroup) accountSelectGroup.style.display = 'none';
@@ -49,19 +47,20 @@ auth.onAuthStateChanged(async (user) => {
             backButton.href = 'dashboard.html';
         }
 
-        // 4. Cargamos los datos compartidos usando el UID del admin principal
+        // Carga los datos compartidos
         cargarClientesYProyectos(adminUid);
         poblarFiltrosYCategorias();
         cargarCuentasEnSelector(adminUid);
         cargarImpuestosParaSeleccion(adminUid);
-        cargarIngresosAprobados(adminUid, user.uid); // Pasamos ambos UIDs
         
-        recalcularTotales(); // <--- ¡AQUÍ ESTÁ LA LÍNEA QUE FALTABA!
+        // Llamada inicial al historial usando la Cloud Function
+        cargarIngresosAprobados(adminUid, userData.rol);
 
-        // Re-asignar listeners de filtros aquí para asegurar que tengan el adminUid
-        categoryFilter.onchange = () => cargarIngresosAprobados(adminUid, user.uid);
-        monthFilter.onchange = () => cargarIngresosAprobados(adminUid, user.uid);
-
+        // Listeners para los filtros
+        categoryFilter.onchange = () => cargarIngresosAprobados(adminUid, userData.rol);
+        monthFilter.onchange = () => cargarIngresosAprobados(adminUid, userData.rol);
+        recalcularTotales();
+        
     } else {
         window.location.href = 'index.html';
     }
@@ -284,7 +283,7 @@ async function cargarIngresosAprobados(adminUid, rol) {
     if (!adminUid) return;
 
     try {
-        // Obtenemos una referencia a nuestra nueva Cloud Function
+        // Obtenemos una referencia a nuestra Cloud Function corregida
         const obtenerHistorial = functions.httpsCallable('obtenerHistorialIngresos');
         
         // La llamamos pasándole la información necesaria
@@ -292,7 +291,7 @@ async function cargarIngresosAprobados(adminUid, rol) {
         
         let ingresos = resultado.data.ingresos;
 
-        // Filtramos por categoría y mes en el lado del cliente (esto es muy rápido)
+        // Filtramos por categoría y mes en el lado del cliente
         const selectedCategory = categoryFilter.value;
         if (selectedCategory && selectedCategory !== 'todos') {
             ingresos = ingresos.filter(ing => ing.categoria === selectedCategory);
@@ -308,7 +307,7 @@ async function cargarIngresosAprobados(adminUid, rol) {
     } catch (error) {
         console.error("Error al llamar a la función obtenerHistorialIngresos:", error);
         alert("Error al cargar el historial: " + error.message);
-        incomeListContainer.innerHTML = `<p class="error">No se pudo cargar el historial. ${error.message}</p>`;
+        incomeListContainer.innerHTML = `<p class="error-message">No se pudo cargar el historial. ${error.message}</p>`;
     }
 }
 
