@@ -26,6 +26,7 @@ const receiptFileInput = document.getElementById('receipt-file');
 const backButton = document.getElementById('back-button');
 
 let empresasCargadas = [];
+let historialDeIngresos = [];
 
 auth.onAuthStateChanged(async (user) => {
     if (user) {
