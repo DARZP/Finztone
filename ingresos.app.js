@@ -28,7 +28,6 @@ const backButton = document.getElementById('back-button');
 let empresasCargadas = [];
 let historialDeIngresos = []; // Guardaremos el historial completo aquí
 
-// --- LÓGICA DE LA PÁGINA ---
 auth.onAuthStateChanged(async (user) => {
     if (user) {
         const userDoc = await db.collection('usuarios').doc(user.uid).get();
@@ -44,23 +43,20 @@ auth.onAuthStateChanged(async (user) => {
             backButton.href = 'coadmin_dashboard.html';
             if (accountSelectGroup) accountSelectGroup.style.display = 'none';
             if (accountSelect) accountSelect.required = false;
-            // --- ¡CORRECCIÓN DEL TEXTO DEL BOTÓN! ---
             if (addApprovedBtn) addApprovedBtn.textContent = 'Enviar para Aprobación';
         } else {
             backButton.href = 'dashboard.html';
             if (addApprovedBtn) addApprovedBtn.textContent = 'Agregar Ingreso Aprobado';
         }
 
-        // Cargamos los datos compartidos
+        // --- LA LÍNEA QUE FALTABA ESTÁ AQUÍ ---
         cargarClientesYProyectos(adminUid);
         poblarFiltrosYCategorias();
         cargarCuentasEnSelector(adminUid);
-        cargarImpuestosParaSeleccion(adminUid); // <--- Corregido
+        cargarImpuestosParaSeleccion(adminUid); // <--- ¡Esta es la línea que faltaba!
         
-        // Llamada inicial al historial usando la Cloud Function
         await cargarIngresosAprobados(adminUid, user.uid);
 
-        // Listeners para los filtros
         categoryFilter.onchange = () => filtrarYMostrarIngresos();
         monthFilter.onchange = () => filtrarYMostrarIngresos();
         recalcularTotales();
