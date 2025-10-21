@@ -281,34 +281,36 @@ function poblarFiltrosYCategorias() {
 
 async function cargarIngresosAprobados(adminUid, rol) {
     if (!adminUid) return;
+    incomeListContainer.innerHTML = '<p>Cargando historial...</p>';
 
     try {
-        // Obtenemos una referencia a nuestra Cloud Function corregida
         const obtenerHistorial = functions.httpsCallable('obtenerHistorialIngresos');
-        
-        // La llamamos pasándole la información necesaria
         const resultado = await obtenerHistorial({ adminUid: adminUid, rol: rol });
         
-        let ingresos = resultado.data.ingresos;
-
-        // Filtramos por categoría y mes en el lado del cliente
-        const selectedCategory = categoryFilter.value;
-        if (selectedCategory && selectedCategory !== 'todos') {
-            ingresos = ingresos.filter(ing => ing.categoria === selectedCategory);
-        }
-
-        const selectedMonth = monthFilter.value;
-        if (selectedMonth && selectedMonth !== 'todos') {
-            ingresos = ingresos.filter(ing => ing.fecha.startsWith(selectedMonth));
-        }
-        
-        mostrarIngresosAprobados(ingresos);
+        historialDeIngresos = resultado.data.ingresos;
+        filtrarYMostrarIngresos();
 
     } catch (error) {
         console.error("Error al llamar a la función obtenerHistorialIngresos:", error);
         alert("Error al cargar el historial: " + error.message);
-        incomeListContainer.innerHTML = `<p class="error-message">No se pudo cargar el historial. ${error.message}</p>`;
+        incomeListContainer.innerHTML = `<p class="error-message">No se pudo cargar el historial.</p>`;
     }
+}
+
+function filtrarYMostrarIngresos() {
+    let ingresosFiltrados = [...historialDeIngresos];
+
+    const selectedCategory = categoryFilter.value;
+    if (selectedCategory && selectedCategory !== 'todos') {
+        ingresosFiltrados = ingresosFiltrados.filter(ing => ing.categoria === selectedCategory);
+    }
+
+    const selectedMonth = monthFilter.value;
+    if (selectedMonth && selectedMonth !== 'todos') {
+        ingresosFiltrados = ingresosFiltrados.filter(ing => ing.fecha.startsWith(selectedMonth));
+    }
+    
+    mostrarIngresosAprobados(ingresosFiltrados);
 }
 
 function mostrarIngresosAprobados(ingresos) {
