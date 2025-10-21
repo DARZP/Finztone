@@ -26,8 +26,9 @@ const receiptFileInput = document.getElementById('receipt-file');
 const backButton = document.getElementById('back-button');
 
 let empresasCargadas = [];
-let historialDeIngresos = [];
+let historialDeIngresos = []; // Guardaremos el historial completo aquí
 
+// --- LÓGICA DE LA PÁGINA ---
 auth.onAuthStateChanged(async (user) => {
     if (user) {
         const userDoc = await db.collection('usuarios').doc(user.uid).get();
@@ -50,13 +51,16 @@ auth.onAuthStateChanged(async (user) => {
             if (addApprovedBtn) addApprovedBtn.textContent = 'Agregar Ingreso Aprobado';
         }
 
+        // Cargamos los datos compartidos
         cargarClientesYProyectos(adminUid);
         poblarFiltrosYCategorias();
         cargarCuentasEnSelector(adminUid);
-        cargarImpuestosParaSeleccion(adminUid);
+        cargarImpuestosParaSeleccion(adminUid); // <--- Corregido
         
+        // Llamada inicial al historial usando la Cloud Function
         await cargarIngresosAprobados(adminUid, user.uid);
 
+        // Listeners para los filtros
         categoryFilter.onchange = () => filtrarYMostrarIngresos();
         monthFilter.onchange = () => filtrarYMostrarIngresos();
         recalcularTotales();
@@ -65,7 +69,6 @@ auth.onAuthStateChanged(async (user) => {
         window.location.href = 'index.html';
     }
 });
-
 
 // --- LISTENERS ---
 addTaxesCheckbox.addEventListener('change', recalcularTotales);
@@ -80,11 +83,9 @@ clientSelect.addEventListener('change', async () => {
     if (!user) return;
     const userDoc = await db.collection('usuarios').doc(user.uid).get();
     const adminUid = userDoc.exists ? (userDoc.data().adminUid || user.uid) : user.uid;
-
     const empresaId = clientSelect.value;
     projectSelect.innerHTML = '<option value="">Cargando...</option>';
     projectSelect.disabled = true;
-
     if (!empresaId) {
         projectSelect.innerHTML = '<option value="">Selecciona un cliente primero</option>';
         return;
@@ -122,9 +123,9 @@ function cargarCuentasEnSelector(adminUid) {
     });
 }
 
+// --- FUNCIÓN DE CARGA DE IMPUESTOS (CORREGIDA) ---
 async function cargarImpuestosParaSeleccion(adminUid) {
     if (!adminUid) return;
-    // Ahora usa el adminUid que recibe para la búsqueda
     const snapshot = await db.collection('impuestos_definiciones').where('adminUid', '==', adminUid).get();
     taxesChecklistContainer.innerHTML = '';
     snapshot.forEach(doc => {
@@ -257,7 +258,7 @@ async function guardarIngresoAdmin(status) {
     } finally {
         saveDraftBtn.disabled = false;
         addApprovedBtn.disabled = false;
-        addApprovedBtn.textContent = 'Agregar Ingreso Aprobado';
+        // El texto del botón se restablece al cargar la página, así que no es necesario aquí.
     }
 }
 
