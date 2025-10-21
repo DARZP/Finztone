@@ -27,18 +27,20 @@ const backButton = document.getElementById('back-button');
 
 let empresasCargadas = [];
 
-// --- LÓGICA DE LA PÁGINA ---
 auth.onAuthStateChanged(async (user) => {
     if (user) {
+        // 1. Obtenemos el perfil del usuario logueado
         const userDoc = await db.collection('usuarios').doc(user.uid).get();
         const userData = userDoc.exists ? userDoc.data() : {};
+        
+        // 2. Determinamos el UID del administrador principal
         const adminUid = userData.rol === 'admin' ? user.uid : userData.adminUid;
-
         if (!adminUid) {
-            alert("Error: No se pudo identificar al administrador principal.");
+            alert("Error: No se pudo identificar al administrador principal de tu cuenta.");
             return;
         }
 
+        // 3. Ajustamos la vista según el rol
         if (userData.rol === 'coadmin') {
             backButton.href = 'coadmin_dashboard.html';
             if (accountSelectGroup) accountSelectGroup.style.display = 'none';
@@ -47,18 +49,19 @@ auth.onAuthStateChanged(async (user) => {
             backButton.href = 'dashboard.html';
         }
 
+        // 4. Cargamos los datos compartidos usando el UID del admin principal
         cargarClientesYProyectos(adminUid);
         poblarFiltrosYCategorias();
         cargarCuentasEnSelector(adminUid);
         cargarImpuestosParaSeleccion(adminUid);
+        cargarIngresosAprobados(adminUid, user.uid); // Pasamos ambos UIDs
         
-        cargarIngresosAprobados(adminUid, userData.rol);
-        recalcularTotales();
+        recalcularTotales(); // <--- ¡AQUÍ ESTÁ LA LÍNEA QUE FALTABA!
 
-        // Listeners para los filtros
-        categoryFilter.onchange = () => cargarIngresosAprobados(adminUid, userData.rol);
-        monthFilter.onchange = () => cargarIngresosAprobados(adminUid, userData.rol);
-        
+        // Re-asignar listeners de filtros aquí para asegurar que tengan el adminUid
+        categoryFilter.onchange = () => cargarIngresosAprobados(adminUid, user.uid);
+        monthFilter.onchange = () => cargarIngresosAprobados(adminUid, user.uid);
+
     } else {
         window.location.href = 'index.html';
     }
