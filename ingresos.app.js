@@ -39,29 +39,28 @@ auth.onAuthStateChanged(async (user) => {
             return;
         }
 
-        const backButton = document.getElementById('back-button');
         if (userData.rol === 'coadmin') {
             backButton.href = 'coadmin_dashboard.html';
             if (accountSelectGroup) accountSelectGroup.style.display = 'none';
             if (accountSelect) accountSelect.required = false;
+            // --- ¡CORRECCIÓN DEL TEXTO DEL BOTÓN! ---
+            if (addApprovedBtn) addApprovedBtn.textContent = 'Enviar para Aprobación';
         } else {
             backButton.href = 'dashboard.html';
+            if (addApprovedBtn) addApprovedBtn.textContent = 'Agregar Ingreso Aprobado';
         }
 
-        // Carga los datos compartidos
         cargarClientesYProyectos(adminUid);
         poblarFiltrosYCategorias();
         cargarCuentasEnSelector(adminUid);
         cargarImpuestosParaSeleccion(adminUid);
         
-        // Llamada inicial al historial usando la Cloud Function
-        cargarIngresosAprobados(adminUid, userData.rol);
+        await cargarIngresosAprobados(adminUid, user.uid);
 
-        // Listeners para los filtros
-        categoryFilter.onchange = () => cargarIngresosAprobados(adminUid, userData.rol);
-        monthFilter.onchange = () => cargarIngresosAprobados(adminUid, userData.rol);
+        categoryFilter.onchange = () => filtrarYMostrarIngresos();
+        monthFilter.onchange = () => filtrarYMostrarIngresos();
         recalcularTotales();
-        
+
     } else {
         window.location.href = 'index.html';
     }
@@ -124,6 +123,8 @@ function cargarCuentasEnSelector(adminUid) {
 }
 
 async function cargarImpuestosParaSeleccion(adminUid) {
+    if (!adminUid) return;
+    // Ahora usa el adminUid que recibe para la búsqueda
     const snapshot = await db.collection('impuestos_definiciones').where('adminUid', '==', adminUid).get();
     taxesChecklistContainer.innerHTML = '';
     snapshot.forEach(doc => {
