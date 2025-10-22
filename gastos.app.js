@@ -25,12 +25,10 @@ const backButton = document.getElementById('back-button');
 let empresasCargadas = [];
 let historialDeGastos = []; // Variable global para guardar el historial
 
-// --- LÓGICA PRINCIPAL ---
 auth.onAuthStateChanged(async (user) => {
     if (user) {
         const userDoc = await db.collection('usuarios').doc(user.uid).get();
         const userData = userDoc.exists ? userDoc.data() : {};
-        // Clave: Determinamos el UID del admin, sin importar quién inicie sesión.
         const adminUid = userData.rol === 'admin' ? user.uid : userData.adminUid;
 
         if (!adminUid) {
@@ -38,13 +36,16 @@ auth.onAuthStateChanged(async (user) => {
             return;
         }
 
-        // --- LÓGICA DE VISUALIZACIÓN POR ROL ---
         if (userData.rol === 'coadmin') {
             backButton.href = 'coadmin_dashboard.html';
-            // Ocultamos el selector de cuenta y lo hacemos no-requerido
             if (accountSelectGroup) accountSelectGroup.style.display = 'none';
             if (accountSelect) accountSelect.required = false;
-        } else { // Es un admin
+
+            // --- LÍNEA AÑADIDA ---
+            // Cambiamos el texto del botón principal para el Co-admin.
+            if (addApprovedBtn) addApprovedBtn.textContent = 'Enviar para Aprobación';
+            
+        } else {
             backButton.href = 'dashboard.html';
         }
 
