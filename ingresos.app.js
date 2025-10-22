@@ -39,28 +39,29 @@ auth.onAuthStateChanged(async (user) => {
             return;
         }
 
+        const backButton = document.getElementById('back-button');
         if (userData.rol === 'coadmin') {
             backButton.href = 'coadmin_dashboard.html';
             if (accountSelectGroup) accountSelectGroup.style.display = 'none';
             if (accountSelect) accountSelect.required = false;
-            if (addApprovedBtn) addApprovedBtn.textContent = 'Enviar para Aprobación';
         } else {
             backButton.href = 'dashboard.html';
-            if (addApprovedBtn) addApprovedBtn.textContent = 'Agregar Ingreso Aprobado';
         }
 
-        // --- LA LÍNEA QUE FALTABA ESTÁ AQUÍ ---
+        // Carga los datos compartidos
         cargarClientesYProyectos(adminUid);
         poblarFiltrosYCategorias();
         cargarCuentasEnSelector(adminUid);
-        cargarImpuestosParaSeleccion(adminUid); // <--- ¡Esta es la línea que faltaba!
+        cargarImpuestosParaSeleccion(adminUid); // <-- ESTA ES LA LÍNEA QUE FALTABA
         
-        await cargarIngresosAprobados(adminUid, user.uid);
+        // Llamada inicial al historial usando la Cloud Function
+        cargarIngresosAprobados(adminUid, userData.rol);
 
-        categoryFilter.onchange = () => filtrarYMostrarIngresos();
-        monthFilter.onchange = () => filtrarYMostrarIngresos();
+        // Listeners para los filtros
+        categoryFilter.onchange = () => cargarIngresosAprobados(adminUid, userData.rol);
+        monthFilter.onchange = () => cargarIngresosAprobados(adminUid, userData.rol);
         recalcularTotales();
-
+        
     } else {
         window.location.href = 'index.html';
     }
