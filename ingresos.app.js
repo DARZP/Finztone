@@ -120,11 +120,23 @@ function cargarCuentasEnSelector(adminUid) {
     });
 }
 
-// --- FUNCIÓN DE CARGA DE IMPUESTOS (CORREGIDA) ---
 async function cargarImpuestosParaSeleccion(adminUid) {
-    if (!adminUid) return;
-    const snapshot = await db.collection('impuestos_definiciones').where('adminUid', '==', adminUid).get();
+    if (!adminUid) {
+        console.error("No se proporcionó adminUid para cargar los impuestos.");
+        return;
+    }
+
+    const snapshot = await db.collection('impuestos_definiciones')
+        .where('adminUid', '==', adminUid)
+        .get();
+        
     taxesChecklistContainer.innerHTML = '';
+    if (snapshot.empty) {
+        // Opcional: Mostrar un mensaje si no hay impuestos definidos
+        taxesChecklistContainer.innerHTML = '<p style="font-size: 0.9em; color: #aeb9c5;">No hay impuestos definidos por el administrador.</p>';
+        return;
+    }
+
     snapshot.forEach(doc => {
         const impuesto = { id: doc.id, ...doc.data() };
         const valorDisplay = impuesto.tipo === 'porcentaje' ? `${impuesto.valor}%` : `$${impuesto.valor}`;
