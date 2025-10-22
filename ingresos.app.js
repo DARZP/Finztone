@@ -67,8 +67,10 @@ auth.onAuthStateChanged(async (user) => {
     }
 });
 
-// --- LISTENERS ---
-addTaxesCheckbox.addEventListener('change', recalcularTotales);
+addTaxesCheckbox.addEventListener('change', () => {
+    taxesDetailsContainer.style.display = addTaxesCheckbox.checked ? 'block' : 'none';
+    recalcularTotales();
+});
 isInvoiceCheckbox.addEventListener('change', () => { invoiceDetailsContainer.style.display = isInvoiceCheckbox.checked ? 'block' : 'none'; });
 montoInput.addEventListener('input', recalcularTotales);
 taxesChecklistContainer.addEventListener('change', recalcularTotales);
