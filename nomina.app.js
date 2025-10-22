@@ -103,6 +103,7 @@ function mostrarUsuarios(usuarios, pagosDelPeriodo) {
         button.addEventListener('click', () => registrarPago(user));
     });
 }
+
 async function registrarPago(empleado) {
     const adminUid = currentUserData.rol === 'admin' ? auth.currentUser.uid : currentUserData.adminUid;
     const creadorUid = auth.currentUser.uid;
@@ -116,41 +117,62 @@ async function registrarPago(empleado) {
 
     if (!confirm(`¿Confirmas el registro del pago para ${empleado.nombre} por el período ${periodo}?`)) return;
 
-    // Lógica para el Administrador (pago directo)
+    // --- LÓGICA PARA EL ADMINISTRADOR (PAGO DIRECTO) ---
     if (currentUserData.rol === 'admin') {
         const userItemElement = userListContainer.querySelector(`[data-user-id="${empleado.id}"]`);
         const accountSelector = userItemElement.querySelector('.account-selector-payroll');
         const cuentaId = accountSelector.value;
+
         if (!cuentaId) return alert(`Por favor, selecciona una cuenta de origen para ${empleado.nombre}.`);
         
-        // Aquí iría tu lógica de transacción para pago directo (la que ya tenías)
-        // Por simplicidad, la recreamos aquí.
+        const cuentaRef = db.collection('cuentas').doc(cuentaId);
+        const nuevoPagoRef = db.collection('pagos_nomina').doc(); // Creamos una referencia para el nuevo pago
+
         try {
-            const cuentaRef = db.collection('cuentas').doc(cuentaId);
             await db.runTransaction(async (transaction) => {
-                // ... Lógica de transacción para descontar saldo y crear registros ...
+                const cuentaDoc = await transaction.get(cuentaRef);
+                if (!cuentaDoc.exists) throw new Error("La cuenta de origen no fue encontrada.");
+                
+                const cuentaData = cuentaDoc.data();
+
+                // 1. Descontar saldo de la cuenta
+                if (cuentaData.tipo === 'credito') {
+                    transaction.update(cuentaRef, { deudaActual: (cuentaData.deudaActual || 0) + montoADescontar });
+                } else {
+                    if ((cuentaData.saldoActual || 0) < montoADescontar) throw new Error("Saldo insuficiente en la cuenta.");
+                    transaction.update(cuentaRef, { saldoActual: cuentaData.saldoActual - montoADescontar });
+                }
+                
+                // 2. Crear el registro del pago de nómina como 'aprobado'
+                const datosPago = {
+                    userId: empleado.id, userName: empleado.nombre, periodo, montoBruto: sueldoBruto, sueldoNeto, montoDescontado: montoADescontar,
+                    fechaDePago: new Date(), cuentaId, cuentaNombre: cuentaData.nombre, adminUid: adminUid, status: 'aprobado'
+                };
+                transaction.set(nuevoPagoRef, datosPago);
+
+                // 3. Crear los movimientos de impuestos (deducciones)
+                (empleado.deducciones || []).forEach(ded => {
+                    const montoDeducido = ded.tipo === 'porcentaje' ? (sueldoBruto * ded.valor) / 100 : ded.valor;
+                    const taxMovRef = db.collection('movimientos_impuestos').doc();
+                    transaction.set(taxMovRef, {
+                        origen: `Nómina - ${empleado.nombre}`, tipoImpuesto: ded.nombre, monto: montoDeducido,
+                        fecha: new Date(), status: 'pagado (retenido)', adminUid: adminUid
+                    });
+                });
             });
             alert(`¡Pago para ${empleado.nombre} registrado exitosamente!`);
         } catch (error) {
+            console.error("Error en la transacción de pago:", error);
             alert("Error al procesar el pago: " + error.message);
         }
 
-    // Lógica para el Co-administrador (enviar a aprobación)
+    // --- LÓGICA PARA EL CO-ADMINISTRADOR (ENVIAR A APROBACIÓN) ---
     } else {
         try {
             await db.collection('pagos_nomina').add({
-                userId: empleado.id,
-                userName: empleado.nombre,
-                periodo,
-                montoBruto: sueldoBruto,
-                sueldoNeto,
-                montoDescontado,
-                deducciones: empleado.deducciones || [],
-                fechaDeCreacion: new Date(),
-                adminUid: adminUid,
-                creadoPor: creadorUid,
-                nombreCreador: creadorNombre,
-                status: 'pendiente' // ¡El estado clave!
+                userId: empleado.id, userName: empleado.nombre, periodo, montoBruto: sueldoBruto, sueldoNeto, montoDescontado,
+                deducciones: empleado.deducciones || [], fechaDeCreacion: new Date(), adminUid: adminUid,
+                creadoPor: creadorUid, nombreCreador: creadorNombre, status: 'pendiente'
             });
             alert(`¡Solicitud de pago para ${empleado.nombre} enviada para aprobación!`);
         } catch (error) {
@@ -293,13 +315,12 @@ function poblarFiltroDePeriodos() {
 }
 
 // Carga los datos de usuarios y pagos para un período específico
-function cargarDatosNomina(user, periodo) {
-    // --- CORRECCIÓN DE SEGURIDAD ---
-    db.collection('usuarios').where('adminUid', '==', user.uid).where('rol', '==', 'empleado').where('status', '==', 'activo').orderBy('nombre').get().then(usersSnapshot => {
+function cargarDatosNomina(adminUid, periodo) { // <--- Parámetro renombrado para mayor claridad
+    db.collection('usuarios').where('adminUid', '==', adminUid).where('rol', '==', 'empleado').where('status', '==', 'activo').orderBy('nombre').get().then(usersSnapshot => {
         listaDeUsuarios = [];
         usersSnapshot.forEach(doc => listaDeUsuarios.push({ id: doc.id, ...doc.data() }));
 
-        db.collection('pagos_nomina').where('adminUid', '==', user.uid).where('periodo', '==', periodo).onSnapshot(paymentsSnapshot => {
+        db.collection('pagos_nomina').where('adminUid', '==', adminUid).where('periodo', '==', periodo).onSnapshot(paymentsSnapshot => {
             const pagosDelPeriodo = [];
             paymentsSnapshot.forEach(doc => pagosDelPeriodo.push({ id: doc.id, ...doc.data() }));
             mostrarUsuarios(listaDeUsuarios, pagosDelPeriodo);
