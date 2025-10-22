@@ -3,6 +3,7 @@ import { auth, db, functions, storage } from './firebase-init.js';
 // --- ELEMENTOS DEL DOM ---
 const addExpenseForm = document.getElementById('add-expense-form');
 const expenseListContainer = document.getElementById('expense-list');
+const accountSelectGroup = document.getElementById('account-select-group'); // Grupo que contiene la cuenta de origen
 const isInvoiceCheckbox = document.getElementById('is-invoice');
 const invoiceDetailsContainer = document.getElementById('invoice-details');
 const categoryFilter = document.getElementById('category-filter');
@@ -19,41 +20,53 @@ const expensePlaceInput = document.getElementById('expense-place');
 const clientSelect = document.getElementById('client-select');
 const projectSelect = document.getElementById('project-select');
 const receiptFileInput = document.getElementById('receipt-file');
+const backButton = document.getElementById('back-button');
 
-let todasLasCuentas = [];
 let empresasCargadas = [];
+let historialDeGastos = []; // Variable global para guardar el historial
 
-// --- LÓGICA DE LA PÁGINA ---
-auth.onAuthStateChanged(async (user) => { // <-- Se añade 'async'
+// --- LÓGICA PRINCIPAL ---
+auth.onAuthStateChanged(async (user) => {
     if (user) {
-        // --- INICIA LA NUEVA LÓGICA PARA EL BOTÓN DE VOLVER ---
-        const backButton = document.getElementById('back-button');
-        try {
-            const userDoc = await db.collection('usuarios').doc(user.uid).get();
-            if (userDoc.exists && userDoc.data().rol === 'coadmin') {
-                backButton.href = 'coadmin_dashboard.html';
-            } else {
-                backButton.href = 'dashboard.html';
-            }
-        } catch (error) {
-            console.error("Error al obtener perfil para configurar el botón de volver:", error);
-            backButton.href = 'dashboard.html'; // Ruta por defecto en caso de error
-        }
-        db.collection('cuentas').where('adminUid', '==', user.uid).orderBy('nombre').onSnapshot(snapshot => {
-            todasLasCuentas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            paymentMethodSelect.dispatchEvent(new Event('change'));
-        });
+        const userDoc = await db.collection('usuarios').doc(user.uid).get();
+        const userData = userDoc.exists ? userDoc.data() : {};
+        // Clave: Determinamos el UID del admin, sin importar quién inicie sesión.
+        const adminUid = userData.rol === 'admin' ? user.uid : userData.adminUid;
 
-        cargarClientesYProyectos();
+        if (!adminUid) {
+            alert("Error: No se pudo identificar al administrador principal.");
+            return;
+        }
+
+        // --- LÓGICA DE VISUALIZACIÓN POR ROL ---
+        if (userData.rol === 'coadmin') {
+            backButton.href = 'coadmin_dashboard.html';
+            // Ocultamos el selector de cuenta y lo hacemos no-requerido
+            if (accountSelectGroup) accountSelectGroup.style.display = 'none';
+            if (accountSelect) accountSelect.required = false;
+        } else { // Es un admin
+            backButton.href = 'dashboard.html';
+        }
+
+        // --- CARGA DE DATOS COMPARTIDOS ---
+        cargarClientesYProyectos(adminUid);
         poblarFiltrosYCategorias();
-        cargarImpuestosParaSeleccion();
-        cargarGastosAprobados();
+        cargarCuentasEnSelector(adminUid); // Se carga para el admin
+        cargarImpuestosParaSeleccion(adminUid);
+
+        // --- CARGA DEL HISTORIAL ---
+        cargarGastosAprobados(adminUid); // Llamada inicial al historial
+
+        // Listeners para los filtros del historial
+        categoryFilter.onchange = () => filtrarYMostrarGastos();
+        monthFilter.onchange = () => filtrarYMostrarGastos();
+        
     } else {
         window.location.href = 'index.html';
     }
 });
 
-// --- LISTENERS ---
+// --- LISTENERS DEL FORMULARIO ---
 addTaxesCheckbox.addEventListener('change', () => {
     taxesDetailsContainer.style.display = addTaxesCheckbox.checked ? 'block' : 'none';
     recalcularTotales();
@@ -107,17 +120,11 @@ monthFilter.addEventListener('change', cargarGastosAprobados);
 
 // --- FUNCIONES ---
 
-async function cargarClientesYProyectos() {
-    const user = auth.currentUser;
-    if (!user) return;
-    const empresasSnapshot = await db.collection('empresas')
-        .where('adminUid', '==', user.uid)
-        .orderBy('nombre').get();
+async function cargarClientesYProyectos(adminUid) {
+    const empresasSnapshot = await db.collection('empresas').where('adminUid', '==', adminUid).orderBy('nombre').get();
     empresasCargadas = empresasSnapshot.docs.map(doc => ({ id: doc.id, nombre: doc.data().nombre }));
     clientSelect.innerHTML = '<option value="">Ninguno</option>';
-    empresasCargadas.forEach(empresa => {
-        clientSelect.innerHTML += `<option value="${empresa.id}">${empresa.nombre}</option>`;
-    });
+    empresasCargadas.forEach(empresa => { clientSelect.innerHTML += `<option value="${empresa.id}">${empresa.nombre}</option>`; });
 }
 
 function generarFolio(userId) {
@@ -127,31 +134,28 @@ function generarFolio(userId) {
     return `EXP-ADM-${userInitials}-${timestamp}`;
 }
 
-function cargarCuentasEnSelector(filtroTipo) {
-    const selectedValue = accountSelect.value;
-    accountSelect.innerHTML = '<option value="" disabled selected>Selecciona una cuenta de origen</option>';
-    const cuentasFiltradas = todasLasCuentas.filter(cuenta => cuenta.tipo === filtroTipo);
-    if (cuentasFiltradas.length === 0) {
-        accountSelect.innerHTML += `<option value="" disabled>No hay cuentas de tipo '${filtroTipo}'</option>`;
-    } else {
-        cuentasFiltradas.forEach(cuenta => {
+function cargarCuentasEnSelector(adminUid) {
+    // Esta función es principalmente para el Admin
+    db.collection('cuentas').where('adminUid', '==', adminUid).orderBy('nombre').onSnapshot(snapshot => {
+        const selectedValue = accountSelect.value;
+        accountSelect.innerHTML = '<option value="" disabled selected>Selecciona una cuenta</option>';
+        snapshot.forEach(doc => {
+            const cuenta = doc.data();
             const esCredito = cuenta.tipo === 'credito';
-            const valor = esCredito ? cuenta.deudaActual : cuenta.saldoActual;
-            const etiqueta = esCredito ? 'Deuda' : 'Saldo';
-            const optionText = `${cuenta.nombre} (${etiqueta}: $${(valor || 0).toLocaleString('es-MX')})`;
-            accountSelect.appendChild(new Option(optionText, cuenta.id));
+            const etiqueta = esCredito ? 'Crédito' : 'Débito';
+            accountSelect.appendChild(new Option(`${cuenta.nombre} (${etiqueta})`, doc.id));
         });
-    }
-    accountSelect.value = selectedValue;
+        accountSelect.value = selectedValue;
+    });
 }
 
-async function cargarImpuestosParaSeleccion() {
-    const user = auth.currentUser;
-    if (!user) return;
-    const snapshot = await db.collection('impuestos_definiciones')
-        .where('adminUid', '==', user.uid)
-        .get();
+async function cargarImpuestosParaSeleccion(adminUid) {
+    const snapshot = await db.collection('impuestos_definiciones').where('adminUid', '==', adminUid).get();
     taxesChecklistContainer.innerHTML = '';
+    if (snapshot.empty) {
+        taxesChecklistContainer.innerHTML = '<p style="font-size: 0.9em; color: #aeb9c5;">No hay impuestos definidos.</p>';
+        return;
+    }
     snapshot.forEach(doc => {
         const impuesto = { id: doc.id, ...doc.data() };
         const valorDisplay = impuesto.tipo === 'porcentaje' ? `${impuesto.valor}%` : `$${impuesto.valor}`;
@@ -336,26 +340,38 @@ function poblarFiltrosYCategorias() {
     formCategorySelect.innerHTML = formOptionsHTML;
 }
 
-function cargarGastosAprobados() {
-    const user = auth.currentUser;
-    if (!user) return;
+async function cargarGastosAprobados(adminUid) {
+    if (!adminUid) return;
+    expenseListContainer.innerHTML = '<p>Cargando historial...</p>';
+
+    try {
+        const obtenerHistorial = functions.httpsCallable('obtenerHistorialGastos');
+        const resultado = await obtenerHistorial({ adminUid: adminUid });
+        
+        historialDeGastos = resultado.data.gastos; // Guardamos en la variable global
+        filtrarYMostrarGastos(); // Mostramos los resultados
+
+    } catch (error) {
+        console.error("Error al llamar a la función obtenerHistorialGastos:", error);
+        expenseListContainer.innerHTML = `<p style="color:red;">No se pudo cargar el historial: ${error.message}</p>`;
+    }
+}
+
+function filtrarYMostrarGastos() {
+    let gastosFiltrados = [...historialDeGastos];
+
     const selectedCategory = categoryFilter.value;
-    const selectedMonth = monthFilter.value;
-    let query = db.collection('gastos').where('adminUid', '==', user.uid).where('status', '==', 'aprobado');
     if (selectedCategory && selectedCategory !== 'todos') {
-        query = query.where('categoria', '==', selectedCategory);
+        gastosFiltrados = gastosFiltrados.filter(g => g.categoria === selectedCategory);
     }
+
+    const selectedMonth = monthFilter.value;
     if (selectedMonth && selectedMonth !== 'todos') {
-        const [year, month] = selectedMonth.split('-').map(Number);
-        const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
-        const endDate = new Date(year, month, 0, 23, 59, 59).toISOString().split('T')[0];
-        query = query.where('fecha', '>=', startDate).where('fecha', '<=', endDate);
+        // Asume que la fecha está en formato 'YYYY-MM-DD'
+        gastosFiltrados = gastosFiltrados.filter(g => g.fecha.startsWith(selectedMonth));
     }
-    query = query.orderBy('fecha', 'desc');
-    query.onSnapshot(snapshot => {
-        const gastos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        mostrarGastosAprobados(gastos);
-    }, error => console.error("Error al obtener gastos:", error));
+    
+    mostrarGastosAprobados(gastosFiltrados);
 }
 
 function mostrarGastosAprobados(gastos) {
@@ -367,35 +383,16 @@ function mostrarGastosAprobados(gastos) {
     gastos.forEach(gasto => {
         const itemContainer = document.createElement('div');
         itemContainer.classList.add('expense-item');
-        itemContainer.dataset.id = gasto.id;
         const fechaFormateada = new Date(gasto.fecha.replace(/-/g, '/')).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
-        const creadorLink = gasto.nombreCreador !== "Administrador" ? `<a href="perfil_empleado.html?id=${gasto.creadorId}">${gasto.nombreCreador}</a>` : "Administrador";
+        const creadorLink = (gasto.nombreCreador !== "Administrador" && gasto.creadorId) ? `<a href="perfil_empleado.html?id=${gasto.creadorId}">${gasto.nombreCreador}</a>` : (gasto.nombreCreador || "Sistema");
         
-        // --- LÓGICA PARA EL ICONO DEL COMPROBANTE ---
-        const iconoComprobante = gasto.comprobanteURL 
-            ? `<a href="${gasto.comprobanteURL}" target="_blank" title="Ver comprobante" style="text-decoration: none; font-size: 1.1em; margin-left: 8px;">📎</a>` 
-            : '';
-
         itemContainer.innerHTML = `
             <div class="item-summary">
                 <div class="expense-info">
-                    <span class="expense-description">
-                        ${gasto.descripcion}
-                        ${iconoComprobante} 
-                    </span>
+                    <span class="expense-description">${gasto.descripcion}</span>
                     <span class="expense-details">Registrado por: ${creadorLink} | ${gasto.categoria} - ${fechaFormateada}</span>
                 </div>
                 <span class="expense-amount">$${(gasto.totalConImpuestos || gasto.monto).toLocaleString('es-MX')}</span>
-            </div>
-            <div class="item-details" style="display: none;">
-                <p><strong>Folio:</strong> ${gasto.folio || 'N/A'}</p>
-                <p><strong>Establecimiento:</strong> ${gasto.establecimiento || 'No especificado'}</p>
-                <p><strong>Cliente Asociado:</strong> ${gasto.empresa || 'Ninguno'}</p>
-                <p><strong>Proyecto:</strong> ${gasto.proyectoNombre || 'Ninguno'}</p>
-                <p><strong>Cuenta:</strong> ${gasto.cuentaNombre || 'No especificada'}</p>
-                <p><strong>Comentarios:</strong> ${gasto.comentarios || 'Ninguno'}</p>
-                ${gasto.impuestos && gasto.impuestos.length > 0 ? '<h4>Impuestos Desglosados</h4>' : ''}
-                ${gasto.impuestos?.map(imp => `<p>- ${imp.nombre}: $${((gasto.monto * imp.valor / 100) || imp.valor).toLocaleString()}</p>`).join('') || ''}
             </div>`;
         expenseListContainer.appendChild(itemContainer);
     });
