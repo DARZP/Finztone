@@ -123,30 +123,50 @@ function cargarCuentasEnSelector(adminUid) {
 }
 
 async function cargarImpuestosParaSeleccion(adminUid) {
+    // 1. Verificamos que se haya proporcionado el ID del administrador.
     if (!adminUid) {
-        console.error("No se proporcionó adminUid para cargar los impuestos.");
+        console.error("No se proporcionó un adminUid para cargar los impuestos.");
         return;
     }
 
-    const snapshot = await db.collection('impuestos_definiciones')
-        .where('adminUid', '==', adminUid)
-        .get();
+    try {
+        // 2. Realizamos la consulta a Firestore para obtener las definiciones de impuestos.
+        const snapshot = await db.collection('impuestos_definiciones')
+            .where('adminUid', '==', adminUid)
+            .get();
         
-    taxesChecklistContainer.innerHTML = '';
-    if (snapshot.empty) {
-        // Opcional: Mostrar un mensaje si no hay impuestos definidos
-        taxesChecklistContainer.innerHTML = '<p style="font-size: 0.9em; color: #aeb9c5;">No hay impuestos definidos por el administrador.</p>';
-        return;
-    }
+        // 3. Limpiamos el contenedor HTML antes de añadir los nuevos elementos.
+        taxesChecklistContainer.innerHTML = '';
 
-    snapshot.forEach(doc => {
-        const impuesto = { id: doc.id, ...doc.data() };
-        const valorDisplay = impuesto.tipo === 'porcentaje' ? `${impuesto.valor}%` : `$${impuesto.valor}`;
-        const item = document.createElement('div');
-        item.classList.add('tax-item');
-        item.innerHTML = `<label><input type="checkbox" data-impuesto='${JSON.stringify(impuesto)}'> ${impuesto.nombre} (${valorDisplay})</label><span class="calculated-amount"></span>`;
-        taxesChecklistContainer.appendChild(item);
-    });
+        // 4. Manejamos el caso en que no se encuentren impuestos.
+        if (snapshot.empty) {
+            taxesChecklistContainer.innerHTML = '<p style="font-size: 0.9em; color: #aeb9c5;">No hay impuestos definidos por el administrador.</p>';
+            return;
+        }
+
+        // 5. Recorremos cada impuesto encontrado y creamos su elemento HTML.
+        snapshot.forEach(doc => {
+            const impuesto = { id: doc.id, ...doc.data() };
+            const valorDisplay = impuesto.tipo === 'porcentaje' ? `${impuesto.valor}%` : `$${impuesto.valor}`;
+            
+            const item = document.createElement('div');
+            item.classList.add('tax-item');
+            item.innerHTML = `
+                <label>
+                    <input type="checkbox" data-impuesto='${JSON.stringify(impuesto)}'> 
+                    ${impuesto.nombre} (${valorDisplay})
+                </label>
+                <span class="calculated-amount"></span>
+            `;
+            
+            taxesChecklistContainer.appendChild(item);
+        });
+
+    } catch (error) {
+        // 6. En caso de error, lo mostramos en la consola y en la interfaz.
+        console.error("Error al obtener los impuestos de Firestore:", error);
+        taxesChecklistContainer.innerHTML = '<p style="color:red;">Error al cargar impuestos. Revisa la consola.</p>';
+    }
 }
 
 function recalcularTotales() {
