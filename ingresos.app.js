@@ -39,11 +39,15 @@ auth.onAuthStateChanged(async (user) => {
             return;
         }
 
-        const backButton = document.getElementById('back-button');
         if (userData.rol === 'coadmin') {
             backButton.href = 'coadmin_dashboard.html';
             if (accountSelectGroup) accountSelectGroup.style.display = 'none';
             if (accountSelect) accountSelect.required = false;
+
+            // --- LÍNEA AÑADIDA ---
+            // Cambiamos el texto del botón principal para el Co-admin.
+            if (addApprovedBtn) addApprovedBtn.textContent = 'Enviar para Aprobación';
+
         } else {
             backButton.href = 'dashboard.html';
         }
