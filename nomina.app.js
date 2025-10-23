@@ -66,36 +66,43 @@ function mostrarUsuarios(usuarios, pagosDelPeriodo) {
 
     usuarios.forEach(usuario => {
         const isPaid = pagosDelPeriodo.some(pago => pago.userId === usuario.id && pago.status === 'aprobado');
-        const userElement = document.createElement('div');
-        userElement.classList.add('user-item');
-        userElement.dataset.userId = usuario.id;
         
+        // Creamos un contenedor principal para la fila y su desglose
+        const containerElement = document.createElement('div');
+        containerElement.classList.add('payroll-item-container');
+
         const statusClass = isPaid ? 'status-paid' : 'status-pending';
         const statusText = isPaid ? 'Pagado' : 'Pendiente';
         
+        // Lógica para ocultar el selector y cambiar el texto del botón para el Co-admin
         let accountSelectorHTML = '';
         let buttonText = 'Marcar como Pagado';
         
-        // Si el usuario es Co-admin, no mostramos el selector y cambiamos el texto del botón.
         if (currentUserData.rol === 'coadmin') {
-            accountSelectorHTML = ''; // Sin selector de cuenta
+            accountSelectorHTML = ''; // Co-admin no ve el selector
             buttonText = 'Enviar para Aprobación';
         } else {
+            // Admin sí ve el selector si el pago está pendiente
             accountSelectorHTML = isPaid ? '' : generarSelectorDeCuentas(usuario.id);
         }
 
-        userElement.innerHTML = `
-            <a href="perfil_empleado.html?id=${usuario.id}" class="user-info-link">
-                <div class="user-name">${usuario.nombre}</div>
-                <div class="user-details">${usuario.cargo} - Sueldo Neto: $${calcularSueldoNeto(usuario).toLocaleString()}</div>
-            </a>
-            <div class="account-selector-container">${accountSelectorHTML}</div>
-            <div class="status ${statusClass}">${statusText}</div>
-            <button class="btn-pay" ${isPaid ? 'disabled' : ''}>${buttonText}</button>
+        containerElement.innerHTML = `
+            <div class="user-item" data-user-id="${usuario.id}">
+                <a href="perfil_empleado.html?id=${usuario.id}" class="user-info-link">
+                    <div class="user-name">${usuario.nombre}</div>
+                    <div class="user-details">${usuario.cargo} - Sueldo Neto: $${calcularSueldoNeto(usuario).toLocaleString('es-MX')}</div>
+                </a>
+                <div class="account-selector-container">${accountSelectorHTML}</div>
+                <div class="status ${statusClass}">${statusText}</div>
+                <button class="btn-pay" ${isPaid ? 'disabled' : ''}>${buttonText}</button>
+            </div>
+            <div class="item-details-view" id="details-${usuario.id}" style="display: none;">
+                </div>
         `;
-        userListContainer.appendChild(userElement);
+        userListContainer.appendChild(containerElement);
     });
 
+    // Esta parte no cambia, sigue asignando la acción al botón de pago/envío
     userListContainer.querySelectorAll('.btn-pay:not([disabled])').forEach(button => {
         const userItem = button.closest('.user-item');
         const userId = userItem.dataset.userId;
@@ -103,6 +110,7 @@ function mostrarUsuarios(usuarios, pagosDelPeriodo) {
         button.addEventListener('click', () => registrarPago(user));
     });
 }
+ 
 
 async function registrarPago(empleado) {
     const adminUid = currentUserData.rol === 'admin' ? auth.currentUser.uid : currentUserData.adminUid;
@@ -313,6 +321,51 @@ function poblarFiltroDePeriodos() {
         periodSelector.appendChild(option);
     });
 }
+
+// --- EVENT LISTENER PARA DESPLEGAR DETALLES DE DEDUCCIONES ---
+
+userListContainer.addEventListener('click', (e) => {
+    // Ignoramos clics directos en enlaces, botones o selectores para no interferir con su función
+    if (e.target.closest('a, button, select')) {
+        return;
+    }
+
+    // Buscamos el 'user-item' más cercano al lugar donde se hizo clic
+    const userItem = e.target.closest('.user-item');
+    if (!userItem) return; // Si no se hizo clic en un item de usuario, no hacemos nada
+
+    const userId = userItem.dataset.userId;
+    const detailsContainer = document.getElementById(`details-${userId}`);
+    const user = listaDeUsuarios.find(u => u.id === userId);
+
+    if (!detailsContainer || !user) return; // Salimos si no encontramos los elementos necesarios
+
+    // Verificamos si el contenedor de detalles ya está visible
+    const isVisible = detailsContainer.style.display === 'block';
+
+    if (isVisible) {
+        // Si está visible, lo ocultamos
+        detailsContainer.style.display = 'none';
+    } else {
+        // Si está oculto, lo llenamos con la información y lo mostramos
+        let deductionsHTML = '<h4>Desglose de Deducciones</h4>';
+        if (!user.deducciones || user.deducciones.length === 0) {
+            deductionsHTML += '<p>Este empleado no tiene deducciones fijas asignadas.</p>';
+        } else {
+            const sueldoBruto = user.sueldoBruto || 0;
+            user.deducciones.forEach(ded => {
+                const montoDeducido = ded.tipo === 'porcentaje' ? (sueldoBruto * ded.valor) / 100 : ded.valor;
+                deductionsHTML += `
+                    <div class="tax-line">
+                        <span>- ${ded.nombre}</span>
+                        <span>$${montoDeducido.toLocaleString('es-MX')}</span>
+                    </div>`;
+            });
+        }
+        detailsContainer.innerHTML = deductionsHTML;
+        detailsContainer.style.display = 'block';
+    }
+});
 
 // Carga los datos de usuarios y pagos para un período específico
 function cargarDatosNomina(adminUid, periodo) { // <--- Parámetro renombrado para mayor claridad
