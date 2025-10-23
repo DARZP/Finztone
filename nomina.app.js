@@ -21,6 +21,7 @@ auth.onAuthStateChanged(async (user) => {
             return;
         }
         currentUserData = userDoc.data();
+        console.log("Rol detectado en la base de datos:", currentUserData.rol);
         const adminUid = currentUserData.rol === 'admin' ? user.uid : currentUserData.adminUid;
 
         // Configuración de la UI según el rol
