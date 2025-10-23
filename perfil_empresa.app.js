@@ -18,29 +18,26 @@ const inactiveProjectsList = document.getElementById('inactive-projects-list');
 let empresaData = null; 
 
 auth.onAuthStateChanged(async (user) => {
-    if (user) {
-        // --- NUEVA LÓGICA: Obtenemos el perfil de QUIEN ESTÁ VIENDO la página ---
+    if (user && empresaId) {
+        // --- LÓGICA DE ROLES ---
+        // Obtenemos el perfil de QUIEN ESTÁ VIENDO la página
         const viewerDoc = await db.collection('usuarios').doc(user.uid).get();
         const viewerData = viewerDoc.exists ? viewerDoc.data() : {};
 
-        // --- OCULTAMOS EL BOTÓN SI ES CO-ADMIN ---
+        // Si el que ve es un Co-admin, ocultamos el botón de editar
         if (viewerData.rol === 'coadmin') {
-            if (editProfileBtn) {
-                editProfileBtn.style.display = 'none';
+            if (editCompanyBtn) {
+                editCompanyBtn.style.display = 'none';
             }
         }
-
-        // El resto de la lógica de la página no cambia
-        if (userId) {
-            editProfileBtn.href = `editar_perfil.html?id=${userId}`;
-            cargarDatosPerfil();
-            downloadEmployeeRecordsBtn.addEventListener('click', descargarRegistrosColaborador);
-        }
+        
+        // El resto de la lógica de carga de la página no cambia
+        cargarDatosDeEmpresa(user, empresaId);
+        downloadCompanyRecordsBtn.addEventListener('click', descargarRegistrosEmpresa);
     } else {
         window.location.href = 'index.html';
     }
 });
-
 
 async function cargarDatosDeEmpresa(user, id) {
     try {
