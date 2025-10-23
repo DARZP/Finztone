@@ -201,30 +201,48 @@ function cargarPagosPendientes(adminUid) {
             pendingPayrollList.innerHTML = '<p>No hay solicitudes de pago pendientes.</p>';
             return;
         }
-        pendingPayrollList.innerHTML = '';
+
+        pendingPayrollList.innerHTML = ''; // Limpiamos la lista
+
+        // ¡Corrección Clave! Nos aseguramos de que las cuentas estén listas.
+        // Si no lo están, la función 'generarSelectorDeCuentas' creará un dropdown vacío.
+        if (listaDeCuentas.length === 0) {
+            console.warn("Advertencia: Se intentó renderizar los pagos pendientes pero la lista de cuentas aún estaba vacía.");
+            // Podríamos reintentar o mostrar un estado de carga, pero por ahora solo lo advertimos.
+        }
+
         snapshot.forEach(doc => {
             const pago = { id: doc.id, ...doc.data() };
-            const itemElement = document.createElement('div');
-            itemElement.classList.add('pending-item');
-            itemElement.dataset.id = pago.id;
-            
-            itemElement.innerHTML = `
-                <div class="item-summary">
-                    <div class="item-details">
-                        <div>
-                            <span class="description">Pago a: ${pago.userName}</span>
-                            <span class="amount">$${pago.montoDescontado.toLocaleString()}</span>
+            const containerElement = document.createElement('div');
+            containerElement.classList.add('payroll-item-container'); // Usamos el mismo contenedor que la lista principal
+
+            containerElement.innerHTML = `
+                <div class="pending-item" data-pago-id="${pago.id}">
+                    <div class="item-summary">
+                        <div class="item-details">
+                            <div>
+                                <span class="description">Pago a: ${pago.userName}</span>
+                                <span class="amount">$${pago.montoDescontado.toLocaleString('es-MX')}</span>
+                            </div>
+                            <div class="meta">Período: ${pago.periodo} | Solicitado por: ${pago.nombreCreador}</div>
                         </div>
-                        <div class="meta">Período: ${pago.periodo} | Solicitado por: ${pago.nombreCreador}</div>
-                    </div>
-                    <div class="item-actions">
-                        ${generarSelectorDeCuentas(pago.id)}
-                        <button class="btn btn-approve" onclick="aprobarPago('${pago.id}')">Aprobar</button>
-                        <button class="btn btn-reject" onclick="rechazarPago('${pago.id}')">Rechazar</button>
+                        <div class="item-actions">
+                            ${generarSelectorDeCuentas(`pending-${pago.id}`)}
+                            <button class="btn btn-approve">Aprobar</button>
+                            <button class="btn btn-reject">Rechazar</button>
+                        </div>
                     </div>
                 </div>
+                <div class="item-details-view" id="details-pending-${pago.id}" style="display: none;">
+                    </div>
             `;
-            pendingPayrollList.appendChild(itemElement);
+            pendingPayrollList.appendChild(containerElement);
+
+            // Asignamos los eventos a los botones de esta solicitud específica
+            const approveBtn = containerElement.querySelector('.btn-approve');
+            const rejectBtn = containerElement.querySelector('.btn-reject');
+            approveBtn.addEventListener('click', () => aprobarPago(pago.id));
+            rejectBtn.addEventListener('click', () => rechazarPago(pago.id));
         });
     });
 }
@@ -368,6 +386,48 @@ userListContainer.addEventListener('click', (e) => {
         detailsContainer.innerHTML = deductionsHTML;
         detailsContainer.style.display = 'block';
     }
+});
+// --- EVENT LISTENER PARA DESPLEGAR DETALLES EN LA LISTA DE PENDIENTES ---
+
+pendingPayrollList.addEventListener('click', (e) => {
+    // Ignoramos clics en botones o selectores
+    if (e.target.closest('button, select')) {
+        return;
+    }
+
+    const pendingItem = e.target.closest('.pending-item');
+    if (!pendingItem) return;
+
+    const pagoId = pendingItem.dataset.pagoId;
+    const detailsContainer = document.getElementById(`details-pending-${pagoId}`);
+    
+    // Para obtener los datos del pago, necesitamos la instantánea de Firestore
+    db.collection('pagos_nomina').doc(pagoId).get().then(doc => {
+        if (!doc.exists || !detailsContainer) return;
+
+        const pago = doc.data();
+        const isVisible = detailsContainer.style.display === 'block';
+
+        if (isVisible) {
+            detailsContainer.style.display = 'none';
+        } else {
+            let deductionsHTML = '<h4>Desglose de Deducciones</h4>';
+            if (!pago.deducciones || pago.deducciones.length === 0) {
+                deductionsHTML += '<p>Esta solicitud de pago no tiene deducciones asociadas.</p>';
+            } else {
+                pago.deducciones.forEach(ded => {
+                    const montoDeducido = ded.tipo === 'porcentaje' ? (pago.montoBruto * ded.valor) / 100 : ded.valor;
+                    deductionsHTML += `
+                        <div class="tax-line">
+                            <span>- ${ded.nombre}</span>
+                            <span>$${montoDeducido.toLocaleString('es-MX')}</span>
+                        </div>`;
+                });
+            }
+            detailsContainer.innerHTML = deductionsHTML;
+            detailsContainer.style.display = 'block';
+        }
+    });
 });
 
 // Carga los datos de usuarios y pagos para un período específico
