@@ -17,16 +17,30 @@ const inactiveProjectsList = document.getElementById('inactive-projects-list');
 
 let empresaData = null; 
 
-// --- LÓGICA PRINCIPAL DE LA PÁGINA ---
+auth.onAuthStateChanged(async (user) => {
+    if (user) {
+        // --- NUEVA LÓGICA: Obtenemos el perfil de QUIEN ESTÁ VIENDO la página ---
+        const viewerDoc = await db.collection('usuarios').doc(user.uid).get();
+        const viewerData = viewerDoc.exists ? viewerDoc.data() : {};
 
-auth.onAuthStateChanged((user) => {
-    if (user && empresaId) {
-        cargarDatosDeEmpresa(user, empresaId);
-        downloadCompanyRecordsBtn.addEventListener('click', descargarRegistrosEmpresa);
+        // --- OCULTAMOS EL BOTÓN SI ES CO-ADMIN ---
+        if (viewerData.rol === 'coadmin') {
+            if (editProfileBtn) {
+                editProfileBtn.style.display = 'none';
+            }
+        }
+
+        // El resto de la lógica de la página no cambia
+        if (userId) {
+            editProfileBtn.href = `editar_perfil.html?id=${userId}`;
+            cargarDatosPerfil();
+            downloadEmployeeRecordsBtn.addEventListener('click', descargarRegistrosColaborador);
+        }
     } else {
         window.location.href = 'index.html';
     }
 });
+
 
 async function cargarDatosDeEmpresa(user, id) {
     try {
