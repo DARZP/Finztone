@@ -73,18 +73,10 @@ function mostrarUsuarios(usuarios, pagosDelPeriodo) {
         const statusClass = isPaid ? 'status-paid' : 'status-pending';
         const statusText = isPaid ? 'Pagado' : 'Pendiente';
         
-        let accountSelectorHTML = '';
-        let buttonText = 'Marcar como Pagado';
-        
-        // --- LA LÍNEA CLAVE CORREGIDA ---
-        // Convertimos el rol a minúsculas y quitamos espacios antes de comparar.
-        if (currentUserData.rol && currentUserData.rol.trim().toLowerCase() === 'coadmin') {
-            accountSelectorHTML = ''; // Co-admin no ve el selector
-            buttonText = 'Enviar para Aprobación';
-        } else {
-            // Admin sí ve el selector si el pago está pendiente
-            accountSelectorHTML = isPaid ? '' : generarSelectorDeCuentas(usuario.id);
-        }
+        // --- LÓGICA DE VISIBILIDAD MEJORADA ---
+        const esCoAdmin = currentUserData.rol && currentUserData.rol.trim().toLowerCase() === 'coadmin';
+        const selectorContainerClass = (esCoAdmin || isPaid) ? 'hidden' : ''; // Añade 'hidden' si es Co-admin o si ya está pagado
+        const buttonText = esCoAdmin ? 'Enviar para Aprobación' : 'Marcar como Pagado';
 
         containerElement.innerHTML = `
             <div class="user-item" data-user-id="${usuario.id}">
@@ -92,7 +84,11 @@ function mostrarUsuarios(usuarios, pagosDelPeriodo) {
                     <div class="user-name">${usuario.nombre}</div>
                     <div class="user-details">${usuario.cargo} - Sueldo Neto: $${calcularSueldoNeto(usuario).toLocaleString('es-MX')}</div>
                 </a>
-                <div class="account-selector-container">${accountSelectorHTML}</div>
+
+                <div class="account-selector-container ${selectorContainerClass}">
+                    ${generarSelectorDeCuentas(usuario.id)}
+                </div>
+
                 <div class="status ${statusClass}">${statusText}</div>
                 <button class="btn-pay" ${isPaid ? 'disabled' : ''}>${buttonText}</button>
             </div>
@@ -102,6 +98,7 @@ function mostrarUsuarios(usuarios, pagosDelPeriodo) {
         userListContainer.appendChild(containerElement);
     });
 
+    // Esta parte no cambia
     userListContainer.querySelectorAll('.btn-pay:not([disabled])').forEach(button => {
         const userItem = button.closest('.user-item');
         const userId = userItem.dataset.userId;
