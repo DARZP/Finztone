@@ -136,14 +136,12 @@ addUserForm.addEventListener('submit', async (e) => {
         
 auth.onAuthStateChanged(async (user) => {
     if (user) {
-        // --- 1. CONFIGURAR EL BOTÓN DE VOLVER ---
-        const backButton = document.getElementById('back-button');
         try {
-            // --- 2. OBTENER EL PERFIL DEL USUARIO ---
             const userDoc = await db.collection('usuarios').doc(user.uid).get();
             const userData = userDoc.exists ? userDoc.data() : {};
+            const adminUid = userData.adminUid || user.uid;
 
-            // Asignar la URL al botón de volver y ajustar la vista para el Co-Admin
+            // Lógica para el botón de volver y la vista del formulario (sin cambios)
             if (userData.rol === 'coadmin') {
                 backButton.href = 'coadmin_dashboard.html';
                 document.getElementById('add-user-form').style.display = 'none';
@@ -155,31 +153,34 @@ auth.onAuthStateChanged(async (user) => {
                 backButton.href = 'dashboard.html';
             }
 
-            // --- 3. CARGAR LA LISTA DE COLABORADORES (Lógica Simplificada) ---
-            const adminUid = userData.adminUid || user.uid;
+            // --- LA MODIFICACIÓN CLAVE ESTÁ AQUÍ ---
 
-            db.collection('usuarios')
-                .where('adminUid', '==', adminUid)
-                .orderBy('nombre')
-                .onSnapshot(snapshot => {
-                    let usuarios = [];
-                    snapshot.forEach(doc => {
-                        // Añadimos a todos los usuarios que pertenecen al admin
-                        usuarios.push({ id: doc.id, ...doc.data() });
-                    });
-                    
-                    // --- LA CORRECCIÓN CLAVE ESTÁ AQUÍ ---
-                    // Si el usuario es un coadmin, lo filtramos de la lista después de recibirla.
-                    if (userData.rol === 'coadmin') {
-                        usuarios = usuarios.filter(u => u.id !== user.uid);
-                    }
+            // 1. Empezamos con la consulta base que ambos roles comparten.
+            let query = db.collection('usuarios').where('adminUid', '==', adminUid);
 
-                    mostrarUsuarios(usuarios, userData.rol);
+            // 2. Si el usuario es un Co-admin, añadimos el filtro de estado.
+            if (userData.rol === 'coadmin') {
+                query = query.where('status', '==', 'activo');
+            }
 
-                }, error => {
-                    console.error("Error al obtener usuarios:", error);
-                    alert("Ocurrió un error al cargar la lista. Revisa la consola (F12).");
+            // 3. Ejecutamos la consulta (con o sin el filtro) y escuchamos los cambios.
+            query.orderBy('nombre').onSnapshot(snapshot => {
+                let usuarios = [];
+                snapshot.forEach(doc => {
+                    usuarios.push({ id: doc.id, ...doc.data() });
                 });
+                
+                // El Co-admin se sigue filtrando a sí mismo de la lista.
+                if (userData.rol === 'coadmin') {
+                    usuarios = usuarios.filter(u => u.id !== user.uid);
+                }
+
+                mostrarUsuarios(usuarios, userData.rol);
+
+            }, error => {
+                console.error("Error al obtener usuarios:", error);
+                alert("Ocurrió un error al cargar la lista. Revisa la consola (F12).");
+            });
 
         } catch (error) {
             console.error("Error al verificar el rol del usuario:", error);
