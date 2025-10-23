@@ -18,29 +18,35 @@
 
         <main>
             <div class="card">
-                <div class="card-header">
-                    <h2>Información del Colaborador</h2>     
-                    <div class="header-actions" style="display: flex; gap: 15px;">
-                        <button id="download-employee-records-btn" class="btn-secondary">Descargar Registros</button>
-                        <a href="#" id="edit-profile-btn" class="btn-primary">Editar Perfil</a>
-                     </div>     
-                </div>
-                <div class="profile-details">
-                    <p><strong>Nombre:</strong> <span id="profile-name">Cargando...</span></p>
-                    <p><strong>Correo:</strong> <span id="profile-email">Cargando...</span></p>
-                    <p><strong>Cargo:</strong> <span id="profile-position">Cargando...</span></p>
-                    <p><strong>Teléfono:</strong> <span id="profile-phone">No registrado</span></p>
-                    <p><strong>CLABE:</strong> <span id="profile-clabe">No registrada</span></p>
-                    <p><strong>RFC:</strong> <span id="profile-rfc">No registrado</span></p>
-                    <hr>
-                    <p><strong>Sueldo Bruto Mensual:</strong> <span id="profile-salary">Cargando...</span></p>
-                    
-                    <div id="profile-deductions-list"></div>
+    <div class="card-header">
+         <h2>Información del Colaborador</h2>     
+         <div class="header-actions" style="display: flex; gap: 15px;">
+             <button id="download-employee-records-btn" class="btn-secondary">Descargar Registros</button>
+             <a href="#" id="edit-profile-btn" class="btn-primary" style="display: none;">Editar Perfil Completo</a>
+         </div>     
+    </div>
+    <div class="profile-details">
+        <p><strong>Nombre:</strong> <span id="profile-name">Cargando...</span></p>
+        <p><strong>Correo:</strong> <span id="profile-email">Cargando...</span></p>
+        <p><strong>Cargo:</strong> <span id="profile-position">Cargando...</span></p>
+        <p><strong>Teléfono:</strong> <span id="profile-phone">No registrado</span></p>
+        <p><strong>CLABE:</strong> <span id="profile-clabe">No registrada</span></p>
+        <p><strong>RFC:</strong> <span id="profile-rfc">No registrado</span></p>
+        <hr>
+        
+        <p>
+            <strong>Sueldo Bruto Mensual:</strong> 
+            <span id="profile-salary">Cargando...</span>
+            <button id="edit-salary-btn" class="btn-secondary" style="display: none; font-size: 0.8em; padding: 4px 10px; margin-left: 15px;">Editar</button>
+        </p>
+        
+        <div id="profile-deductions-list"></div>
 
-                    <p class="net-salary"><strong>Sueldo Neto Mensual:</strong> <span id="profile-net-salary">Calculando...</span></p>
-                </div>
-            </div>
+        <p class="net-salary"><strong>Sueldo Neto Mensual:</strong> <span id="profile-net-salary">Calculando...</span></p>
 
+        <button id="edit-deductions-btn" class="btn-primary" style="display: none; width: 100%; margin-top: 20px;">Gestionar Deducciones</button>
+    </div>
+</div>
             <div class="card">
                 <h2>Actividad Reciente</h2>
                 <div id="activity-feed"></div>
