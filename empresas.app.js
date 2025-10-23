@@ -3,60 +3,58 @@ import { auth, db } from './firebase-init.js';
 // --- ELEMENTOS DEL DOM ---
 const addCompanyForm = document.getElementById('add-company-form');
 const companyListContainer = document.getElementById('company-list');
+const backButton = document.getElementById('back-button');
+const formCard = document.querySelector('.form-card'); // El contenedor del formulario
 
 // --- LÓGICA DE LA PÁGINA ---
-
-auth.onAuthStateChanged(async (user) => { // <-- Se añade 'async'
+auth.onAuthStateChanged(async (user) => {
     if (user) {
-        // --- INICIA LA NUEVA LÓGICA PARA EL BOTÓN DE VOLVER ---
-        const backButton = document.getElementById('back-button');
-        try {
-            const userDoc = await db.collection('usuarios').doc(user.uid).get();
-            if (userDoc.exists && userDoc.data().rol === 'coadmin') {
-                backButton.href = 'coadmin_dashboard.html';
-            } else {
-                backButton.href = 'dashboard.html';
+        // --- LÓGICA DE ROLES ---
+        const userDoc = await db.collection('usuarios').doc(user.uid).get();
+        const userData = userDoc.exists ? userDoc.data() : {};
+        const adminUid = userData.adminUid || user.uid; // La lógica clave
+
+        // Configuramos la UI según el rol
+        if (userData.rol === 'coadmin') {
+            backButton.href = 'coadmin_dashboard.html';
+            // Ocultamos la tarjeta completa del formulario
+            if (formCard) {
+                formCard.style.display = 'none';
             }
-        } catch (error) {
-            console.error("Error al obtener perfil para configurar el botón de volver:", error);
-            backButton.href = 'dashboard.html'; // Ruta por defecto en caso de error
+        } else {
+            backButton.href = 'dashboard.html';
         }
-        db.collection('empresas').where('adminUid', '==', user.uid).orderBy('nombre').onSnapshot(snapshot => {
-            const empresas = [];
-            snapshot.forEach(doc => {
-                empresas.push({ id: doc.id, ...doc.data() });
-            });
+
+        // --- CARGA DE DATOS ---
+        // Usamos el 'adminUid' correcto para cargar la lista de empresas
+        db.collection('empresas').where('adminUid', '==', adminUid).orderBy('nombre').onSnapshot(snapshot => {
+            const empresas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             mostrarEmpresas(empresas);
         }, error => {
             console.error("Error al obtener las empresas: ", error);
         });
+
     } else {
         window.location.href = 'index.html';
     }
 });
 
-// Listener para el formulario de registro de nuevas empresas
+// Listener para el formulario (solo funcionará para el Admin, ya que para el Co-admin está oculto)
 addCompanyForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const user = auth.currentUser;
     if (!user) return;
 
-    const companyName = addCompanyForm['company-name'].value;
-    const companyRfc = addCompanyForm['company-rfc'].value;
-    const contactName = addCompanyForm['contact-name'].value;
-    const contactEmail = addCompanyForm['contact-email'].value;
-
-    // Añadimos el nuevo documento a la colección 'empresas'
     db.collection('empresas').add({
-        nombre: companyName,
-        rfc: companyRfc,
-        contactoNombre: contactName,
-        contactoEmail: contactEmail,
+        nombre: addCompanyForm['company-name'].value,
+        rfc: addCompanyForm['company-rfc'].value,
+        contactoNombre: addCompanyForm['contact-name'].value,
+        contactoEmail: addCompanyForm['contact-email'].value,
         fechaDeCreacion: new Date(),
-        adminUid: user.uid
+        adminUid: user.uid // El creador siempre es el Admin
     })
     .then(() => {
-        alert(`¡Empresa "${companyName}" registrada exitosamente!`);
+        alert(`¡Empresa registrada exitosamente!`);
         addCompanyForm.reset();
     })
     .catch((error) => {
@@ -65,10 +63,9 @@ addCompanyForm.addEventListener('submit', (e) => {
     });
 });
 
-
-// Función para renderizar la lista de empresas en el HTML
+// Función para renderizar la lista de empresas (sin cambios)
 function mostrarEmpresas(empresas) {
-    companyListContainer.innerHTML = ''; // Limpiamos la lista actual
+    companyListContainer.innerHTML = '';
     if (empresas.length === 0) {
         companyListContainer.innerHTML = '<p>No hay empresas registradas.</p>';
         return;
@@ -76,9 +73,8 @@ function mostrarEmpresas(empresas) {
 
     empresas.forEach(empresa => {
         const empresaElement = document.createElement('a');
-        // Por ahora, el enlace no llevará a ningún lado. En el siguiente paso lo activaremos.
         empresaElement.href = `perfil_empresa.html?id=${empresa.id}`;
-        empresaElement.classList.add('user-item'); // Reutilizamos la clase de CSS
+        empresaElement.classList.add('user-item');
         
         empresaElement.innerHTML = `
             <div class="user-info">
