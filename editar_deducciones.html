@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestionar Deducciones - FINZTONE</title>
+    <link rel="stylesheet" href="main.style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="page-wrapper">
+        <header class="main-header">
+            <a href="#" id="back-to-profile-btn" class="back-button">← Cancelar</a>
+            <img src="images/nombre.png" alt="FINZTONE" class="logo-header">
+        </header>
+        <main>
+            <div class="card form-card">
+                <h2>Gestionar Deducciones Fijas</h2>
+                <form id="edit-deductions-form">
+                    <div class="deductions-section" style="border-top: none; margin-top: 0; padding-top: 0;">
+                        <p>Selecciona las deducciones que aplican a este colaborador.</p>
+                        <div id="deductions-checklist">
+                            </div>
+                    </div>
+                    <button type="submit" class="btn-primary" style="width:100%; margin-top: 20px;">Guardar Cambios</button>
+                </form>
+            </div>
+        </main>
+    </div>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script type="module" src="editar_deducciones.app.js"></script>
+</body>
+</html>
