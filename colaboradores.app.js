@@ -3,7 +3,7 @@ import { auth, db, functions } from './firebase-init.js';
 const addUserForm = document.getElementById('add-user-form');
 const userListContainer = document.getElementById('user-list');
 
-function mostrarUsuarios(usuarios) {
+function mostrarUsuarios(usuarios, currentUserRole) {
     userListContainer.innerHTML = '';
     if (usuarios.length === 0) {
         userListContainer.innerHTML = '<p>No hay colaboradores registrados.</p>';
@@ -11,19 +11,30 @@ function mostrarUsuarios(usuarios) {
     }
 
     usuarios.forEach(usuario => {
-        const userElement = document.createElement('div'); // Cambiado de <a> a <div>
+        const userElement = document.createElement('div');
         userElement.classList.add('user-item');
-        userElement.dataset.userId = usuario.id; // Guardamos el ID del usuario aquí
+        userElement.dataset.userId = usuario.id;
 
         const sueldoFormateado = (usuario.sueldoBruto || 0).toLocaleString('es-MX', {
             style: 'currency',
             currency: 'MXN'
         });
 
-        // --- LÓGICA NUEVA PARA EL BOTÓN ---
-        const esActivo = usuario.status !== 'inactivo'; // Asumimos 'activo' si no es 'inactivo'
-        const botonTexto = esActivo ? 'Desactivar' : 'Activar';
-        const botonClass = esActivo ? 'btn-reject' : 'btn-approve'; // Reusamos los colores de los botones
+        // --- LÓGICA DE VISIBILIDAD DEL BOTÓN ---
+        let botonHTML = ''; // Por defecto, no hay botón.
+        
+        // Solo si el usuario actual es un 'admin', creamos el HTML del botón.
+        if (currentUserRole === 'admin') {
+            const esActivo = usuario.status !== 'inactivo';
+            const botonTexto = esActivo ? 'Desactivar' : 'Activar';
+            const botonClass = esActivo ? 'btn-reject' : 'btn-approve';
+            
+            botonHTML = `
+                <button class="btn ${botonClass} status-btn" style="padding: 8px 16px; font-size: 0.9em;">
+                    ${botonTexto}
+                </button>
+            `;
+        }
         
         userElement.innerHTML = `
             <a href="perfil_empleado.html?id=${usuario.id}" class="user-info-link" style="text-decoration: none; color: inherit; flex-grow: 1;">
@@ -33,9 +44,7 @@ function mostrarUsuarios(usuarios) {
                 </div>
                 <div class="user-salary">${sueldoFormateado}</div>
             </a>
-            <button class="btn ${botonClass} status-btn" style="padding: 8px 16px; font-size: 0.9em;">
-                ${botonTexto}
-            </button>
+            ${botonHTML} 
         `;
         userListContainer.appendChild(userElement);
     });
@@ -165,7 +174,7 @@ auth.onAuthStateChanged(async (user) => {
                         usuarios = usuarios.filter(u => u.id !== user.uid);
                     }
 
-                    mostrarUsuarios(usuarios);
+                    mostrarUsuarios(usuarios, userData.rol);
 
                 }, error => {
                     console.error("Error al obtener usuarios:", error);
