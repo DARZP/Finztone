@@ -197,27 +197,21 @@ function cargarPagosPendientes(adminUid) {
       .where('adminUid', '==', adminUid)
       .where('status', '==', 'pendiente')
       .onSnapshot(snapshot => {
+        pendingPayrollList.innerHTML = ''; // Clear the list first
         if (snapshot.empty) {
             pendingPayrollList.innerHTML = '<p>No hay solicitudes de pago pendientes.</p>';
             return;
         }
 
-        pendingPayrollList.innerHTML = ''; // Limpiamos la lista
-
-        // ¡Corrección Clave! Nos aseguramos de que las cuentas estén listas.
-        // Si no lo están, la función 'generarSelectorDeCuentas' creará un dropdown vacío.
-        if (listaDeCuentas.length === 0) {
-            console.warn("Advertencia: Se intentó renderizar los pagos pendientes pero la lista de cuentas aún estaba vacía.");
-            // Podríamos reintentar o mostrar un estado de carga, pero por ahora solo lo advertimos.
-        }
-
         snapshot.forEach(doc => {
             const pago = { id: doc.id, ...doc.data() };
             const containerElement = document.createElement('div');
-            containerElement.classList.add('payroll-item-container'); // Usamos el mismo contenedor que la lista principal
+            containerElement.classList.add('payroll-item-container');
+            containerElement.dataset.pagoId = pago.id; // Set the ID on the main container
 
+            // Generate the HTML for the pending item
             containerElement.innerHTML = `
-                <div class="pending-item" data-pago-id="${pago.id}">
+                <div class="pending-item">
                     <div class="item-summary">
                         <div class="item-details">
                             <div>
@@ -227,33 +221,46 @@ function cargarPagosPendientes(adminUid) {
                             <div class="meta">Período: ${pago.periodo} | Solicitado por: ${pago.nombreCreador}</div>
                         </div>
                         <div class="item-actions">
-                            ${generarSelectorDeCuentas(`pending-${pago.id}`)}
+                            ${generarSelectorDeCuentas()}
                             <button class="btn btn-approve">Aprobar</button>
                             <button class="btn btn-reject">Rechazar</button>
                         </div>
                     </div>
                 </div>
-                <div class="item-details-view" id="details-pending-${pago.id}" style="display: none;">
-                    </div>
+                <div class="item-details-view" id="details-pending-${pago.id}" style="display: none;"></div>
             `;
+            
             pendingPayrollList.appendChild(containerElement);
 
-            // Asignamos los eventos a los botones de esta solicitud específica
-            const approveBtn = containerElement.querySelector('.btn-approve');
-            const rejectBtn = containerElement.querySelector('.btn-reject');
-            approveBtn.addEventListener('click', () => aprobarPago(pago.id));
-            rejectBtn.addEventListener('click', () => rechazarPago(pago.id));
+            // --- EVENT HANDLING (The Safe Way) ---
+            // Find the buttons WITHIN the element we just created and assign clicks
+            containerElement.querySelector('.btn-approve').addEventListener('click', (e) => {
+                // We find the parent container to get the correct select element
+                const parentContainer = e.target.closest('.payroll-item-container');
+                aprobarPago(pago.id, parentContainer);
+            });
+            
+            containerElement.querySelector('.btn-reject').addEventListener('click', () => {
+                rechazarPago(pago.id);
+            });
         });
     });
 }
 
-window.aprobarPago = async (pagoId) => {
+async function aprobarPago(pagoId, itemContainer) {
     const adminUid = auth.currentUser.uid;
-    const itemElement = pendingPayrollList.querySelector(`[data-id="${pagoId}"]`);
-    const cuentaId = itemElement.querySelector('select').value;
+    
+    // --- THE FIX ---
+    // We now get the select element from the 'itemContainer' passed to the function
+    const selectElement = itemContainer.querySelector('select');
+    const cuentaId = selectElement.value;
 
-    if (!cuentaId) return alert("Por favor, selecciona una cuenta para aprobar el pago.");
-    if (!confirm("¿Estás seguro de que quieres aprobar este pago? Esta acción es irreversible.")) return;
+    if (!cuentaId) {
+        return alert("Por favor, selecciona una cuenta para aprobar el pago.");
+    }
+    if (!confirm("¿Estás seguro de que quieres aprobar este pago? Esta acción es irreversible.")) {
+        return;
+    }
 
     const pagoRef = db.collection('pagos_nomina').doc(pagoId);
     const cuentaRef = db.collection('cuentas').doc(cuentaId);
@@ -270,7 +277,8 @@ window.aprobarPago = async (pagoId) => {
 
             // Descontar saldo de la cuenta
             if (cuentaData.tipo === 'credito') {
-                transaction.update(cuentaRef, { deudaActual: (cuentaData.deudaActual || 0) + monto });
+                const nuevaDeuda = (cuentaData.deudaActual || 0) + monto;
+                transaction.update(cuentaRef, { deudaActual: nuevaDeuda, deudaTotal: (cuentaData.deudaTotal || 0) + monto });
             } else {
                 if ((cuentaData.saldoActual || 0) < monto) throw "Saldo insuficiente.";
                 transaction.update(cuentaRef, { saldoActual: cuentaData.saldoActual - monto });
@@ -294,7 +302,8 @@ window.aprobarPago = async (pagoId) => {
         });
         alert("¡Pago aprobado y procesado!");
     } catch (error) {
-        alert("Error al aprobar el pago: " + error);
+        console.error("Error al aprobar pago: ", error);
+        alert("Error al aprobar el pago: " + error.message);
     }
 }
 
