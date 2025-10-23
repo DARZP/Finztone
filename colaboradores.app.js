@@ -45,7 +45,6 @@ function mostrarUsuarios(usuarios, currentUserRole) {
     });
 }
 
-// --- LÓGICA PRINCIPAL DE LA PÁGINA ---
 auth.onAuthStateChanged(async (user) => {
     if (user) {
         try {
@@ -56,7 +55,14 @@ auth.onAuthStateChanged(async (user) => {
             // Lógica para el botón de volver y la vista del formulario
             if (userData.rol === 'coadmin') {
                 backButton.href = 'coadmin_dashboard.html';
-                addUserForm.style.display = 'none'; // Ocultamos el formulario
+                
+                // --- LA LÍNEA CORREGIDA ---
+                // Ahora buscamos el contenedor con la clase 'form-card' y lo ocultamos por completo.
+                const addUserCard = document.querySelector('.form-card');
+                if (addUserCard) {
+                    addUserCard.style.display = 'none';
+                }
+
                 const listCardTitle = document.querySelector('.list-card h2');
                 if (listCardTitle) {
                     listCardTitle.textContent = 'Equipo de Colaboradores';
@@ -65,22 +71,17 @@ auth.onAuthStateChanged(async (user) => {
                 backButton.href = 'dashboard.html';
             }
 
-            // Construcción de la consulta a la base de datos
+            // El resto de la lógica para cargar la lista no cambia...
             let query = db.collection('usuarios').where('adminUid', '==', adminUid);
             if (userData.rol === 'coadmin') {
                 query = query.where('status', '==', 'activo');
             }
-
-            // Ejecución de la consulta y renderizado de la lista
             query.orderBy('nombre').onSnapshot(snapshot => {
                 let usuarios = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                
                 if (userData.rol === 'coadmin') {
                     usuarios = usuarios.filter(u => u.id !== user.uid);
                 }
-
                 mostrarUsuarios(usuarios, userData.rol);
-
             }, error => {
                 console.error("Error al obtener usuarios:", error);
                 alert("Ocurrió un error al cargar la lista. Revisa la consola (F12).");
@@ -94,8 +95,6 @@ auth.onAuthStateChanged(async (user) => {
         window.location.href = 'index.html';
     }
 });
-
-// --- EVENT LISTENERS PARA LOS FORMULARIOS Y BOTONES ---
 
 userListContainer.addEventListener('click', async (e) => {
     if (!e.target.classList.contains('status-btn')) return;
