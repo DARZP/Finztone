@@ -116,7 +116,7 @@ async function registrarPago(empleado) {
     const tipoDeDescuento = document.querySelector('input[name="payment-type"]:checked').value;
     const sueldoBruto = empleado.sueldoBruto || 0;
     const sueldoNeto = calcularSueldoNeto(empleado);
-    const montoADescontar = tipoDeDescuento === 'neto' ? sueldoNeto : sueldoBruto;
+    const montoADescontar = tipoDeDescuento === 'neto' ? sueldoNeto : sueldoBruto; // Esta variable está bien definida
 
     if (!confirm(`¿Confirmas el registro del pago para ${empleado.nombre} por el período ${periodo}?`)) return;
 
@@ -129,7 +129,7 @@ async function registrarPago(empleado) {
         if (!cuentaId) return alert(`Por favor, selecciona una cuenta de origen para ${empleado.nombre}.`);
         
         const cuentaRef = db.collection('cuentas').doc(cuentaId);
-        const nuevoPagoRef = db.collection('pagos_nomina').doc(); // Creamos una referencia para el nuevo pago
+        const nuevoPagoRef = db.collection('pagos_nomina').doc();
 
         try {
             await db.runTransaction(async (transaction) => {
@@ -138,22 +138,19 @@ async function registrarPago(empleado) {
                 
                 const cuentaData = cuentaDoc.data();
 
-                // 1. Descontar saldo de la cuenta
                 if (cuentaData.tipo === 'credito') {
-                    transaction.update(cuentaRef, { deudaActual: (cuentaData.deudaActual || 0) + montoADescontar });
+                    transaction.update(cuentaRef, { deudaActual: (cuentaData.deudaActual || 0) + montoADescontar, deudaTotal: (cuentaData.deudaTotal || 0) + montoADescontar });
                 } else {
                     if ((cuentaData.saldoActual || 0) < montoADescontar) throw new Error("Saldo insuficiente en la cuenta.");
                     transaction.update(cuentaRef, { saldoActual: cuentaData.saldoActual - montoADescontar });
                 }
                 
-                // 2. Crear el registro del pago de nómina como 'aprobado'
                 const datosPago = {
                     userId: empleado.id, userName: empleado.nombre, periodo, montoBruto: sueldoBruto, sueldoNeto, montoDescontado: montoADescontar,
                     fechaDePago: new Date(), cuentaId, cuentaNombre: cuentaData.nombre, adminUid: adminUid, status: 'aprobado'
                 };
                 transaction.set(nuevoPagoRef, datosPago);
 
-                // 3. Crear los movimientos de impuestos (deducciones)
                 (empleado.deducciones || []).forEach(ded => {
                     const montoDeducido = ded.tipo === 'porcentaje' ? (sueldoBruto * ded.valor) / 100 : ded.valor;
                     const taxMovRef = db.collection('movimientos_impuestos').doc();
@@ -173,9 +170,20 @@ async function registrarPago(empleado) {
     } else {
         try {
             await db.collection('pagos_nomina').add({
-                userId: empleado.id, userName: empleado.nombre, periodo, montoBruto: sueldoBruto, sueldoNeto, montoDescontado,
-                deducciones: empleado.deducciones || [], fechaDeCreacion: new Date(), adminUid: adminUid,
-                creadoPor: creadorUid, nombreCreador: creadorNombre, status: 'pendiente'
+                userId: empleado.id,
+                userName: empleado.nombre,
+                periodo,
+                montoBruto: sueldoBruto,
+                sueldoNeto,
+                // --- LA LÍNEA CORREGIDA ---
+                // Aquí usamos la variable correcta que definimos arriba.
+                montoDescontado: montoADescontar,
+                deducciones: empleado.deducciones || [],
+                fechaDeCreacion: new Date(),
+                adminUid: adminUid,
+                creadoPor: creadorUid,
+                nombreCreador: creadorNombre,
+                status: 'pendiente'
             });
             alert(`¡Solicitud de pago para ${empleado.nombre} enviada para aprobación!`);
         } catch (error) {
