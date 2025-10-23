@@ -67,19 +67,18 @@ function mostrarUsuarios(usuarios, pagosDelPeriodo) {
 
     usuarios.forEach(usuario => {
         const isPaid = pagosDelPeriodo.some(pago => pago.userId === usuario.id && pago.status === 'aprobado');
-        
-        // Creamos un contenedor principal para la fila y su desglose
         const containerElement = document.createElement('div');
         containerElement.classList.add('payroll-item-container');
 
         const statusClass = isPaid ? 'status-paid' : 'status-pending';
         const statusText = isPaid ? 'Pagado' : 'Pendiente';
         
-        // Lógica para ocultar el selector y cambiar el texto del botón para el Co-admin
         let accountSelectorHTML = '';
         let buttonText = 'Marcar como Pagado';
         
-        if (currentUserData.rol === 'coadmin') {
+        // --- LA LÍNEA CLAVE CORREGIDA ---
+        // Convertimos el rol a minúsculas y quitamos espacios antes de comparar.
+        if (currentUserData.rol && currentUserData.rol.trim().toLowerCase() === 'coadmin') {
             accountSelectorHTML = ''; // Co-admin no ve el selector
             buttonText = 'Enviar para Aprobación';
         } else {
@@ -98,12 +97,11 @@ function mostrarUsuarios(usuarios, pagosDelPeriodo) {
                 <button class="btn-pay" ${isPaid ? 'disabled' : ''}>${buttonText}</button>
             </div>
             <div class="item-details-view" id="details-${usuario.id}" style="display: none;">
-                </div>
+            </div>
         `;
         userListContainer.appendChild(containerElement);
     });
 
-    // Esta parte no cambia, sigue asignando la acción al botón de pago/envío
     userListContainer.querySelectorAll('.btn-pay:not([disabled])').forEach(button => {
         const userItem = button.closest('.user-item');
         const userId = userItem.dataset.userId;
@@ -111,7 +109,6 @@ function mostrarUsuarios(usuarios, pagosDelPeriodo) {
         button.addEventListener('click', () => registrarPago(user));
     });
 }
- 
 
 async function registrarPago(empleado) {
     const adminUid = currentUserData.rol === 'admin' ? auth.currentUser.uid : currentUserData.adminUid;
