@@ -888,6 +888,11 @@ tbody tr:hover {
 .tax-breakdown { color: #aeb9c5; }
 .tax-line { display: flex; justify-content: space-between; padding: 4px 0; }
 
+/* --- CLASE DE AYUDA PARA OCULTAR ELEMENTOS --- */
+.hidden {
+    display: none !important;
+}
+
 /* --- AJUSTES PARA BOTÓN DE ESTADO DE COLABORADOR --- */
 
 /* 1. Hacemos que la información del usuario (el enlace) ocupe todo el espacio sobrante */
