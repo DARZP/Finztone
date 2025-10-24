@@ -3,7 +3,7 @@ import { exportToCSV } from './utils.js';
 
 // --- ELEMENTOS DEL DOM ---
 const urlParams = new URLSearchParams(window.location.search);
-const userId = urlParams.get('id'); // ID del perfil que se está viendo
+const userId = urlParams.get('id');
 
 const profileName = document.getElementById('profile-name');
 const profileEmail = document.getElementById('profile-email');
@@ -22,14 +22,36 @@ const downloadEmployeeRecordsBtn = document.getElementById('download-employee-re
 
 let currentUserData = null;
 
+// --- PUNTO DE CONTROL #1 ---
+console.log("perfil_empleado.app.js: El script se ha cargado.");
+console.log("El ID de usuario obtenido de la URL (userId) es:", userId);
+
 // --- LÓGICA PRINCIPAL ---
 auth.onAuthStateChanged(async (user) => {
-    if (user && userId) {
-        // Obtenemos el perfil de QUIEN ESTÁ VIENDO la página
+    // --- PUNTO DE CONTROL #2 ---
+    console.log("auth.onAuthStateChanged: Se detectó un cambio de estado.");
+
+    if (!user) {
+        console.error("El usuario NO está autenticado. Redirigiendo...");
+        window.location.href = 'index.html';
+        return;
+    }
+    console.log("El usuario SÍ está autenticado.");
+
+    if (!userId) {
+        console.error("ERROR CRÍTICO: El userId NO se encontró en la URL. La página no puede cargar datos.");
+        alert("Error: No se ha especificado un perfil para ver. Vuelve a la lista de colaboradores e inténtalo de nuevo.");
+        return; // Detenemos la ejecución si no hay ID
+    }
+    console.log("El userId SÍ existe en la URL. El valor es:", userId);
+
+    // Si llegamos aquí, ambas condiciones son verdaderas.
+    console.log("Condiciones cumplidas. Iniciando carga de la página...");
+    
+    try {
         const viewerDoc = await db.collection('usuarios').doc(user.uid).get();
         const viewerData = viewerDoc.exists ? viewerDoc.data() : {};
 
-        // Lógica de visibilidad de botones
         if (viewerData.rol === 'admin') {
             editProfileBtn.style.display = 'block';
             editProfileBtn.href = `editar_perfil.html?id=${userId}`;
@@ -38,14 +60,11 @@ auth.onAuthStateChanged(async (user) => {
             editDeductionsBtn.style.display = 'block';
         }
 
-        // --- CORRECCIÓN CLAVE: Llamamos a ambas funciones de carga directamente ---
-        await cargarDatosPerfil(); // Esperamos a que los datos del perfil se carguen primero
-        await cargarActividad();     // Luego, cargamos la actividad (con diagnóstico)
-
+        await cargarDatosPerfil();
+        await cargarActividad();
         downloadEmployeeRecordsBtn.addEventListener('click', descargarRegistrosColaborador);
-
-    } else {
-        window.location.href = 'index.html';
+    } catch (error) {
+        console.error("Ocurrió un error en el bloque principal:", error);
     }
 });
 
@@ -98,9 +117,6 @@ async function cargarDatosPerfil() {
             const sueldoNeto = sueldoBruto - totalDeducciones;
             profileDeductionsList.innerHTML = deduccionesHTML;
             profileNetSalary.textContent = sueldoNeto.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
-            
-            // La llamada a cargarActividad() se eliminó de aquí para tener un mejor control del flujo.
-
         } else {
             profileName.textContent = "Usuario no encontrado";
         }
@@ -109,11 +125,10 @@ async function cargarDatosPerfil() {
     }
 }
 
-// --- VERSIÓN DE DIAGNÓSTICO DE 'cargarActividad' ---
 async function cargarActividad() {
     const viewer = auth.currentUser;
     if (!userId || !viewer) {
-        console.error("ERROR: No se encontró el 'userId' del perfil o el 'viewer'.");
+        console.error("ERROR INTERNO: No se encontró el 'userId' del perfil o el 'viewer' dentro de cargarActividad.");
         return;
     }
 
@@ -123,8 +138,6 @@ async function cargarActividad() {
     const viewerData = viewerDoc.exists ? viewerDoc.data() : {};
     const adminUid = viewerData.adminUid || viewer.uid;
 
-    console.log("Perfil que se está viendo (userId):", userId);
-    console.log("Quien está viendo (viewer.uid):", viewer.uid);
     console.log("ID del equipo (adminUid) que se usará en las consultas:", adminUid);
 
     try {
@@ -148,7 +161,7 @@ async function cargarActividad() {
         
         if (todosLosMovimientos.length === 0) {
             activityFeed.innerHTML = '<p>Este empleado no tiene actividad reciente.</p>';
-            console.log("--- FIN DEL DIAGNÓSTICO ---");
+            console.log("--- FIN DEL DIAGNÓSTICO (sin movimientos) ---");
             return;
         }
         
