@@ -124,25 +124,24 @@ async function cargarHistorialDeProyecto(proyectoId, adminUid) {
     try {
         const gastosPromise = db.collection('gastos').where('adminUid', '==', adminUid).where('proyectoId', '==', proyectoId).get();
         const ingresosPromise = db.collection('ingresos').where('adminUid', '==', adminUid).where('proyectoId', '==', proyectoId).get();
-        const [gastosSnapshot, ingresosSnapshot] = await Promise.all([gastosPromise, ingresosSnapshot]);
+        
+        // --- LA LÍNEA CORREGIDA ---
+        // Ahora usamos 'ingresosPromise' dentro del array, que es la variable correcta.
+        const [gastosSnapshot, ingresosSnapshot] = await Promise.all([gastosPromise, ingresosPromise]);
 
         let todosLosMovimientos = [];
-
         gastosSnapshot.forEach(doc => todosLosMovimientos.push({ tipo: 'gasto', ...doc.data() }));
         ingresosSnapshot.forEach(doc => todosLosMovimientos.push({ tipo: 'ingreso', ...doc.data() }));
 
-        // --- CORRECCIÓN 1: Ordenamos los registros del más reciente al más antiguo ---
         todosLosMovimientos.sort((a, b) => new Date(b.fecha.replace(/-/g, '/')) - new Date(a.fecha.replace(/-/g, '/')));
 
         let movimientosHTML = '';
-        
         todosLosMovimientos.forEach(mov => {
-            if (mov.tipo === 'gasto') {
-                // --- CORRECCIÓN 2: Lógica para el icono del comprobante ---
-                const iconoComprobante = mov.comprobanteURL 
-                    ? `<a href="${mov.comprobanteURL}" target="_blank" title="Ver comprobante" style="text-decoration: none; font-size: 1.1em; margin-left: 8px;">📎</a>` 
-                    : '';
+            const iconoComprobante = mov.comprobanteURL 
+                ? `<a href="${mov.comprobanteURL}" target="_blank" title="Ver comprobante" style="text-decoration: none; font-size: 1.1em; margin-left: 8px;">📎</a>` 
+                : '';
 
+            if (mov.tipo === 'gasto') {
                 let impuestosHTML = '';
                 if (mov.impuestos && mov.impuestos.length > 0) {
                     impuestosHTML += '<div class="tax-breakdown" style="padding-left: 15px; margin-top: 5px;">';
@@ -152,31 +151,9 @@ async function cargarHistorialDeProyecto(proyectoId, adminUid) {
                     });
                     impuestosHTML += '</div>';
                 }
-
-                movimientosHTML += `
-                    <div class="history-item expense">
-                        <div class="history-main-line">
-                            <span>Gasto: ${mov.descripcion}${iconoComprobante}</span>
-                            <strong>-$${(mov.totalConImpuestos || mov.monto).toLocaleString('es-MX')}</strong>
-                        </div>
-                        <div class="history-meta">Registrado por: ${mov.nombreCreador || 'N/A'}</div>
-                        ${impuestosHTML}
-                    </div>
-                `;
+                movimientosHTML += `<div class="history-item expense"><div class="history-main-line"><span>Gasto: ${mov.descripcion}${iconoComprobante}</span><strong>-$${(mov.totalConImpuestos || mov.monto).toLocaleString('es-MX')}</strong></div><div class="history-meta">Registrado por: ${mov.nombreCreador || 'N/A'}</div>${impuestosHTML}</div>`;
             } else if (mov.tipo === 'ingreso') {
-                const iconoComprobante = mov.comprobanteURL 
-                    ? `<a href="${mov.comprobanteURL}" target="_blank" title="Ver comprobante" style="text-decoration: none; font-size: 1.1em; margin-left: 8px;">📎</a>` 
-                    : '';
-                
-                movimientosHTML += `
-                    <div class="history-item income">
-                        <div class="history-main-line">
-                            <span>Ingreso: ${mov.descripcion}${iconoComprobante}</span>
-                            <strong>+$${(mov.totalConImpuestos || mov.monto).toLocaleString('es-MX')}</strong>
-                        </div>
-                        <div class="history-meta">Registrado por: ${mov.nombreCreador || 'N/A'}</div>
-                    </div>
-                `;
+                movimientosHTML += `<div class="history-item income"><div class="history-main-line"><span>Ingreso: ${mov.descripcion}${iconoComprobante}</span><strong>+$${(mov.totalConImpuestos || mov.monto).toLocaleString('es-MX')}</strong></div><div class="history-meta">Registrado por: ${mov.nombreCreador || 'N/A'}</div></div>`;
             }
         });
 
@@ -185,7 +162,7 @@ async function cargarHistorialDeProyecto(proyectoId, adminUid) {
         console.error("Error al cargar historial:", error);
         historyContainer.innerHTML = '<p class="history-line error">Error al cargar historial.</p>';
     }
-} 
+}
 
 addProjectForm.addEventListener('submit', (e) => {
     e.preventDefault();
