@@ -288,9 +288,23 @@ function poblarFiltroDePeriodos() {
 }
 
 function cargarDatosNomina(adminUid, periodo) {
-    db.collection('usuarios').where('adminUid', '==', adminUid).where('rol', '==', 'empleado').where('status', '==', 'activo').orderBy('nombre').get().then(usersSnapshot => {
-        listaDeUsuarios = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        db.collection('pagos_nomina').where('adminUid', '==', adminUid).where('periodo', '==', periodo).onSnapshot(paymentsSnapshot => {
+    db.collection('usuarios')
+      .where('adminUid', '==', adminUid)
+      .where('status', '==', 'activo') // Traemos a todos los activos
+      .orderBy('nombre')
+      .get()
+      .then(usersSnapshot => {
+        
+        listaDeUsuarios = [];
+        usersSnapshot.forEach(doc => {
+                listaDeUsuarios.push({ id: doc.id, ...doc.data() });
+            }
+        });
+
+        db.collection('pagos_nomina')
+          .where('adminUid', '==', adminUid)
+          .where('periodo', '==', periodo)
+          .onSnapshot(paymentsSnapshot => {
             const pagosDelPeriodo = paymentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             mostrarUsuarios(listaDeUsuarios, pagosDelPeriodo);
         });
