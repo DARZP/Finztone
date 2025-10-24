@@ -25,7 +25,7 @@ auth.onAuthStateChanged(async (user) => {
 
         await cargarCuentas(adminUid);
         poblarFiltroDePeriodos();
-        await cargarDatosNomina(adminUid, periodSelector.value); // Le añadimos await
+        await cargarDatosNomina(adminUid, periodSelector.value);
         periodSelector.addEventListener('change', () => cargarDatosNomina(adminUid, periodSelector.value));
 
         if (currentUserData.rol && currentUserData.rol.trim().toLowerCase() === 'coadmin') {
@@ -68,7 +68,7 @@ function mostrarUsuarios(usuarios, pagosDelPeriodo) {
         const statusClass = isPaid ? 'status-paid' : 'status-pending';
         const statusText = isPaid ? 'Pagado' : 'Pendiente';
         const esCoAdmin = currentUserData.rol && currentUserData.rol.trim().toLowerCase() === 'coadmin';
-        const selectorContainerClass = (esCoAdmin || isPaid || usuario.rol === 'admin') ? 'hidden' : ''; // Admin tampoco necesita selector para sí mismo
+        const selectorContainerClass = (esCoAdmin || isPaid) ? 'hidden' : '';
         const buttonText = esCoAdmin ? 'Enviar para Aprobación' : 'Marcar como Pagado';
         containerElement.innerHTML = `<div class="user-item" data-user-id="${usuario.id}"><a href="perfil_empleado.html?id=${usuario.id}" class="user-info-link"><div class="user-name">${usuario.nombre}</div><div class="user-details">${usuario.cargo} - Sueldo Neto: $${calcularSueldoNeto(usuario).toLocaleString('es-MX')}</div></a><div class="account-selector-container ${selectorContainerClass}">${generarSelectorDeCuentas(usuario.id)}</div><div class="status ${statusClass}">${statusText}</div><button class="btn-pay" ${isPaid ? 'disabled' : ''}>${buttonText}</button></div><div class="item-details-view" id="details-${usuario.id}" style="display: none;"></div>`;
         userListContainer.appendChild(containerElement);
@@ -201,34 +201,28 @@ function poblarFiltroDePeriodos() {
     periodos.forEach(p => { periodSelector.appendChild(new Option(p.text, p.value)); });
 }
 
-// --- FUNCIÓN DE CARGA DE DATOS CORREGIDA ---
 async function cargarDatosNomina(adminUid, periodo) {
-    // 1. Preparamos las dos consultas que necesitamos.
     const collaboratorsPromise = db.collection('usuarios')
         .where('adminUid', '==', adminUid)
         .where('status', '==', 'activo')
         .get();
-        
     const adminPromise = db.collection('usuarios').doc(adminUid).get();
 
-    // 2. Ejecutamos ambas consultas en paralelo para mayor eficiencia.
     const [collaboratorsSnapshot, adminDoc] = await Promise.all([collaboratorsPromise, adminPromise]);
 
     listaDeUsuarios = [];
-    // 3. Añadimos los colaboradores a la lista.
     collaboratorsSnapshot.forEach(doc => {
         listaDeUsuarios.push({ id: doc.id, ...doc.data() });
     });
 
-    // 4. Añadimos al administrador a la lista si existe y está activo.
+    // --- LA CORRECCIÓN ESTÁ AQUÍ ---
+    // Usamos 'adminDoc.data()' para obtener los datos del administrador
     if (adminDoc.exists && adminDoc.data().status === 'activo') {
-        listaDeUsuarios.push({ id: adminDoc.id, ...doc.data() });
+        listaDeUsuarios.push({ id: adminDoc.id, ...adminDoc.data() });
     }
 
-    // 5. Ordenamos la lista final alfabéticamente.
     listaDeUsuarios.sort((a, b) => a.nombre.localeCompare(b.nombre));
 
-    // 6. Buscamos los pagos del período y mostramos la lista completa.
     db.collection('pagos_nomina')
       .where('adminUid', '==', adminUid)
       .where('periodo', '==', periodo)
