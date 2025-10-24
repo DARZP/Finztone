@@ -202,27 +202,38 @@ function poblarFiltroDePeriodos() {
 }
 
 async function cargarDatosNomina(adminUid, periodo) {
+    // 1. Preparamos las dos consultas, igual que antes.
     const collaboratorsPromise = db.collection('usuarios')
         .where('adminUid', '==', adminUid)
         .where('status', '==', 'activo')
         .get();
+        
     const adminPromise = db.collection('usuarios').doc(adminUid).get();
 
+    // 2. Ejecutamos ambas consultas en paralelo.
     const [collaboratorsSnapshot, adminDoc] = await Promise.all([collaboratorsPromise, adminPromise]);
 
     listaDeUsuarios = [];
-    collaboratorsSnapshot.forEach(doc => {
-        listaDeUsuarios.push({ id: doc.id, ...doc.data() });
-    });
 
     // --- LA CORRECCIÓN ESTÁ AQUÍ ---
-    // Usamos 'adminDoc.data()' para obtener los datos del administrador
+
+    // 3. Añadimos al administrador a la lista PRIMERO, si existe y está activo.
     if (adminDoc.exists && adminDoc.data().status === 'activo') {
         listaDeUsuarios.push({ id: adminDoc.id, ...adminDoc.data() });
     }
 
+    // 4. Ahora, recorremos la lista de colaboradores y los añadimos SOLO SI NO SON el administrador.
+    //    Esto evita la duplicación, sin importar la estructura de los datos.
+    collaboratorsSnapshot.forEach(doc => {
+        if (doc.id !== adminUid) { // Esta condición previene que se añada de nuevo al admin
+            listaDeUsuarios.push({ id: doc.id, ...doc.data() });
+        }
+    });
+
+    // 5. Ordenamos la lista final y única.
     listaDeUsuarios.sort((a, b) => a.nombre.localeCompare(b.nombre));
 
+    // 6. Buscamos los pagos y mostramos la lista.
     db.collection('pagos_nomina')
       .where('adminUid', '==', adminUid)
       .where('periodo', '==', periodo)
