@@ -290,17 +290,18 @@ function poblarFiltroDePeriodos() {
 function cargarDatosNomina(adminUid, periodo) {
     db.collection('usuarios')
       .where('adminUid', '==', adminUid)
-      .where('status', '==', 'activo') // Traemos a todos los activos
+      .where('status', '==', 'activo')
       .orderBy('nombre')
       .get()
       .then(usersSnapshot => {
         
         listaDeUsuarios = [];
         usersSnapshot.forEach(doc => {
-                listaDeUsuarios.push({ id: doc.id, ...doc.data() });
-            }
+            // Ahora añadimos a TODOS los colaboradores activos a la lista, sin excluir a nadie.
+            listaDeUsuarios.push({ id: doc.id, ...doc.data() });
         });
 
+        // La lógica para buscar los pagos del período no cambia.
         db.collection('pagos_nomina')
           .where('adminUid', '==', adminUid)
           .where('periodo', '==', periodo)
