@@ -251,10 +251,14 @@ async function guardarIngresoAdmin(status) {
             empresa: clienteSeleccionado ? clienteSeleccionado.nombre : '',
             metodoPago: addIncomeForm['payment-method'].value,
             comentarios: addIncomeForm['income-comments'].value,
-            folio: generarFolio(user.uid),
+            folio: `INC-ADM-${user.uid.substring(0, 4).toUpperCase()}-${Date.now()}`,
             creadoPor: user.uid,
             emailCreador: user.email,
             nombreCreador: userData.nombre,
+
+            // --- LA LÍNEA CLAVE QUE SOLUCIONA EL BUG ---
+            creadorId: user.uid,
+
             adminUid: userData.adminUid || user.uid,
             fechaDeCreacion: new Date(),
             status: finalStatus,
@@ -272,7 +276,7 @@ async function guardarIngresoAdmin(status) {
         if (finalStatus === 'borrador' || finalStatus === 'pendiente') {
             await db.collection('ingresos').add(incomeData);
             alert(finalStatus === 'borrador' ? '¡Borrador guardado!' : '¡Ingreso enviado para aprobación!');
-        } else {
+        } else { // Es un admin guardando un ingreso aprobado
             const cuentaRef = db.collection('cuentas').doc(cuentaId);
             await db.runTransaction(async (transaction) => {
                 const cuentaDoc = await transaction.get(cuentaRef);
@@ -282,18 +286,19 @@ async function guardarIngresoAdmin(status) {
                 transaction.set(newIncomeRef, incomeData);
                 transaction.update(cuentaRef, { saldoActual: nuevoSaldo });
             });
-            alert('¡Ingreso registrado!');
+            alert('¡Ingreso registrado y saldo de cuenta actualizado!');
         }
+        
         addIncomeForm.reset();
         clientSelect.dispatchEvent(new Event('change'));
         
     } catch (error) {
-        console.error("Error al guardar:", error);
+        console.error("Error al guardar el ingreso:", error);
         alert("Error: " + error.message);
     } finally {
         saveDraftBtn.disabled = false;
         addApprovedBtn.disabled = false;
-        // El texto del botón se restablece al cargar la página, así que no es necesario aquí.
+        addApprovedBtn.textContent = 'Agregar Ingreso Aprobado';
     }
 }
 
