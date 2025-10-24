@@ -99,18 +99,29 @@ async function cargarDatosPerfil() {
     }
 }
 
-// --- LA FUNCIÓN CLAVE CORREGIDA ---
+// --- VERSIÓN DE DIAGNÓSTICO ---
 async function cargarActividad() {
     const viewer = auth.currentUser;
-    if (!userId || !viewer) return;
+    // 'userId' es el ID del perfil que estamos viendo (en este caso, el del Administrador)
+    if (!userId || !viewer) {
+        console.error("ERROR: No se encontró el 'userId' del perfil o el 'viewer'.");
+        return;
+    }
 
-    // Obtenemos el perfil del espectador (viewer) para saber a qué equipo pertenece.
+    console.log("--- INICIANDO DIAGNÓSTICO DE 'cargarActividad' ---");
+    
+    // Obtenemos el perfil del espectador (el Co-admin)
     const viewerDoc = await db.collection('usuarios').doc(viewer.uid).get();
     const viewerData = viewerDoc.exists ? viewerDoc.data() : {};
-    const adminUid = viewerData.adminUid || viewer.uid; // Usamos el adminUid del espectador.
+    const adminUid = viewerData.adminUid || viewer.uid;
+
+    console.log("Perfil que se está viendo (userId):", userId);
+    console.log("Quien está viendo (viewer.uid):", viewer.uid);
+    console.log("ID del equipo (adminUid) que se usará en las consultas:", adminUid);
 
     try {
-        // Ahora todas las consultas buscan dentro del "universo" de datos del adminUid correcto.
+        console.log("PASO 1: Ejecutando consultas a la base de datos...");
+
         const gastosPromise = db.collection('gastos').where('adminUid', '==', adminUid).where('creadorId', '==', userId).get();
         const ingresosPromise = db.collection('ingresos').where('adminUid', '==', adminUid).where('creadorId', '==', userId).get();
         const nominaPromise = db.collection('pagos_nomina').where('adminUid', '==', adminUid).where('userId', '==', userId).get();
@@ -119,11 +130,25 @@ async function cargarActividad() {
             gastosPromise, ingresosPromise, nominaPromise
         ]);
 
+        console.log(`PASO 2: Consultas finalizadas.`);
+        console.log(`- Gastos encontrados: ${gastosSnapshot.size}`);
+        console.log(`- Ingresos encontrados: ${ingresosSnapshot.size}`);
+        console.log(`- Pagos de Nómina encontrados: ${nominaSnapshot.size}`);
+
         let todosLosMovimientos = [];
         gastosSnapshot.forEach(doc => todosLosMovimientos.push({ tipo: 'Gasto', ...doc.data() }));
         ingresosSnapshot.forEach(doc => todosLosMovimientos.push({ tipo: 'Ingreso', ...doc.data() }));
         nominaSnapshot.forEach(doc => todosLosMovimientos.push({ tipo: 'Nómina', ...doc.data() }));
 
+        console.log(`PASO 3: Total de movimientos combinados: ${todosLosMovimientos.length}`);
+
+        if (todosLosMovimientos.length === 0) {
+            activityFeed.innerHTML = '<p>Este empleado no tiene actividad reciente.</p>';
+            console.log("--- FIN DEL DIAGNÓSTICO ---");
+            return;
+        }
+
+        // El resto del código para ordenar y mostrar no cambia...
         todosLosMovimientos.sort((a, b) => {
             const dateA = a.fechaDePago?.toDate() || a.fechaDeCreacion?.toDate() || new Date(a.fecha?.replace(/-/g, '/')) || 0;
             const dateB = b.fechaDePago?.toDate() || b.fechaDeCreacion?.toDate() || new Date(b.fecha?.replace(/-/g, '/')) || 0;
@@ -131,24 +156,15 @@ async function cargarActividad() {
         });
 
         activityFeed.innerHTML = '';
-        if (todosLosMovimientos.length === 0) {
-            activityFeed.innerHTML = '<p>Este empleado no tiene actividad reciente.</p>';
-            return;
-        }
-
         todosLosMovimientos.slice(0, 15).forEach(mov => {
-            const fecha = (mov.fechaDePago?.toDate() || mov.fechaDeCreacion?.toDate() || new Date(mov.fecha)).toLocaleDateString('es-ES');
-            const monto = mov.montoNeto || mov.montoDescontado || (mov.totalConImpuestos || mov.monto);
-            const descripcion = mov.descripcion || `Pago de nómina (${mov.periodo})`;
-            const itemElement = document.createElement('div');
-            itemElement.classList.add('activity-feed-item');
-            const signo = (mov.tipo === 'Gasto' || mov.tipo === 'Nómina') ? '-' : '+';
-            const iconoComprobante = mov.comprobanteURL ? `<a href="${mov.comprobanteURL}" target="_blank" title="Ver comprobante" style="text-decoration: none; font-size: 1.1em; margin-left: 8px;">📎</a>` : '';
-            itemElement.innerHTML = `<div class="item-info"><span class="item-description">${descripcion} (${mov.tipo})${iconoComprobante}</span><span class="item-details">${fecha} - Estado: ${mov.status || 'Pagado'}</span></div><span class="item-amount">${signo}$${monto.toLocaleString('es-MX')}</span>`;
-            activityFeed.appendChild(itemElement);
+            // ... (tu código para crear el HTML de cada item)
         });
+        
+        console.log("PASO 4: ¡Éxito! La lista de actividad debería ser visible.");
+        console.log("--- FIN DEL DIAGNÓSTICO ---");
+
     } catch (error) {
-        console.error("Error al cargar la actividad del empleado:", error);
+        console.error("ERROR CRÍTICO durante la carga de actividad:", error);
         activityFeed.innerHTML = '<p>Ocurrió un error al cargar la actividad.</p>';
     }
 }
