@@ -21,9 +21,9 @@ let todosLosMovimientos = [];
 let periodosCalculados = {};
 let adminUidGlobal = null;
 
+// --- LÓGICA PRINCIPAL ---
 auth.onAuthStateChanged(async (user) => {
     if (user && cuentaId) {
-        // --- CORRECCIÓN 1: Obtenemos el adminUid correcto ---
         const userDoc = await db.collection('usuarios').doc(user.uid).get();
         const userData = userDoc.exists ? userDoc.data() : {};
         adminUidGlobal = userData.adminUid || user.uid;
@@ -35,7 +35,7 @@ auth.onAuthStateChanged(async (user) => {
     }
 });
 
-async function cargarDatosDeCuenta() {
+async function cargarDatosDeCuenta(adminUid) {
     const cuentaRef = db.collection('cuentas').doc(cuentaId);
     cuentaRef.onSnapshot(async (doc) => {
         if (!doc.exists) {
@@ -46,42 +46,39 @@ async function cargarDatosDeCuenta() {
         const cuentaData = doc.data();
         accountNameTitle.textContent = cuentaData.nombre;
 
+        // Pasamos el adminUid a la función que carga los movimientos.
+        await cargarTodosLosMovimientos(cuentaData, adminUid);
+
         if (cuentaData.tipo === 'credito') {
             debitDetails.style.display = 'none';
             creditDetailsSection.style.display = 'block';
             periodControls.style.display = 'flex';
-
             currentPeriodDebt.textContent = `$${(cuentaData.deudaActual || 0).toLocaleString('es-MX')}`;
             totalDebtDisplay.textContent = `$${(cuentaData.deudaTotal || 0).toLocaleString('es-MX')}`;
-            
-            // Lógica para calcular días restantes
             const hoy = new Date();
             let proximoCorte = new Date(hoy.getFullYear(), hoy.getMonth(), cuentaData.diaCorte);
-            if(hoy.getDate() > cuentaData.diaCorte) {
+            if (hoy.getDate() > cuentaData.diaCorte) {
                 proximoCorte.setMonth(proximoCorte.getMonth() + 1);
             }
             const diffTime = proximoCorte - hoy;
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             cutoffDay.textContent = `Día ${cuentaData.diaCorte} de cada mes`;
             daysUntilCutoff.textContent = `${diffDays} días`;
-
             payCardBtn.onclick = () => realizarPago(cuentaData, 'actual');
             payPeriodBtn.onclick = () => realizarPago(cuentaData, 'periodo');
-
-            await cargarTodosLosMovimientos(cuentaData);
-
+            agruparMovimientosPorPeriodo(cuentaData.diaCorte);
+            poblarSelectorDePeriodos();
         } else { // Débito
             creditDetailsSection.style.display = 'none';
             periodControls.style.display = 'none';
             debitDetails.style.display = 'block';
             debitBalance.textContent = `$${(cuentaData.saldoActual || 0).toLocaleString('es-MX')}`;
-            await cargarTodosLosMovimientos(cuentaData);
+            mostrarMovimientos(todosLosMovimientos);
         }
     });
 }
 
 async function cargarTodosLosMovimientos(cuentaData, adminUid) {
-    // --- CORRECCIÓN 2: Las consultas usan el adminUid correcto ---
     const gastosPromise = db.collection('gastos').where('adminUid', '==', adminUid).where('cuentaId', '==', cuentaId).get();
     const ingresosPromise = db.collection('ingresos').where('adminUid', '==', adminUid).where('cuentaId', '==', cuentaId).get();
     const nominaPromise = db.collection('pagos_nomina').where('adminUid', '==', adminUid).where('cuentaId', '==', cuentaId).get();
@@ -92,21 +89,14 @@ async function cargarTodosLosMovimientos(cuentaData, adminUid) {
     gastosSnapshot.forEach(doc => todosLosMovimientos.push({ tipoMovimiento: 'gasto', ...doc.data() }));
     ingresosSnapshot.forEach(doc => todosLosMovimientos.push({ tipoMovimiento: 'ingreso', ...doc.data() }));
     nominaSnapshot.forEach(doc => todosLosMovimientos.push({ tipoMovimiento: 'nomina', ...doc.data() }));
-    
-    if(cuentaData.tipo === 'credito') {
-        agruparMovimientosPorPeriodo(cuentaData.diaCorte);
-        poblarSelectorDePeriodos();
-    } else {
-        mostrarMovimientos(todosLosMovimientos);
-    }
+}
 
 function agruparMovimientosPorPeriodo(diaCorte) {
     periodosCalculados = { 'actual': { movimientos: [], total: 0, pagos: 0 } };
     const pagosDePeriodos = todosLosMovimientos.filter(m => m.esPagoDePeriodo);
 
     todosLosMovimientos.forEach(mov => {
-        if(mov.esPagoDePeriodo) return; // Ignoramos los pagos en la primera pasada
-
+        if (mov.esPagoDePeriodo) return;
         const fechaMov = mov.fechaDePago ? mov.fechaDePago.toDate() : new Date(mov.fecha.replace(/-/g, '/'));
         const hoy = new Date();
         let fechaCorteEsteMes = new Date(hoy.getFullYear(), hoy.getMonth(), diaCorte);
@@ -116,12 +106,10 @@ function agruparMovimientosPorPeriodo(diaCorte) {
         } else {
             let mesPeriodo = fechaMov.getMonth();
             let anioPeriodo = fechaMov.getFullYear();
-
-            if(fechaMov.getDate() > diaCorte) {
+            if (fechaMov.getDate() > diaCorte) {
                 mesPeriodo += 1;
-                if(mesPeriodo > 11) { mesPeriodo = 0; anioPeriodo += 1; }
+                if (mesPeriodo > 11) { mesPeriodo = 0; anioPeriodo += 1; }
             }
-
             const keyPeriodo = `${anioPeriodo}-${String(mesPeriodo + 1).padStart(2, '0')}`;
             if (!periodosCalculados[keyPeriodo]) {
                 periodosCalculados[keyPeriodo] = { movimientos: [], total: 0, pagos: 0 };
@@ -130,19 +118,17 @@ function agruparMovimientosPorPeriodo(diaCorte) {
         }
     });
 
-    // Ahora, asignamos los pagos a sus períodos correspondientes
     pagosDePeriodos.forEach(pago => {
-        if(pago.periodoPagado && periodosCalculados[pago.periodoPagado]) {
+        if (pago.periodoPagado && periodosCalculados[pago.periodoPagado]) {
             periodosCalculados[pago.periodoPagado].movimientos.push(pago);
             periodosCalculados[pago.periodoPagado].pagos += pago.monto;
         }
     });
 
-    // Finalmente, calculamos los totales de cada período
     for (const key in periodosCalculados) {
         let totalGastos = 0;
         periodosCalculados[key].movimientos.forEach(mov => {
-            if (mov.esPagoDePeriodo) return; // No sumar los pagos al total de deuda
+            if (mov.esPagoDePeriodo) return;
             const monto = mov.totalConImpuestos || mov.monto || mov.montoDescontado;
             if (mov.tipoMovimiento === 'gasto' || mov.tipoMovimiento === 'nomina') {
                 totalGastos += monto;
@@ -166,24 +152,10 @@ function poblarSelectorDePeriodos() {
     periodSelector.dispatchEvent(new Event('change'));
 }
 
-periodSelector.addEventListener('change', () => {
-    const periodoSeleccionado = periodSelector.value;
-    const dataPeriodo = periodosCalculados[periodoSeleccionado];
-    
-    mostrarMovimientos(dataPeriodo.movimientos);
-
-    if(periodoSeleccionado !== 'actual' && dataPeriodo.total > 0) {
-        payPeriodBtn.style.display = 'block';
-        payPeriodBtn.textContent = `Pagar $${dataPeriodo.total.toLocaleString('es-MX')}`;
-    } else {
-        payPeriodBtn.style.display = 'none';
-    }
-});
-
 function mostrarMovimientos(movimientos) {
     movementsList.innerHTML = '';
-    if (movimientos.length === 0) {
-        movementsList.innerHTML = '<p>No hay movimientos registrados en esta cuenta.</p>';
+    if (!movimientos || movimientos.length === 0) {
+        movementsList.innerHTML = '<p>No hay movimientos registrados en este período.</p>';
         return;
     }
     movimientos.sort((a, b) => {
@@ -199,9 +171,8 @@ function mostrarMovimientos(movimientos) {
         const signo = esGasto ? '-' : '+';
         const colorMonto = esGasto ? 'color: #ff8a80;' : 'color: var(--primary-color);';
         const monto = mov.totalConImpuestos || mov.monto || mov.montoDescontado;
-        const fecha = mov.fechaDePago ? mov.fechaDePago.toDate() : new Date(mov.fecha);
-     
-        const iconoComprobante = mov.comprobanteURL ? `<a href="${mov.comprobanteURL}" target="_blank" title="Ver comprobante">📎</a>` : '';
+        const fecha = mov.fechaDePago ? mov.fechaDePago.toDate() : new Date(mov.fecha.replace(/-/g, '/'));
+        const iconoComprobante = mov.comprobanteURL ? `<a href="${mov.comprobanteURL}" target="_blank" title="Ver comprobante" style="text-decoration: none; font-size: 1.1em; margin-left: 8px;">📎</a>` : '';
 
         itemElement.innerHTML = `
             <div class="item-info">
@@ -215,18 +186,19 @@ function mostrarMovimientos(movimientos) {
         `;
         movementsList.appendChild(itemElement);
     });
+}
 
 async function realizarPago(cuentaCreditoData, tipoPago) {
     const user = auth.currentUser;
     if (!user) return;
-
+    
     let montoAPagar;
     let periodoPagadoKey = null;
 
     if (tipoPago === 'periodo') {
         periodoPagadoKey = periodSelector.value;
         montoAPagar = periodosCalculados[periodoPagadoKey].total;
-        if(montoAPagar <= 0) return alert("Este período no tiene deuda pendiente.");
+        if (montoAPagar <= 0) return alert("Este período no tiene deuda pendiente.");
         if (!confirm(`Vas a pagar el total del período seleccionado: $${montoAPagar.toLocaleString('es-MX')}. ¿Continuar?`)) return;
     } else {
         const montoStr = prompt("¿Qué monto deseas abonar al período actual?", (cuentaCreditoData.deudaActual || 0).toString());
@@ -236,6 +208,7 @@ async function realizarPago(cuentaCreditoData, tipoPago) {
     
     const cuentasDebitoSnapshot = await db.collection('cuentas').where('adminUid', '==', adminUidGlobal).where('tipo', '==', 'debito').get();
     if (cuentasDebitoSnapshot.empty) return alert("No tienes cuentas de débito para pagar.");
+    
     const cuentasDebito = cuentasDebitoSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     let promptMessage = "Selecciona la cuenta de origen para el pago:\n";
     cuentasDebito.forEach((cuenta, index) => {
@@ -261,36 +234,47 @@ async function realizarPago(cuentaCreditoData, tipoPago) {
             let nuevaDeudaTotal = credDoc.data().deudaTotal || 0;
             
             nuevaDeudaTotal -= montoAPagar;
-            if (tipoPago === 'actual') {
-                nuevaDeudaActual -= montoAPagar;
-            }
+            if (tipoPago === 'actual') nuevaDeudaActual -= montoAPagar;
             
             const nuevoSaldoDebito = debDoc.data().saldoActual - montoAPagar;
             
             transaction.update(cuentaCreditoRef, { deudaActual: nuevaDeudaActual, deudaTotal: nuevaDeudaTotal });
             transaction.update(cuentaDebitoRef, { saldoActual: nuevoSaldoDebito });
 
-            const gastoRef = db.collection('gastos').doc();
-            transaction.set(gastoRef, {
+            transaction.set(db.collection('gastos').doc(), {
                 descripcion: `Pago a tarjeta ${credDoc.data().nombre}`, monto: montoAPagar, totalConImpuestos: montoAPagar, categoria: 'Pagos', fecha: fechaActualISO,
                 status: 'aprobado', cuentaId: cuentaDebitoSeleccionada.id, cuentaNombre: cuentaDebitoSeleccionada.nombre,
-                adminUid: user.uid, creadoPor: user.uid, nombreCreador: "Sistema", fechaDeCreacion: new Date()
+                adminUid: adminUidGlobal, creadoPor: user.uid, nombreCreador: "Sistema", fechaDeCreacion: new Date()
             });
-            const ingresoData = {
+            transaction.set(db.collection('ingresos').doc(), {
                 descripcion: `Pago recibido desde ${debDoc.data().nombre}`, monto: montoAPagar, totalConImpuestos: montoAPagar, categoria: 'Pagos', fecha: fechaActualISO,
                 status: 'aprobado', cuentaId: cuentaId, cuentaNombre: cuentaCreditoData.nombre,
-                adminUid: user.uid, creadoPor: user.uid, nombreCreador: "Sistema", fechaDeCreacion: new Date(),
+                adminUid: adminUidGlobal, creadoPor: user.uid, nombreCreador: "Sistema", fechaDeCreacion: new Date(),
                 esPagoDePeriodo: tipoPago === 'periodo', periodoPagado: periodoPagadoKey
-            };
-            const ingresoRef = db.collection('ingresos').doc();
-            transaction.set(ingresoRef, ingresoData);
+            });
         });
         alert(`¡Pago de $${montoAPagar.toLocaleString()} realizado!`);
-        
-        await cargarTodosLosMovimientos(cuentaCreditoData);
-
     } catch (error) {
         console.error("Error en la transacción:", error);
         alert("Error: " + error.message);
     }
 }
+
+// --- EVENT LISTENER ---
+periodSelector.addEventListener('change', () => {
+    const periodoSeleccionado = periodSelector.value;
+    const dataPeriodo = periodosCalculados[periodoSeleccionado];
+    if (!dataPeriodo) {
+        mostrarMovimientos([]);
+        return;
+    }
+    
+    mostrarMovimientos(dataPeriodo.movimientos);
+
+    if (periodoSeleccionado !== 'actual' && dataPeriodo.total > 0) {
+        payPeriodBtn.style.display = 'block';
+        payPeriodBtn.textContent = `Pagar $${dataPeriodo.total.toLocaleString('es-MX')}`;
+    } else {
+        payPeriodBtn.style.display = 'none';
+    }
+});
