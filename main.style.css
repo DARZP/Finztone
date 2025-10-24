@@ -921,3 +921,17 @@ tbody tr:hover {
         font-size: 0.8em;
     }
 }
+
+/* --- Estilos para el historial de proyectos --- */
+.history-item {
+    padding-bottom: 15px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid var(--input-border-color);
+}
+
+.history-item:last-of-type {
+    /* El último elemento no necesita separador debajo */
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
