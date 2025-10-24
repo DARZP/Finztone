@@ -3,7 +3,7 @@ import { exportToCSV } from './utils.js';
 
 // --- VARIABLES GLOBALES Y ELEMENTOS DEL DOM ---
 const urlParams = new URLSearchParams(window.location.search);
-const userId = urlParams.get('id');
+const userId = urlParams.get('id'); // ID del perfil que se está viendo
 
 const profileName = document.getElementById('profile-name');
 const profileEmail = document.getElementById('profile-email');
@@ -25,21 +25,17 @@ let currentUserData = null;
 // --- LÓGICA PRINCIPAL ---
 auth.onAuthStateChanged(async (user) => {
     if (user && userId) {
-        // --- NUEVA LÓGICA DE ROLES ---
-        // Obtenemos el perfil de QUIEN ESTÁ VIENDO la página para decidir qué botones mostrar.
         const viewerDoc = await db.collection('usuarios').doc(user.uid).get();
         const viewerData = viewerDoc.exists ? viewerDoc.data() : {};
 
-        // Mostramos los botones correspondientes según el rol del espectador.
         if (viewerData.rol === 'admin') {
-            editProfileBtn.style.display = 'block'; // El Admin ve el botón de edición general.
+            editProfileBtn.style.display = 'block';
             editProfileBtn.href = `editar_perfil.html?id=${userId}`;
         } else if (viewerData.rol === 'coadmin') {
-            editSalaryBtn.style.display = 'inline-block'; // El Co-admin ve los botones específicos.
+            editSalaryBtn.style.display = 'inline-block';
             editDeductionsBtn.style.display = 'block';
         }
 
-        // El resto de la carga de la página es igual para ambos roles.
         cargarDatosPerfil();
         downloadEmployeeRecordsBtn.addEventListener('click', descargarRegistrosColaborador);
 
@@ -48,23 +44,17 @@ auth.onAuthStateChanged(async (user) => {
     }
 });
 
-// --- NUEVOS EVENT LISTENERS PARA LOS BOTONES DE EDICIÓN GRANULAR ---
-
+// --- EVENT LISTENERS PARA EDICIÓN GRANULAR ---
 editSalaryBtn.addEventListener('click', async () => {
     const sueldoActual = currentUserData.sueldoBruto || 0;
     const nuevoSueldoStr = prompt("Introduce el nuevo Sueldo Bruto Mensual:", sueldoActual);
-
-    if (nuevoSueldoStr === null) return; // Si el usuario presiona "Cancelar"
-
+    if (nuevoSueldoStr === null) return;
     const nuevoSueldo = parseFloat(nuevoSueldoStr);
-    if (isNaN(nuevoSueldo) || nuevoSueldo < 0) {
-        return alert("Por favor, introduce un número válido.");
-    }
-
+    if (isNaN(nuevoSueldo) || nuevoSueldo < 0) return alert("Por favor, introduce un número válido.");
     try {
         await db.collection('usuarios').doc(userId).update({ sueldoBruto: nuevoSueldo });
         alert("¡Sueldo actualizado exitosamente!");
-        cargarDatosPerfil(); // Recargamos los datos para reflejar el cambio inmediatamente.
+        cargarDatosPerfil();
     } catch (error) {
         console.error("Error al actualizar el sueldo:", error);
         alert("Ocurrió un error al guardar el cambio.");
@@ -72,19 +62,16 @@ editSalaryBtn.addEventListener('click', async () => {
 });
 
 editDeductionsBtn.addEventListener('click', () => {
-    // Redirigimos a la nueva página dedicada solo a editar las deducciones.
     window.location.href = `editar_deducciones.html?id=${userId}`;
 });
 
-// --- FUNCIONES EXISTENTES (SIN CAMBIOS) ---
+// --- FUNCIONES DE CARGA Y PROCESAMIENTO ---
 
 async function cargarDatosPerfil() {
     if (!userId) return;
-    
     const userDoc = await db.collection('usuarios').doc(userId).get();
     if (userDoc.exists) {
         currentUserData = userDoc.data();
-        
         profileName.textContent = currentUserData.nombre;
         profileEmail.textContent = currentUserData.email;
         profilePosition.textContent = currentUserData.cargo || 'No disponible';
@@ -97,33 +84,33 @@ async function cargarDatosPerfil() {
         const deducciones = currentUserData.deducciones || [];
         let totalDeducciones = 0;
         let deduccionesHTML = '';
-
         deducciones.forEach(ded => {
             let montoDeducido = ded.tipo === 'porcentaje' ? (sueldoBruto * ded.valor) / 100 : ded.valor;
             totalDeducciones += montoDeducido;
             deduccionesHTML += `<div class="deduction-line"><span class="name">(-) ${ded.nombre}</span><span class="amount">-$${montoDeducido.toLocaleString('es-MX')}</span></div>`;
         });
-
         const sueldoNeto = sueldoBruto - totalDeducciones;
         profileDeductionsList.innerHTML = deduccionesHTML;
         profileNetSalary.textContent = sueldoNeto.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
 
         cargarActividad();
-
     } else {
         profileName.textContent = "Usuario no encontrado";
     }
 }
 
+// --- LA FUNCIÓN CLAVE CORREGIDA ---
 async function cargarActividad() {
     const viewer = auth.currentUser;
     if (!userId || !viewer) return;
 
-    // Obtenemos el perfil del espectador para saber cuál es el adminUid principal.
+    // Obtenemos el perfil del espectador (viewer) para saber a qué equipo pertenece.
     const viewerDoc = await db.collection('usuarios').doc(viewer.uid).get();
-    const adminUid = viewerDoc.exists ? (viewerDoc.data().adminUid || viewer.uid) : viewer.uid;
+    const viewerData = viewerDoc.exists ? viewerDoc.data() : {};
+    const adminUid = viewerData.adminUid || viewer.uid; // Usamos el adminUid del espectador.
 
     try {
+        // Ahora todas las consultas buscan dentro del "universo" de datos del adminUid correcto.
         const gastosPromise = db.collection('gastos').where('adminUid', '==', adminUid).where('creadorId', '==', userId).get();
         const ingresosPromise = db.collection('ingresos').where('adminUid', '==', adminUid).where('creadorId', '==', userId).get();
         const nominaPromise = db.collection('pagos_nomina').where('adminUid', '==', adminUid).where('userId', '==', userId).get();
@@ -133,7 +120,6 @@ async function cargarActividad() {
         ]);
 
         let todosLosMovimientos = [];
-
         gastosSnapshot.forEach(doc => todosLosMovimientos.push({ tipo: 'Gasto', ...doc.data() }));
         ingresosSnapshot.forEach(doc => todosLosMovimientos.push({ tipo: 'Ingreso', ...doc.data() }));
         nominaSnapshot.forEach(doc => todosLosMovimientos.push({ tipo: 'Nómina', ...doc.data() }));
@@ -154,28 +140,13 @@ async function cargarActividad() {
             const fecha = (mov.fechaDePago?.toDate() || mov.fechaDeCreacion?.toDate() || new Date(mov.fecha)).toLocaleDateString('es-ES');
             const monto = mov.montoNeto || mov.montoDescontado || (mov.totalConImpuestos || mov.monto);
             const descripcion = mov.descripcion || `Pago de nómina (${mov.periodo})`;
-            
             const itemElement = document.createElement('div');
             itemElement.classList.add('activity-feed-item');
             const signo = (mov.tipo === 'Gasto' || mov.tipo === 'Nómina') ? '-' : '+';
-
-            const iconoComprobante = mov.comprobanteURL 
-                ? `<a href="${mov.comprobanteURL}" target="_blank" title="Ver comprobante" style="text-decoration: none; font-size: 1.1em; margin-left: 8px;">📎</a>` 
-                : '';
-            
-            itemElement.innerHTML = `
-                <div class="item-info">
-                    <span class="item-description">
-                        ${descripcion} (${mov.tipo})
-                        ${iconoComprobante}
-                    </span>
-                    <span class="item-details">${fecha} - Estado: ${mov.status || 'Pagado'}</span>
-                </div>
-                <span class="item-amount">${signo}$${monto.toLocaleString('es-MX')}</span>
-            `;
+            const iconoComprobante = mov.comprobanteURL ? `<a href="${mov.comprobanteURL}" target="_blank" title="Ver comprobante" style="text-decoration: none; font-size: 1.1em; margin-left: 8px;">📎</a>` : '';
+            itemElement.innerHTML = `<div class="item-info"><span class="item-description">${descripcion} (${mov.tipo})${iconoComprobante}</span><span class="item-details">${fecha} - Estado: ${mov.status || 'Pagado'}</span></div><span class="item-amount">${signo}$${monto.toLocaleString('es-MX')}</span>`;
             activityFeed.appendChild(itemElement);
         });
-
     } catch (error) {
         console.error("Error al cargar la actividad del empleado:", error);
         activityFeed.innerHTML = '<p>Ocurrió un error al cargar la actividad.</p>';
