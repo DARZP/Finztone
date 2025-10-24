@@ -3,7 +3,7 @@ import { exportToCSV } from './utils.js';
 
 // --- ELEMENTOS DEL DOM ---
 const urlParams = new URLSearchParams(window.location.search);
-const userId = urlParams.get('id');
+const userId = urlParams.get('id'); // ID del perfil que se está viendo
 
 const profileName = document.getElementById('profile-name');
 const profileEmail = document.getElementById('profile-email');
@@ -22,33 +22,9 @@ const downloadEmployeeRecordsBtn = document.getElementById('download-employee-re
 
 let currentUserData = null;
 
-// --- PUNTO DE CONTROL #1 ---
-console.log("perfil_empleado.app.js: El script se ha cargado.");
-console.log("El ID de usuario obtenido de la URL (userId) es:", userId);
-
 // --- LÓGICA PRINCIPAL ---
 auth.onAuthStateChanged(async (user) => {
-    // --- PUNTO DE CONTROL #2 ---
-    console.log("auth.onAuthStateChanged: Se detectó un cambio de estado.");
-
-    if (!user) {
-        console.error("El usuario NO está autenticado. Redirigiendo...");
-        window.location.href = 'index.html';
-        return;
-    }
-    console.log("El usuario SÍ está autenticado.");
-
-    if (!userId) {
-        console.error("ERROR CRÍTICO: El userId NO se encontró en la URL. La página no puede cargar datos.");
-        alert("Error: No se ha especificado un perfil para ver. Vuelve a la lista de colaboradores e inténtalo de nuevo.");
-        return; // Detenemos la ejecución si no hay ID
-    }
-    console.log("El userId SÍ existe en la URL. El valor es:", userId);
-
-    // Si llegamos aquí, ambas condiciones son verdaderas.
-    console.log("Condiciones cumplidas. Iniciando carga de la página...");
-    
-    try {
+    if (user && userId) {
         const viewerDoc = await db.collection('usuarios').doc(user.uid).get();
         const viewerData = viewerDoc.exists ? viewerDoc.data() : {};
 
@@ -63,8 +39,8 @@ auth.onAuthStateChanged(async (user) => {
         await cargarDatosPerfil();
         await cargarActividad();
         downloadEmployeeRecordsBtn.addEventListener('click', descargarRegistrosColaborador);
-    } catch (error) {
-        console.error("Ocurrió un error en el bloque principal:", error);
+    } else {
+        window.location.href = 'index.html';
     }
 });
 
@@ -127,44 +103,31 @@ async function cargarDatosPerfil() {
 
 async function cargarActividad() {
     const viewer = auth.currentUser;
-    if (!userId || !viewer) {
-        console.error("ERROR INTERNO: No se encontró el 'userId' del perfil o el 'viewer' dentro de cargarActividad.");
-        return;
-    }
+    if (!userId || !viewer) return;
 
-    console.log("--- INICIANDO DIAGNÓSTICO DE 'cargarActividad' ---");
-    
     const viewerDoc = await db.collection('usuarios').doc(viewer.uid).get();
     const viewerData = viewerDoc.exists ? viewerDoc.data() : {};
     const adminUid = viewerData.adminUid || viewer.uid;
 
-    console.log("ID del equipo (adminUid) que se usará en las consultas:", adminUid);
-
     try {
-        console.log("PASO 1: Ejecutando consultas a la base de datos...");
         const gastosPromise = db.collection('gastos').where('adminUid', '==', adminUid).where('creadorId', '==', userId).get();
         const ingresosPromise = db.collection('ingresos').where('adminUid', '==', adminUid).where('creadorId', '==', userId).get();
         const nominaPromise = db.collection('pagos_nomina').where('adminUid', '==', adminUid).where('userId', '==', userId).get();
-        const [gastosSnapshot, ingresosSnapshot, nominaSnapshot] = await Promise.all([gastosPromise, ingresosPromise, nominaPromise]);
-
-        console.log(`PASO 2: Consultas finalizadas.`);
-        console.log(`- Gastos encontrados: ${gastosSnapshot.size}`);
-        console.log(`- Ingresos encontrados: ${ingresosSnapshot.size}`);
-        console.log(`- Pagos de Nómina encontrados: ${nominaSnapshot.size}`);
+        
+        const [gastosSnapshot, ingresosSnapshot, nominaSnapshot] = await Promise.all([
+            gastosPromise, ingresosPromise, nominaPromise
+        ]);
 
         let todosLosMovimientos = [];
         gastosSnapshot.forEach(doc => todosLosMovimientos.push({ tipo: 'Gasto', ...doc.data() }));
         ingresosSnapshot.forEach(doc => todosLosMovimientos.push({ tipo: 'Ingreso', ...doc.data() }));
         nominaSnapshot.forEach(doc => todosLosMovimientos.push({ tipo: 'Nómina', ...doc.data() }));
 
-        console.log(`PASO 3: Total de movimientos combinados: ${todosLosMovimientos.length}`);
-        
         if (todosLosMovimientos.length === 0) {
             activityFeed.innerHTML = '<p>Este empleado no tiene actividad reciente.</p>';
-            console.log("--- FIN DEL DIAGNÓSTICO (sin movimientos) ---");
             return;
         }
-        
+
         todosLosMovimientos.sort((a, b) => {
             const dateA = a.fechaDePago?.toDate() || a.fechaDeCreacion?.toDate() || new Date(a.fecha?.replace(/-/g, '/')) || 0;
             const dateB = b.fechaDePago?.toDate() || b.fechaDeCreacion?.toDate() || new Date(b.fecha?.replace(/-/g, '/')) || 0;
@@ -183,11 +146,8 @@ async function cargarActividad() {
             itemElement.innerHTML = `<div class="item-info"><span class="item-description">${descripcion} (${mov.tipo})${iconoComprobante}</span><span class="item-details">${fecha} - Estado: ${mov.status || 'Pagado'}</span></div><span class="item-amount">${signo}$${monto.toLocaleString('es-MX')}</span>`;
             activityFeed.appendChild(itemElement);
         });
-        
-        console.log("PASO 4: ¡Éxito! La lista de actividad debería ser visible.");
-        console.log("--- FIN DEL DIAGNÓSTICO ---");
     } catch (error) {
-        console.error("ERROR CRÍTICO durante la carga de actividad:", error);
+        console.error("Error al cargar la actividad del empleado:", error);
         activityFeed.innerHTML = '<p>Ocurrió un error al cargar la actividad.</p>';
     }
 }
@@ -200,9 +160,11 @@ async function descargarRegistrosColaborador() {
         if (!viewer) return alert("Error de autenticación");
         const viewerDoc = await db.collection('usuarios').doc(viewer.uid).get();
         const adminUid = viewerDoc.exists ? (viewerDoc.data().adminUid || viewer.uid) : viewer.uid;
+        
         const gastosPromise = db.collection('gastos').where('adminUid', '==', adminUid).where('creadorId', '==', userId).get();
         const ingresosPromise = db.collection('ingresos').where('adminUid', '==', adminUid).where('creadorId', '==', userId).get();
         const nominaPromise = db.collection('pagos_nomina').where('adminUid', '==', adminUid).where('userId', '==', userId).get();
+        
         const [gastosSnapshot, ingresosSnapshot, nominaSnapshot] = await Promise.all([gastosPromise, ingresosPromise, nominaPromise]);
 
         const registros = [];
@@ -218,6 +180,7 @@ async function descargarRegistrosColaborador() {
             const data = doc.data();
             registros.push({ Fecha: data.fechaDePago.toDate().toISOString().split('T')[0], Tipo: 'Nómina', Concepto: `Pago de nómina (${data.periodo})`, Monto: data.montoNeto, Estado: 'Pagado' });
         });
+        
         if (registros.length === 0) {
             return alert("Este colaborador no tiene registros para descargar.");
         }
