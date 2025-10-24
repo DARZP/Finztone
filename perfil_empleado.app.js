@@ -1,7 +1,7 @@
 import { auth, db } from './firebase-init.js';
 import { exportToCSV } from './utils.js';
 
-// --- VARIABLES GLOBALES Y ELEMENTOS DEL DOM ---
+// --- ELEMENTOS DEL DOM ---
 const urlParams = new URLSearchParams(window.location.search);
 const userId = urlParams.get('id'); // ID del perfil que se está viendo
 
@@ -20,14 +20,16 @@ const profileDeductionsList = document.getElementById('profile-deductions-list')
 const profileNetSalary = document.getElementById('profile-net-salary');
 const downloadEmployeeRecordsBtn = document.getElementById('download-employee-records-btn');
 
-let currentUserData = null; 
+let currentUserData = null;
 
 // --- LÓGICA PRINCIPAL ---
 auth.onAuthStateChanged(async (user) => {
     if (user && userId) {
+        // Obtenemos el perfil de QUIEN ESTÁ VIENDO la página
         const viewerDoc = await db.collection('usuarios').doc(user.uid).get();
         const viewerData = viewerDoc.exists ? viewerDoc.data() : {};
 
+        // Lógica de visibilidad de botones
         if (viewerData.rol === 'admin') {
             editProfileBtn.style.display = 'block';
             editProfileBtn.href = `editar_perfil.html?id=${userId}`;
@@ -36,7 +38,10 @@ auth.onAuthStateChanged(async (user) => {
             editDeductionsBtn.style.display = 'block';
         }
 
-        cargarDatosPerfil();
+        // --- CORRECCIÓN CLAVE: Llamamos a ambas funciones de carga directamente ---
+        await cargarDatosPerfil(); // Esperamos a que los datos del perfil se carguen primero
+        await cargarActividad();     // Luego, cargamos la actividad (con diagnóstico)
+
         downloadEmployeeRecordsBtn.addEventListener('click', descargarRegistrosColaborador);
 
     } else {
@@ -44,7 +49,7 @@ auth.onAuthStateChanged(async (user) => {
     }
 });
 
-// --- EVENT LISTENERS PARA EDICIÓN GRANULAR ---
+// --- EVENT LISTENERS PARA EDICIÓN ---
 editSalaryBtn.addEventListener('click', async () => {
     const sueldoActual = currentUserData.sueldoBruto || 0;
     const nuevoSueldoStr = prompt("Introduce el nuevo Sueldo Bruto Mensual:", sueldoActual);
@@ -69,39 +74,44 @@ editDeductionsBtn.addEventListener('click', () => {
 
 async function cargarDatosPerfil() {
     if (!userId) return;
-    const userDoc = await db.collection('usuarios').doc(userId).get();
-    if (userDoc.exists) {
-        currentUserData = userDoc.data();
-        profileName.textContent = currentUserData.nombre;
-        profileEmail.textContent = currentUserData.email;
-        profilePosition.textContent = currentUserData.cargo || 'No disponible';
-        profilePhone.textContent = currentUserData.telefono || 'No registrado';
-        profileClabe.textContent = currentUserData.clabe || 'No registrada';
-        profileRfc.textContent = currentUserData.rfc || 'No registrado';
-        profileSalary.textContent = (currentUserData.sueldoBruto || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
+    try {
+        const userDoc = await db.collection('usuarios').doc(userId).get();
+        if (userDoc.exists) {
+            currentUserData = userDoc.data();
+            profileName.textContent = currentUserData.nombre;
+            profileEmail.textContent = currentUserData.email;
+            profilePosition.textContent = currentUserData.cargo || 'No disponible';
+            profilePhone.textContent = currentUserData.telefono || 'No registrado';
+            profileClabe.textContent = currentUserData.clabe || 'No registrada';
+            profileRfc.textContent = currentUserData.rfc || 'No registrado';
+            profileSalary.textContent = (currentUserData.sueldoBruto || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
 
-        const sueldoBruto = currentUserData.sueldoBruto || 0;
-        const deducciones = currentUserData.deducciones || [];
-        let totalDeducciones = 0;
-        let deduccionesHTML = '';
-        deducciones.forEach(ded => {
-            let montoDeducido = ded.tipo === 'porcentaje' ? (sueldoBruto * ded.valor) / 100 : ded.valor;
-            totalDeducciones += montoDeducido;
-            deduccionesHTML += `<div class="deduction-line"><span class="name">(-) ${ded.nombre}</span><span class="amount">-$${montoDeducido.toLocaleString('es-MX')}</span></div>`;
-        });
-        const sueldoNeto = sueldoBruto - totalDeducciones;
-        profileDeductionsList.innerHTML = deduccionesHTML;
-        profileNetSalary.textContent = sueldoNeto.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
+            const sueldoBruto = currentUserData.sueldoBruto || 0;
+            const deducciones = currentUserData.deducciones || [];
+            let totalDeducciones = 0;
+            let deduccionesHTML = '';
+            deducciones.forEach(ded => {
+                let montoDeducido = ded.tipo === 'porcentaje' ? (sueldoBruto * ded.valor) / 100 : ded.valor;
+                totalDeducciones += montoDeducido;
+                deduccionesHTML += `<div class="deduction-line"><span class="name">(-) ${ded.nombre}</span><span class="amount">-$${montoDeducido.toLocaleString('es-MX')}</span></div>`;
+            });
+            const sueldoNeto = sueldoBruto - totalDeducciones;
+            profileDeductionsList.innerHTML = deduccionesHTML;
+            profileNetSalary.textContent = sueldoNeto.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
+            
+            // La llamada a cargarActividad() se eliminó de aquí para tener un mejor control del flujo.
 
-        cargarActividad();
-    } else {
-        profileName.textContent = "Usuario no encontrado";
+        } else {
+            profileName.textContent = "Usuario no encontrado";
+        }
+    } catch (error) {
+        console.error("Error cargando datos del perfil:", error);
     }
 }
 
+// --- VERSIÓN DE DIAGNÓSTICO DE 'cargarActividad' ---
 async function cargarActividad() {
     const viewer = auth.currentUser;
-    // 'userId' es el ID del perfil que estamos viendo (en este caso, el del Administrador)
     if (!userId || !viewer) {
         console.error("ERROR: No se encontró el 'userId' del perfil o el 'viewer'.");
         return;
@@ -109,7 +119,6 @@ async function cargarActividad() {
 
     console.log("--- INICIANDO DIAGNÓSTICO DE 'cargarActividad' ---");
     
-    // Obtenemos el perfil del espectador (el Co-admin)
     const viewerDoc = await db.collection('usuarios').doc(viewer.uid).get();
     const viewerData = viewerDoc.exists ? viewerDoc.data() : {};
     const adminUid = viewerData.adminUid || viewer.uid;
@@ -120,14 +129,10 @@ async function cargarActividad() {
 
     try {
         console.log("PASO 1: Ejecutando consultas a la base de datos...");
-
         const gastosPromise = db.collection('gastos').where('adminUid', '==', adminUid).where('creadorId', '==', userId).get();
         const ingresosPromise = db.collection('ingresos').where('adminUid', '==', adminUid).where('creadorId', '==', userId).get();
         const nominaPromise = db.collection('pagos_nomina').where('adminUid', '==', adminUid).where('userId', '==', userId).get();
-
-        const [gastosSnapshot, ingresosSnapshot, nominaSnapshot] = await Promise.all([
-            gastosPromise, ingresosPromise, nominaPromise
-        ]);
+        const [gastosSnapshot, ingresosSnapshot, nominaSnapshot] = await Promise.all([gastosPromise, ingresosPromise, nominaPromise]);
 
         console.log(`PASO 2: Consultas finalizadas.`);
         console.log(`- Gastos encontrados: ${gastosSnapshot.size}`);
@@ -140,7 +145,7 @@ async function cargarActividad() {
         nominaSnapshot.forEach(doc => todosLosMovimientos.push({ tipo: 'Nómina', ...doc.data() }));
 
         console.log(`PASO 3: Total de movimientos combinados: ${todosLosMovimientos.length}`);
-
+        
         if (todosLosMovimientos.length === 0) {
             activityFeed.innerHTML = '<p>Este empleado no tiene actividad reciente.</p>';
             console.log("--- FIN DEL DIAGNÓSTICO ---");
@@ -154,11 +159,6 @@ async function cargarActividad() {
         });
 
         activityFeed.innerHTML = '';
-        if (todosLosMovimientos.length === 0) {
-            activityFeed.innerHTML = '<p>Este empleado no tiene actividad reciente.</p>';
-            return;
-        }
-
         todosLosMovimientos.slice(0, 15).forEach(mov => {
             const fecha = (mov.fechaDePago?.toDate() || mov.fechaDeCreacion?.toDate() || new Date(mov.fecha)).toLocaleDateString('es-ES');
             const monto = mov.montoNeto || mov.montoDescontado || (mov.totalConImpuestos || mov.monto);
@@ -170,8 +170,11 @@ async function cargarActividad() {
             itemElement.innerHTML = `<div class="item-info"><span class="item-description">${descripcion} (${mov.tipo})${iconoComprobante}</span><span class="item-details">${fecha} - Estado: ${mov.status || 'Pagado'}</span></div><span class="item-amount">${signo}$${monto.toLocaleString('es-MX')}</span>`;
             activityFeed.appendChild(itemElement);
         });
+        
+        console.log("PASO 4: ¡Éxito! La lista de actividad debería ser visible.");
+        console.log("--- FIN DEL DIAGNÓSTICO ---");
     } catch (error) {
-        console.error("Error al cargar la actividad del empleado:", error);
+        console.error("ERROR CRÍTICO durante la carga de actividad:", error);
         activityFeed.innerHTML = '<p>Ocurrió un error al cargar la actividad.</p>';
     }
 }
@@ -179,36 +182,34 @@ async function cargarActividad() {
 async function descargarRegistrosColaborador() {
     if (!currentUserData) return;
     alert(`Preparando la descarga de todos los registros de ${currentUserData.nombre}. Esto puede tardar...`);
-
     try {
         const viewer = auth.currentUser;
         if (!viewer) return alert("Error de autenticación");
-
         const viewerDoc = await db.collection('usuarios').doc(viewer.uid).get();
         const adminUid = viewerDoc.exists ? (viewerDoc.data().adminUid || viewer.uid) : viewer.uid;
-
         const gastosPromise = db.collection('gastos').where('adminUid', '==', adminUid).where('creadorId', '==', userId).get();
         const ingresosPromise = db.collection('ingresos').where('adminUid', '==', adminUid).where('creadorId', '==', userId).get();
         const nominaPromise = db.collection('pagos_nomina').where('adminUid', '==', adminUid).where('userId', '==', userId).get();
-
-        const [gastosSnapshot, ingresosSnapshot, nominaSnapshot] = await Promise.all([
-            gastosPromise, 
-            ingresosPromise, 
-            nominaPromise 
-        ]);
+        const [gastosSnapshot, ingresosSnapshot, nominaSnapshot] = await Promise.all([gastosPromise, ingresosPromise, nominaPromise]);
 
         const registros = [];
-        gastosSnapshot.forEach(doc => { /* ... (tu código para procesar gastos) ... */ });
-        ingresosSnapshot.forEach(doc => { /* ... (tu código para procesar ingresos) ... */ });
-        nominaSnapshot.forEach(doc => { /* ... (tu código para procesar nómina) ... */ });
-
+        gastosSnapshot.forEach(doc => {
+            const data = doc.data();
+            registros.push({ Fecha: data.fecha || '', Tipo: 'Gasto', Concepto: data.descripcion || '', Monto: -(data.totalConImpuestos || data.monto), Estado: data.status || '' });
+        });
+        ingresosSnapshot.forEach(doc => {
+            const data = doc.data();
+            registros.push({ Fecha: data.fecha || '', Tipo: 'Ingreso', Concepto: data.descripcion || '', Monto: data.totalConImpuestos || data.monto, Estado: data.status || '' });
+        });
+        nominaSnapshot.forEach(doc => {
+            const data = doc.data();
+            registros.push({ Fecha: data.fechaDePago.toDate().toISOString().split('T')[0], Tipo: 'Nómina', Concepto: `Pago de nómina (${data.periodo})`, Monto: data.montoNeto, Estado: 'Pagado' });
+        });
         if (registros.length === 0) {
             return alert("Este colaborador no tiene registros para descargar.");
         }
-
         registros.sort((a, b) => new Date(a.Fecha.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$3-$2-$1')) - new Date(b.Fecha.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$3-$2-$1')));
         exportToCSV(registros, `Registros-${currentUserData.nombre.replace(/ /g, '_')}`);
-
     } catch (error) {
         console.error("Error al descargar registros del colaborador:", error);
         alert("Ocurrió un error al generar el reporte.");
