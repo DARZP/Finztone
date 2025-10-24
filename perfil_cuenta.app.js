@@ -19,12 +19,17 @@ const urlParams = new URLSearchParams(window.location.search);
 const cuentaId = urlParams.get('id');
 let todosLosMovimientos = [];
 let periodosCalculados = {};
+let adminUidGlobal = null;
 
-// --- LÓGICA PRINCIPAL ---
-
-auth.onAuthStateChanged((user) => {
+auth.onAuthStateChanged(async (user) => {
     if (user && cuentaId) {
-        cargarDatosDeCuenta();
+        // --- CORRECCIÓN 1: Obtenemos el adminUid correcto ---
+        const userDoc = await db.collection('usuarios').doc(user.uid).get();
+        const userData = userDoc.exists ? userDoc.data() : {};
+        adminUidGlobal = userData.adminUid || user.uid;
+        
+        cargarDatosDeCuenta(adminUidGlobal);
+
     } else {
         window.location.href = 'index.html';
     }
@@ -75,13 +80,11 @@ async function cargarDatosDeCuenta() {
     });
 }
 
-async function cargarTodosLosMovimientos(cuentaData) {
-    const user = auth.currentUser;
-    if (!user) return;
-
-    const gastosPromise = db.collection('gastos').where('adminUid', '==', user.uid).where('cuentaId', '==', cuentaId).get();
-    const ingresosPromise = db.collection('ingresos').where('adminUid', '==', user.uid).where('cuentaId', '==', cuentaId).get();
-    const nominaPromise = db.collection('pagos_nomina').where('adminUid', '==', user.uid).where('cuentaId', '==', cuentaId).get();
+async function cargarTodosLosMovimientos(cuentaData, adminUid) {
+    // --- CORRECCIÓN 2: Las consultas usan el adminUid correcto ---
+    const gastosPromise = db.collection('gastos').where('adminUid', '==', adminUid).where('cuentaId', '==', cuentaId).get();
+    const ingresosPromise = db.collection('ingresos').where('adminUid', '==', adminUid).where('cuentaId', '==', cuentaId).get();
+    const nominaPromise = db.collection('pagos_nomina').where('adminUid', '==', adminUid).where('cuentaId', '==', cuentaId).get();
 
     const [gastosSnapshot, ingresosSnapshot, nominaSnapshot] = await Promise.all([gastosPromise, ingresosPromise, nominaPromise]);
 
@@ -96,7 +99,6 @@ async function cargarTodosLosMovimientos(cuentaData) {
     } else {
         mostrarMovimientos(todosLosMovimientos);
     }
-}
 
 function agruparMovimientosPorPeriodo(diaCorte) {
     periodosCalculados = { 'actual': { movimientos: [], total: 0, pagos: 0 } };
@@ -179,10 +181,9 @@ periodSelector.addEventListener('change', () => {
 });
 
 function mostrarMovimientos(movimientos) {
-    // ... (Esta función no cambia, es la misma que ya tenías)
     movementsList.innerHTML = '';
     if (movimientos.length === 0) {
-        movementsList.innerHTML = '<p>No hay movimientos en este período.</p>';
+        movementsList.innerHTML = '<p>No hay movimientos registrados en esta cuenta.</p>';
         return;
     }
     movimientos.sort((a, b) => {
@@ -194,14 +195,13 @@ function mostrarMovimientos(movimientos) {
     movimientos.forEach(mov => {
         const itemElement = document.createElement('div');
         itemElement.classList.add('activity-feed-item'); 
-
         const esGasto = mov.tipoMovimiento !== 'ingreso';
         const signo = esGasto ? '-' : '+';
         const colorMonto = esGasto ? 'color: #ff8a80;' : 'color: var(--primary-color);';
-
         const monto = mov.totalConImpuestos || mov.monto || mov.montoDescontado;
         const fecha = mov.fechaDePago ? mov.fechaDePago.toDate() : new Date(mov.fecha);
-        const iconoComprobante = mov.comprobanteURL ? `<a href="${mov.comprobanteURL}" target="_blank" title="Ver comprobante" style="text-decoration: none; font-size: 1.2em; margin-left: 10px;">📎</a>` : '';
+     
+        const iconoComprobante = mov.comprobanteURL ? `<a href="${mov.comprobanteURL}" target="_blank" title="Ver comprobante">📎</a>` : '';
 
         itemElement.innerHTML = `
             <div class="item-info">
@@ -215,7 +215,6 @@ function mostrarMovimientos(movimientos) {
         `;
         movementsList.appendChild(itemElement);
     });
-}
 
 async function realizarPago(cuentaCreditoData, tipoPago) {
     const user = auth.currentUser;
@@ -235,7 +234,7 @@ async function realizarPago(cuentaCreditoData, tipoPago) {
         if (isNaN(montoAPagar) || montoAPagar <= 0) return alert("Monto inválido.");
     }
     
-    const cuentasDebitoSnapshot = await db.collection('cuentas').where('adminUid', '==', user.uid).where('tipo', '==', 'debito').get();
+    const cuentasDebitoSnapshot = await db.collection('cuentas').where('adminUid', '==', adminUidGlobal).where('tipo', '==', 'debito').get();
     if (cuentasDebitoSnapshot.empty) return alert("No tienes cuentas de débito para pagar.");
     const cuentasDebito = cuentasDebitoSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     let promptMessage = "Selecciona la cuenta de origen para el pago:\n";
