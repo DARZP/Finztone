@@ -16,19 +16,16 @@ const activeProjectsList = document.getElementById('active-projects-list');
 const inactiveProjectsList = document.getElementById('inactive-projects-list');
 
 let empresaData = null;
-let adminUidGlobal = null; // Variable global para el adminUid
-let viewerRoleGlobal = null; // Variable global para el rol del espectador
+let adminUidGlobal = null;
+let viewerRoleGlobal = null;
 
-// --- LÓGICA PRINCIPAL ---
 auth.onAuthStateChanged(async (user) => {
     if (user && empresaId) {
-        // --- CORRECCIÓN 1: Obtenemos el rol y el adminUid correcto desde el inicio ---
         const viewerDoc = await db.collection('usuarios').doc(user.uid).get();
         const viewerData = viewerDoc.exists ? viewerDoc.data() : {};
         adminUidGlobal = viewerData.adminUid || user.uid;
         viewerRoleGlobal = viewerData.rol || 'admin';
 
-        // Ocultamos elementos de la UI si es un Co-admin
         if (viewerRoleGlobal === 'coadmin') {
             if (editCompanyBtn) editCompanyBtn.style.display = 'none';
             if (addProjectForm) addProjectForm.style.display = 'none';
@@ -128,20 +125,50 @@ async function cargarHistorialDeProyecto(proyectoId, adminUid) {
     historyContainer.innerHTML = 'Cargando...';
 
     try {
-        // --- CORRECCIÓN 4: Las consultas de historial usan el adminUid correcto ---
         const gastosPromise = db.collection('gastos').where('adminUid', '==', adminUid).where('proyectoId', '==', proyectoId).get();
         const ingresosPromise = db.collection('ingresos').where('adminUid', '==', adminUid).where('proyectoId', '==', proyectoId).get();
         const [gastosSnapshot, ingresosSnapshot] = await Promise.all([gastosPromise, ingresosPromise]);
 
         let movimientosHTML = '';
+        
         gastosSnapshot.forEach(doc => {
             const gasto = doc.data();
-            movimientosHTML += `<p class="history-line expense">Gasto: ${gasto.descripcion} <strong>-$${(gasto.totalConImpuestos || gasto.monto).toLocaleString()}</strong></p>`;
+            let impuestosHTML = '';
+            if (gasto.impuestos && gasto.impuestos.length > 0) {
+                impuestosHTML += '<div class="tax-breakdown">';
+                gasto.impuestos.forEach(imp => {
+                    const montoImpuesto = imp.tipo === 'porcentaje' ? (gasto.monto * imp.valor) / 100 : imp.valor;
+                    impuestosHTML += `<div class="tax-line"><span>- ${imp.nombre}</span><span>$${montoImpuesto.toLocaleString('es-MX')}</span></div>`;
+                });
+                impuestosHTML += '</div>';
+            }
+
+            movimientosHTML += `
+                <div class="history-item expense">
+                    <div class="history-main-line">
+                        <span>Gasto: ${gasto.descripcion}</span>
+                        <strong>-$${(gasto.totalConImpuestos || gasto.monto).toLocaleString('es-MX')}</strong>
+                    </div>
+                    <div class="history-meta">Registrado por: ${gasto.nombreCreador || 'N/A'}</div>
+                    ${impuestosHTML}
+                </div>
+            `;
         });
+
         ingresosSnapshot.forEach(doc => {
             const ingreso = doc.data();
-            movimientosHTML += `<p class="history-line income">Ingreso: ${ingreso.descripcion} <strong>+$${(ingreso.totalConImpuestos || ingreso.monto).toLocaleString()}</strong></p>`;
+            // (Puedes añadir la misma lógica de desglose de impuestos para ingresos si lo necesitas)
+            movimientosHTML += `
+                <div class="history-item income">
+                    <div class="history-main-line">
+                        <span>Ingreso: ${ingreso.descripcion}</span>
+                        <strong>+$${(ingreso.totalConImpuestos || ingreso.monto).toLocaleString('es-MX')}</strong>
+                    </div>
+                    <div class="history-meta">Registrado por: ${ingreso.nombreCreador || 'N/A'}</div>
+                </div>
+            `;
         });
+
         historyContainer.innerHTML = movimientosHTML || '<p class="history-line">No hay movimientos para este proyecto.</p>';
     } catch (error) {
         console.error("Error al cargar historial:", error);
@@ -149,51 +176,39 @@ async function cargarHistorialDeProyecto(proyectoId, adminUid) {
     }
 }
 
-// Event listener para agregar proyecto (solo el Admin lo verá)
-addProjectForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    if (!adminUidGlobal) return alert("Error de autenticación");
-
-    db.collection('proyectos').add({
-        nombre: addProjectForm['project-name'].value,
-        empresaId: empresaId,
-        status: 'activo',
-        fechaDeCreacion: new Date(),
-        adminUid: adminUidGlobal
-    }).then(() => addProjectForm.reset())
-      .catch(error => console.error("Error al agregar proyecto:", error));
-});
-
-// Event listener global para los clics en la página
-document.addEventListener('click', (e) => {
-    const statusBtn = e.target.closest('.btn-deactivate, .btn-activate');
-    if (statusBtn) {
-        db.collection('proyectos').doc(statusBtn.dataset.id).update({ status: statusBtn.classList.contains('btn-deactivate') ? 'inactivo' : 'activo' });
-    }
-
-    const downloadBtn = e.target.closest('.download-project-btn');
-    if (downloadBtn) {
-        descargarRegistrosProyecto(downloadBtn.dataset.projectId, downloadBtn.dataset.projectName, adminUidGlobal);
-    }
-    
-    const projectHeader = e.target.closest('.project-header');
-    if (projectHeader && !e.target.closest('button')) {
-        cargarHistorialDeProyecto(projectHeader.dataset.projectId, adminUidGlobal);
-    }
-});
-
 async function descargarRegistrosEmpresa(adminUid) {
     if (!empresaData) return;
     alert('Preparando la descarga de todos los registros de la empresa...');
     try {
-        // --- CORRECCIÓN 5: Las consultas de descarga usan el adminUid correcto ---
         const gastosPromise = db.collection('gastos').where('adminUid', '==', adminUid).where('empresa', '==', empresaData.nombre).get();
         const ingresosPromise = db.collection('ingresos').where('adminUid', '==', adminUid).where('empresa', '==', empresaData.nombre).get();
         const [gastosSnapshot, ingresosSnapshot] = await Promise.all([gastosPromise, ingresosPromise]);
         
         const registros = [];
-        gastosSnapshot.forEach(doc => { /* Tu lógica de mapeo de datos aquí */ });
-        ingresosSnapshot.forEach(doc => { /* Tu lógica de mapeo de datos aquí */ });
+        // Lógica de mapeo para gastos (ya sin comentarios)
+        gastosSnapshot.forEach(doc => {
+            const data = doc.data();
+            registros.push({ 
+                Fecha: data.fecha, 
+                Tipo: 'Gasto', 
+                Concepto: data.descripcion, 
+                Proyecto: data.proyectoNombre || 'N/A', 
+                Monto: -(data.totalConImpuestos || data.monto), 
+                Creador: data.nombreCreador 
+            });
+        });
+        // Lógica de mapeo para ingresos (ya sin comentarios)
+        ingresosSnapshot.forEach(doc => {
+            const data = doc.data();
+            registros.push({ 
+                Fecha: data.fecha, 
+                Tipo: 'Ingreso', 
+                Concepto: data.descripcion, 
+                Proyecto: data.proyectoNombre || 'N/A', 
+                Monto: data.totalConImpuestos || data.monto, 
+                Creador: data.nombreCreador 
+            });
+        });
 
         if(registros.length === 0) return alert("No hay registros para esta empresa.");
         registros.sort((a, b) => new Date(a.Fecha) - new Date(b.Fecha));
