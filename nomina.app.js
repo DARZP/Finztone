@@ -25,7 +25,7 @@ auth.onAuthStateChanged(async (user) => {
 
         await cargarCuentas(adminUid);
         poblarFiltroDePeriodos();
-        cargarDatosNomina(adminUid, periodSelector.value);
+        await cargarDatosNomina(adminUid, periodSelector.value); // Le añadimos await
         periodSelector.addEventListener('change', () => cargarDatosNomina(adminUid, periodSelector.value));
 
         if (currentUserData.rol && currentUserData.rol.trim().toLowerCase() === 'coadmin') {
@@ -58,40 +58,21 @@ function generarSelectorDeCuentas(idSufijo = '') {
 function mostrarUsuarios(usuarios, pagosDelPeriodo) {
     userListContainer.innerHTML = '';
     if (usuarios.length === 0) {
-        userListContainer.innerHTML = '<p>No hay empleados activos registrados.</p>';
+        userListContainer.innerHTML = '<p>No hay colaboradores activos registrados.</p>';
         return;
     }
-
     usuarios.forEach(usuario => {
         const isPaid = pagosDelPeriodo.some(pago => pago.userId === usuario.id && pago.status === 'aprobado');
         const containerElement = document.createElement('div');
         containerElement.classList.add('payroll-item-container');
-
         const statusClass = isPaid ? 'status-paid' : 'status-pending';
         const statusText = isPaid ? 'Pagado' : 'Pendiente';
-        
-        // --- LA LÓGICA DE VISIBILIDAD MEJORADA Y ROBUSTA ---
         const esCoAdmin = currentUserData.rol && currentUserData.rol.trim().toLowerCase() === 'coadmin';
-        const selectorContainerClass = (esCoAdmin || isPaid) ? 'hidden' : '';
+        const selectorContainerClass = (esCoAdmin || isPaid || usuario.rol === 'admin') ? 'hidden' : ''; // Admin tampoco necesita selector para sí mismo
         const buttonText = esCoAdmin ? 'Enviar para Aprobación' : 'Marcar como Pagado';
-
-        containerElement.innerHTML = `
-            <div class="user-item" data-user-id="${usuario.id}">
-                <a href="perfil_empleado.html?id=${usuario.id}" class="user-info-link">
-                    <div class="user-name">${usuario.nombre}</div>
-                    <div class="user-details">${usuario.cargo} - Sueldo Neto: $${calcularSueldoNeto(usuario).toLocaleString('es-MX')}</div>
-                </a>
-                <div class="account-selector-container ${selectorContainerClass}">
-                    ${generarSelectorDeCuentas(usuario.id)}
-                </div>
-                <div class="status ${statusClass}">${statusText}</div>
-                <button class="btn-pay" ${isPaid ? 'disabled' : ''}>${buttonText}</button>
-            </div>
-            <div class="item-details-view" id="details-${usuario.id}" style="display: none;"></div>
-        `;
+        containerElement.innerHTML = `<div class="user-item" data-user-id="${usuario.id}"><a href="perfil_empleado.html?id=${usuario.id}" class="user-info-link"><div class="user-name">${usuario.nombre}</div><div class="user-details">${usuario.cargo} - Sueldo Neto: $${calcularSueldoNeto(usuario).toLocaleString('es-MX')}</div></a><div class="account-selector-container ${selectorContainerClass}">${generarSelectorDeCuentas(usuario.id)}</div><div class="status ${statusClass}">${statusText}</div><button class="btn-pay" ${isPaid ? 'disabled' : ''}>${buttonText}</button></div><div class="item-details-view" id="details-${usuario.id}" style="display: none;"></div>`;
         userListContainer.appendChild(containerElement);
     });
-
     userListContainer.querySelectorAll('.btn-pay:not([disabled])').forEach(button => {
         const userItem = button.closest('.user-item');
         const userId = userItem.dataset.userId;
@@ -109,30 +90,19 @@ async function registrarPago(empleado) {
     const sueldoBruto = empleado.sueldoBruto || 0;
     const sueldoNeto = calcularSueldoNeto(empleado);
     const montoADescontar = tipoDeDescuento === 'neto' ? sueldoNeto : sueldoBruto;
-
     if (!confirm(`¿Confirmas el registro del pago para ${empleado.nombre} por el período ${periodo}?`)) return;
 
     const esCoAdmin = currentUserData.rol && currentUserData.rol.trim().toLowerCase() === 'coadmin';
-
     if (esCoAdmin) {
-        // Lógica para el Co-administrador (enviar a aprobación)
         try {
-            await db.collection('pagos_nomina').add({
-                userId: empleado.id, userName: empleado.nombre, periodo, montoBruto: sueldoBruto, sueldoNeto,
-                montoDescontado: montoADescontar, deducciones: empleado.deducciones || [], fechaDeCreacion: new Date(),
-                adminUid: adminUid, creadoPor: creadorUid, nombreCreador: creadorNombre, status: 'pendiente'
-            });
+            await db.collection('pagos_nomina').add({ userId: empleado.id, userName: empleado.nombre, periodo, montoBruto: sueldoBruto, sueldoNeto, montoDescontado: montoADescontar, deducciones: empleado.deducciones || [], fechaDeCreacion: new Date(), adminUid: adminUid, creadoPor: creadorUid, nombreCreador: creadorNombre, status: 'pendiente' });
             alert(`¡Solicitud de pago para ${empleado.nombre} enviada para aprobación!`);
-        } catch (error) {
-            alert("Error al enviar la solicitud: " + error.message);
-        }
+        } catch (error) { alert("Error al enviar la solicitud: " + error.message); }
     } else {
-        // Lógica para el Administrador (pago directo)
         const userItemElement = userListContainer.querySelector(`.user-item[data-user-id="${empleado.id}"]`);
         const accountSelector = userItemElement.querySelector('.account-selector-payroll');
         const cuentaId = accountSelector ? accountSelector.value : null;
         if (!cuentaId) return alert(`Por favor, selecciona una cuenta de origen para ${empleado.nombre}.`);
-        
         const cuentaRef = db.collection('cuentas').doc(cuentaId);
         const nuevoPagoRef = db.collection('pagos_nomina').doc();
         try {
@@ -140,41 +110,19 @@ async function registrarPago(empleado) {
                 const cuentaDoc = await transaction.get(cuentaRef);
                 if (!cuentaDoc.exists) throw new Error("La cuenta de origen no fue encontrada.");
                 const cuentaData = cuentaDoc.data();
-                if (cuentaData.tipo === 'credito') {
-                    transaction.update(cuentaRef, { deudaActual: (cuentaData.deudaActual || 0) + montoADescontar, deudaTotal: (cuentaData.deudaTotal || 0) + montoADescontar });
-                } else {
-                    if ((cuentaData.saldoActual || 0) < montoADescontar) throw new Error("Saldo insuficiente en la cuenta.");
-                    transaction.update(cuentaRef, { saldoActual: cuentaData.saldoActual - montoADescontar });
-                }
-                const datosPago = {
-                    userId: empleado.id, userName: empleado.nombre, periodo, montoBruto: sueldoBruto, sueldoNeto, montoDescontado: montoADescontar,
-                    fechaDePago: new Date(), cuentaId, cuentaNombre: cuentaData.nombre, adminUid: adminUid, status: 'aprobado'
-                };
-                transaction.set(nuevoPagoRef, datosPago);
-                (empleado.deducciones || []).forEach(ded => {
-                    const montoDeducido = ded.tipo === 'porcentaje' ? (sueldoBruto * ded.valor) / 100 : ded.valor;
-                    const taxMovRef = db.collection('movimientos_impuestos').doc();
-                    transaction.set(taxMovRef, {
-                        origen: `Nómina - ${empleado.nombre}`, tipoImpuesto: ded.nombre, monto: montoDeducido,
-                        fecha: new Date(), status: 'pagado (retenido)', adminUid: adminUid
-                    });
-                });
+                if (cuentaData.tipo === 'credito') { transaction.update(cuentaRef, { deudaActual: (cuentaData.deudaActual || 0) + montoADescontar, deudaTotal: (cuentaData.deudaTotal || 0) + montoADescontar }); } else { if ((cuentaData.saldoActual || 0) < montoADescontar) throw new Error("Saldo insuficiente en la cuenta."); transaction.update(cuentaRef, { saldoActual: cuentaData.saldoActual - montoADescontar }); }
+                transaction.set(nuevoPagoRef, { userId: empleado.id, userName: empleado.nombre, periodo, montoBruto: sueldoBruto, sueldoNeto, montoDescontado: montoADescontar, fechaDePago: new Date(), cuentaId, cuentaNombre: cuentaData.nombre, adminUid: adminUid, status: 'aprobado' });
+                (empleado.deducciones || []).forEach(ded => { const montoDeducido = ded.tipo === 'porcentaje' ? (sueldoBruto * ded.valor) / 100 : ded.valor; const taxMovRef = db.collection('movimientos_impuestos').doc(); transaction.set(taxMovRef, { origen: `Nómina - ${empleado.nombre}`, tipoImpuesto: ded.nombre, monto: montoDeducido, fecha: new Date(), status: 'pagado (retenido)', adminUid: adminUid }); });
             });
             alert(`¡Pago para ${empleado.nombre} registrado exitosamente!`);
-        } catch (error) {
-            console.error("Error en la transacción de pago:", error);
-            alert("Error al procesar el pago: " + error.message);
-        }
+        } catch (error) { console.error("Error en la transacción de pago:", error); alert("Error al procesar el pago: " + error.message); }
     }
 }
 
 function cargarPagosPendientes(adminUid) {
     db.collection('pagos_nomina').where('adminUid', '==', adminUid).where('status', '==', 'pendiente').onSnapshot(snapshot => {
         pendingPayrollList.innerHTML = '';
-        if (snapshot.empty) {
-            pendingPayrollList.innerHTML = '<p>No hay solicitudes de pago pendientes.</p>';
-            return;
-        }
+        if (snapshot.empty) { pendingPayrollList.innerHTML = '<p>No hay solicitudes de pago pendientes.</p>'; return; }
         snapshot.forEach(doc => {
             const pago = { id: doc.id, ...doc.data() };
             const containerElement = document.createElement('div');
@@ -187,18 +135,9 @@ function cargarPagosPendientes(adminUid) {
                 if (e.target.closest('button, select')) return;
                 const detailsContainer = containerElement.querySelector('.item-details-view');
                 const isVisible = detailsContainer.style.display === 'block';
-                if (isVisible) {
-                    detailsContainer.style.display = 'none';
-                } else {
+                if (isVisible) { detailsContainer.style.display = 'none'; } else {
                     let deductionsHTML = '<h4>Desglose de Deducciones</h4>';
-                    if (!pago.deducciones || pago.deducciones.length === 0) {
-                        deductionsHTML += '<p>Esta solicitud no tiene deducciones asociadas.</p>';
-                    } else {
-                        pago.deducciones.forEach(ded => {
-                            const montoDeducido = ded.tipo === 'porcentaje' ? (pago.montoBruto * ded.valor) / 100 : ded.valor;
-                            deductionsHTML += `<div class="tax-line"><span>- ${ded.nombre}</span><span>$${montoDeducido.toLocaleString('es-MX')}</span></div>`;
-                        });
-                    }
+                    if (!pago.deducciones || pago.deducciones.length === 0) { deductionsHTML += '<p>Esta solicitud no tiene deducciones asociadas.</p>'; } else { pago.deducciones.forEach(ded => { const montoDeducido = ded.tipo === 'porcentaje' ? (pago.montoBruto * ded.valor) / 100 : ded.valor; deductionsHTML += `<div class="tax-line"><span>- ${ded.nombre}</span><span>$${montoDeducido.toLocaleString('es-MX')}</span></div>`; }); }
                     detailsContainer.innerHTML = deductionsHTML;
                     detailsContainer.style.display = 'block';
                 }
@@ -223,55 +162,32 @@ async function aprobarPago(pagoId, itemContainer) {
             const pagoData = pagoDoc.data();
             const cuentaData = cuentaDoc.data();
             const monto = pagoData.montoDescontado;
-            if (cuentaData.tipo === 'credito') {
-                transaction.update(cuentaRef, { deudaActual: (cuentaData.deudaActual || 0) + monto, deudaTotal: (cuentaData.deudaTotal || 0) + monto });
-            } else {
-                if ((cuentaData.saldoActual || 0) < monto) throw "Saldo insuficiente.";
-                transaction.update(cuentaRef, { saldoActual: cuentaData.saldoActual - monto });
-            }
+            if (cuentaData.tipo === 'credito') { transaction.update(cuentaRef, { deudaActual: (cuentaData.deudaActual || 0) + monto, deudaTotal: (cuentaData.deudaTotal || 0) + monto }); } else { if ((cuentaData.saldoActual || 0) < monto) throw "Saldo insuficiente."; transaction.update(cuentaRef, { saldoActual: cuentaData.saldoActual - monto }); }
             transaction.update(pagoRef, { status: 'aprobado', fechaDePago: new Date(), cuentaId: cuentaId, cuentaNombre: cuentaData.nombre });
-            (pagoData.deducciones || []).forEach(ded => {
-                const montoDeducido = ded.tipo === 'porcentaje' ? (pagoData.montoBruto * ded.valor) / 100 : ded.valor;
-                const taxMovRef = db.collection('movimientos_impuestos').doc();
-                transaction.set(taxMovRef, {
-                    origen: `Nómina - ${pagoData.userName}`, tipoImpuesto: ded.nombre, monto: montoDeducido,
-                    fecha: new Date(), status: 'pagado (retenido)', adminUid: adminUid
-                });
-            });
+            (pagoData.deducciones || []).forEach(ded => { const montoDeducido = ded.tipo === 'porcentaje' ? (pagoData.montoBruto * ded.valor) / 100 : ded.valor; const taxMovRef = db.collection('movimientos_impuestos').doc(); transaction.set(taxMovRef, { origen: `Nómina - ${pagoData.userName}`, tipoImpuesto: ded.nombre, monto: montoDeducido, fecha: new Date(), status: 'pagado (retenido)', adminUid: adminUid }); });
         });
         alert("¡Pago aprobado y procesado!");
-    } catch (error) {
-        console.error("Error al aprobar pago:", error);
-        alert("Error al aprobar el pago: " + error.message);
-    }
+    } catch (error) { console.error("Error al aprobar pago:", error); alert("Error al aprobar el pago: " + error.message); }
 }
 
 async function rechazarPago(pagoId) {
     const motivo = prompt("Introduce un motivo para el rechazo (opcional):");
     if (motivo === null) return;
-    await db.collection('pagos_nomina').doc(pagoId).update({
-        status: 'rechazado',
-        motivoRechazo: motivo
-    });
+    await db.collection('pagos_nomina').doc(pagoId).update({ status: 'rechazado', motivoRechazo: motivo });
     alert("La solicitud de pago ha sido rechazada.");
 }
 
 function calcularSueldoNeto(usuario) {
     const sueldoBruto = usuario.sueldoBruto || 0;
     let totalDeducciones = 0;
-    (usuario.deducciones || []).forEach(ded => {
-        totalDeducciones += ded.tipo === 'porcentaje' ? (sueldoBruto * ded.valor) / 100 : ded.valor;
-    });
+    (usuario.deducciones || []).forEach(ded => { totalDeducciones += ded.tipo === 'porcentaje' ? (sueldoBruto * ded.valor) / 100 : ded.valor; });
     return sueldoBruto - totalDeducciones;
 }
 
 function generarPeriodos() {
-    const periodos = [];
-    let fecha = new Date();
+    const periodos = []; let fecha = new Date();
     for (let i = 0; i < 12; i++) {
-        const year = fecha.getFullYear();
-        const month = fecha.getMonth();
-        const monthStr = String(month + 1).padStart(2, '0');
+        const year = fecha.getFullYear(); const month = fecha.getMonth(); const monthStr = String(month + 1).padStart(2, '0');
         periodos.push({ value: `${year}-${monthStr}-Q2`, text: `${fecha.toLocaleString('es-ES', { month: 'long' })} ${year} - 2da Quincena` });
         periodos.push({ value: `${year}-${monthStr}-Q1`, text: `${fecha.toLocaleString('es-ES', { month: 'long' })} ${year} - 1ra Quincena` });
         fecha.setMonth(fecha.getMonth() - 1);
@@ -282,33 +198,43 @@ function generarPeriodos() {
 function poblarFiltroDePeriodos() {
     periodSelector.innerHTML = '';
     const periodos = generarPeriodos();
-    periodos.forEach(p => {
-        periodSelector.appendChild(new Option(p.text, p.value));
-    });
+    periodos.forEach(p => { periodSelector.appendChild(new Option(p.text, p.value)); });
 }
 
-function cargarDatosNomina(adminUid, periodo) {
-    db.collection('usuarios')
-      .where('adminUid', '==', adminUid)
-      .where('status', '==', 'activo')
-      .orderBy('nombre')
-      .get()
-      .then(usersSnapshot => {
+// --- FUNCIÓN DE CARGA DE DATOS CORREGIDA ---
+async function cargarDatosNomina(adminUid, periodo) {
+    // 1. Preparamos las dos consultas que necesitamos.
+    const collaboratorsPromise = db.collection('usuarios')
+        .where('adminUid', '==', adminUid)
+        .where('status', '==', 'activo')
+        .get();
         
-        listaDeUsuarios = [];
-        usersSnapshot.forEach(doc => {
-            // Ahora añadimos a TODOS los colaboradores activos a la lista, sin excluir a nadie.
-            listaDeUsuarios.push({ id: doc.id, ...doc.data() });
-        });
+    const adminPromise = db.collection('usuarios').doc(adminUid).get();
 
-        // La lógica para buscar los pagos del período no cambia.
-        db.collection('pagos_nomina')
-          .where('adminUid', '==', adminUid)
-          .where('periodo', '==', periodo)
-          .onSnapshot(paymentsSnapshot => {
-            const pagosDelPeriodo = paymentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            mostrarUsuarios(listaDeUsuarios, pagosDelPeriodo);
-        });
+    // 2. Ejecutamos ambas consultas en paralelo para mayor eficiencia.
+    const [collaboratorsSnapshot, adminDoc] = await Promise.all([collaboratorsPromise, adminPromise]);
+
+    listaDeUsuarios = [];
+    // 3. Añadimos los colaboradores a la lista.
+    collaboratorsSnapshot.forEach(doc => {
+        listaDeUsuarios.push({ id: doc.id, ...doc.data() });
+    });
+
+    // 4. Añadimos al administrador a la lista si existe y está activo.
+    if (adminDoc.exists && adminDoc.data().status === 'activo') {
+        listaDeUsuarios.push({ id: adminDoc.id, ...doc.data() });
+    }
+
+    // 5. Ordenamos la lista final alfabéticamente.
+    listaDeUsuarios.sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+    // 6. Buscamos los pagos del período y mostramos la lista completa.
+    db.collection('pagos_nomina')
+      .where('adminUid', '==', adminUid)
+      .where('periodo', '==', periodo)
+      .onSnapshot(paymentsSnapshot => {
+        const pagosDelPeriodo = paymentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        mostrarUsuarios(listaDeUsuarios, pagosDelPeriodo);
     });
 }
 
@@ -321,19 +247,9 @@ userListContainer.addEventListener('click', (e) => {
     const user = listaDeUsuarios.find(u => u.id === userId);
     if (!detailsContainer || !user) return;
     const isVisible = detailsContainer.style.display === 'block';
-    if (isVisible) {
-        detailsContainer.style.display = 'none';
-    } else {
+    if (isVisible) { detailsContainer.style.display = 'none'; } else {
         let deductionsHTML = '<h4>Desglose de Deducciones</h4>';
-        if (!user.deducciones || user.deducciones.length === 0) {
-            deductionsHTML += '<p>Este empleado no tiene deducciones fijas asignadas.</p>';
-        } else {
-            const sueldoBruto = user.sueldoBruto || 0;
-            user.deducciones.forEach(ded => {
-                const montoDeducido = ded.tipo === 'porcentaje' ? (sueldoBruto * ded.valor) / 100 : ded.valor;
-                deductionsHTML += `<div class="tax-line"><span>- ${ded.nombre}</span><span>$${montoDeducido.toLocaleString('es-MX')}</span></div>`;
-            });
-        }
+        if (!user.deducciones || user.deducciones.length === 0) { deductionsHTML += '<p>Este empleado no tiene deducciones fijas asignadas.</p>'; } else { const sueldoBruto = user.sueldoBruto || 0; user.deducciones.forEach(ded => { const montoDeducido = ded.tipo === 'porcentaje' ? (sueldoBruto * ded.valor) / 100 : ded.valor; deductionsHTML += `<div class="tax-line"><span>- ${ded.nombre}</span><span>$${montoDeducido.toLocaleString('es-MX')}</span></div>`; }); }
         detailsContainer.innerHTML = deductionsHTML;
         detailsContainer.style.display = 'block';
     }
