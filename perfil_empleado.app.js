@@ -99,7 +99,6 @@ async function cargarDatosPerfil() {
     }
 }
 
-// --- VERSIÓN DE DIAGNÓSTICO ---
 async function cargarActividad() {
     const viewer = auth.currentUser;
     // 'userId' es el ID del perfil que estamos viendo (en este caso, el del Administrador)
@@ -147,8 +146,7 @@ async function cargarActividad() {
             console.log("--- FIN DEL DIAGNÓSTICO ---");
             return;
         }
-
-        // El resto del código para ordenar y mostrar no cambia...
+        
         todosLosMovimientos.sort((a, b) => {
             const dateA = a.fechaDePago?.toDate() || a.fechaDeCreacion?.toDate() || new Date(a.fecha?.replace(/-/g, '/')) || 0;
             const dateB = b.fechaDePago?.toDate() || b.fechaDeCreacion?.toDate() || new Date(b.fecha?.replace(/-/g, '/')) || 0;
@@ -156,15 +154,24 @@ async function cargarActividad() {
         });
 
         activityFeed.innerHTML = '';
-        todosLosMovimientos.slice(0, 15).forEach(mov => {
-            // ... (tu código para crear el HTML de cada item)
-        });
-        
-        console.log("PASO 4: ¡Éxito! La lista de actividad debería ser visible.");
-        console.log("--- FIN DEL DIAGNÓSTICO ---");
+        if (todosLosMovimientos.length === 0) {
+            activityFeed.innerHTML = '<p>Este empleado no tiene actividad reciente.</p>';
+            return;
+        }
 
+        todosLosMovimientos.slice(0, 15).forEach(mov => {
+            const fecha = (mov.fechaDePago?.toDate() || mov.fechaDeCreacion?.toDate() || new Date(mov.fecha)).toLocaleDateString('es-ES');
+            const monto = mov.montoNeto || mov.montoDescontado || (mov.totalConImpuestos || mov.monto);
+            const descripcion = mov.descripcion || `Pago de nómina (${mov.periodo})`;
+            const itemElement = document.createElement('div');
+            itemElement.classList.add('activity-feed-item');
+            const signo = (mov.tipo === 'Gasto' || mov.tipo === 'Nómina') ? '-' : '+';
+            const iconoComprobante = mov.comprobanteURL ? `<a href="${mov.comprobanteURL}" target="_blank" title="Ver comprobante" style="text-decoration: none; font-size: 1.1em; margin-left: 8px;">📎</a>` : '';
+            itemElement.innerHTML = `<div class="item-info"><span class="item-description">${descripcion} (${mov.tipo})${iconoComprobante}</span><span class="item-details">${fecha} - Estado: ${mov.status || 'Pagado'}</span></div><span class="item-amount">${signo}$${monto.toLocaleString('es-MX')}</span>`;
+            activityFeed.appendChild(itemElement);
+        });
     } catch (error) {
-        console.error("ERROR CRÍTICO durante la carga de actividad:", error);
+        console.error("Error al cargar la actividad del empleado:", error);
         activityFeed.innerHTML = '<p>Ocurrió un error al cargar la actividad.</p>';
     }
 }
