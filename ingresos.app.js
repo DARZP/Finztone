@@ -26,7 +26,10 @@ const receiptFileInput = document.getElementById('receipt-file');
 const backButton = document.getElementById('back-button');
 
 let empresasCargadas = [];
-let historialDeIngresos = []; // Guardaremos el historial completo aquí
+let historialDeIngresos = []; 
+let listaDeBorradores = []; // Para guardar los borradores cargados
+const draftsSection = document.getElementById('drafts-section');
+const draftsListContainer = document.getElementById('drafts-list');
 
 auth.onAuthStateChanged(async (user) => {
     if (user) {
@@ -60,6 +63,7 @@ auth.onAuthStateChanged(async (user) => {
         
         // Llamada inicial al historial usando la Cloud Function
         cargarIngresosAprobados(adminUid, userData.rol);
+        cargarBorradores();
 
         // Listeners para los filtros
         categoryFilter.onchange = () => cargarIngresosAprobados(adminUid, userData.rol);
@@ -390,5 +394,68 @@ incomeListContainer.addEventListener('click', (e) => {
     if (item) {
         const details = item.querySelector('.item-details');
         if(details) details.style.display = details.style.display === 'block' ? 'none' : 'block';
+    }
+});
+
+// =========== FUNCIONES NUEVAS PARA BORRADORES (ADMIN/COADMIN) ===========
+
+function cargarBorradores() {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    // Consultamos solo los ingresos creados por este usuario que sean borradores
+    db.collection('ingresos')
+        .where('creadoPor', '==', user.uid)
+        .where('status', '==', 'borrador')
+        .orderBy('fechaDeCreacion', 'desc')
+        .onSnapshot(snapshot => {
+            listaDeBorradores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            mostrarBorradores();
+        });
+}
+
+function mostrarBorradores() {
+    if (listaDeBorradores.length === 0) {
+        draftsSection.style.display = 'none';
+        return;
+    }
+    
+    draftsSection.style.display = 'block';
+    draftsListContainer.innerHTML = '';
+
+    listaDeBorradores.forEach(draft => {
+        const fecha = draft.fecha ? new Date(draft.fecha.replace(/-/g, '/')).toLocaleDateString('es-ES') : 'Sin fecha';
+        const draftElement = document.createElement('div');
+        draftElement.classList.add('draft-item');
+        draftElement.innerHTML = `
+            <div class="draft-info">
+                <div class="draft-description">${draft.descripcion || 'Borrador sin descripción'}</div>
+                <div class="draft-date">${fecha} - $${(draft.monto || 0).toLocaleString('es-MX')}</div>
+            </div>
+            <div class="draft-actions">
+                <button class="btn-delete" data-id="${draft.id}">Borrar</button>
+            </div>
+        `;
+        draftsListContainer.appendChild(draftElement);
+    });
+}
+
+// Listener solo para el botón de Borrar
+draftsListContainer.addEventListener('click', async (e) => {
+    const draftId = e.target.dataset.id;
+    if (!draftId) return;
+
+    // BOTÓN BORRAR
+    if (e.target.classList.contains('btn-delete')) {
+        if (confirm('¿Estás seguro de que quieres eliminar este borrador?')) {
+            try {
+                await db.collection('ingresos').doc(draftId).delete();
+                alert('Borrador eliminado.');
+                // No necesitas recargar, el 'onSnapshot' de cargarBorradores lo hará solo.
+            } catch (error) {
+                console.error("Error al borrar borrador:", error);
+                alert('No se pudo eliminar el borrador.');
+            }
+        }
     }
 });
