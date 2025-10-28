@@ -402,23 +402,37 @@ function poblarFiltrosYCategorias() {
     formCategorySelect.innerHTML = formOptionsHTML;
 }
 
-function cargarGastos() {
+async function cargarGastos() {
     const user = auth.currentUser;
-    if (!user) return;
-    let query = db.collection('gastos').where('creadoPor', '==', user.uid);
-    if (categoryFilter.value && categoryFilter.value !== 'todos') {
-        query = query.where('categoria', '==', categoryFilter.value);
+    if (!user || !adminUidGlobal) return; // Usamos el adminUidGlobal que ya se cargó
+
+    try {
+        // 1. Llamamos a la Cloud Function que ya usan los Admins
+        const obtenerHistorial = functions.httpsCallable('obtenerHistorialGastos');
+        const resultado = await obtenerHistorial({ adminUid: adminUidGlobal });
+
+        // 2. Filtramos los resultados para mostrar SOLO los de este empleado
+        const misGastos = resultado.data.gastos.filter(gasto => gasto.creadorId === user.uid);
+
+        // 3. Aplicamos los filtros de categoría y mes (¡sobre la lista ya filtrada!)
+        let gastosFiltrados = [...misGastos];
+
+        if (categoryFilter.value && categoryFilter.value !== 'todos') {
+            gastosFiltrados = gastosFiltrados.filter(g => g.categoria === categoryFilter.value);
+        }
+        if (monthFilter.value && monthFilter.value !== 'todos') {
+            const [year, month] = monthFilter.value.split('-').map(Number);
+            const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
+            const endDate = new Date(year, month, 0, 23, 59, 59).toISOString().split('T')[0];
+            gastosFiltrados = gastosFiltrados.filter(g => g.fecha >= startDate && g.fecha <= endDate);
+        }
+        
+        mostrarGastos(gastosFiltrados);
+
+    } catch (error) {
+        console.error("Error al obtener gastos desde Cloud Function:", error);
+        expenseListContainer.innerHTML = '<p>Ocurrió un error al cargar el historial.</p>';
     }
-    if (monthFilter.value && monthFilter.value !== 'todos') {
-        const [year, month] = monthFilter.value.split('-').map(Number);
-        const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
-        const endDate = new Date(year, month, 0, 23, 59, 59).toISOString().split('T')[0];
-        query = query.where('fecha', '>=', startDate).where('fecha', '<=', endDate);
-    }
-    query.orderBy('fecha', 'desc').onSnapshot(snapshot => {
-        const gastos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        mostrarGastos(gastos);
-    }, error => console.error("Error al obtener gastos:", error));
 }
 
 
