@@ -71,6 +71,8 @@ sendForApprovalBtn.addEventListener('click', () => guardarIngreso('pendiente'));
 categoryFilter.addEventListener('change', cargarIngresos);
 monthFilter.addEventListener('change', cargarIngresos);
 
+// REEMPLAZAR ESTE LISTENER en empleado_ingresos.app.js
+
 clientSelect.addEventListener('change', async () => {
     if (!adminUidGlobal) return;
     const empresaId = clientSelect.value;
@@ -82,7 +84,14 @@ clientSelect.addEventListener('change', async () => {
         return;
     }
 
-    const proyectosSnapshot = await db.collection('proyectos').where('empresaId', '==', empresaId).where('status', '==', 'activo').get();
+    // --- LA LÍNEA CORREGIDA ---
+    // Añadimos .where('adminUid', '==', adminUidGlobal) a la consulta
+    const proyectosSnapshot = await db.collection('proyectos')
+        .where('adminUid', '==', adminUidGlobal) // <--- ¡ESTA LÍNEA FALTABA!
+        .where('empresaId', '==', empresaId)
+        .where('status', '==', 'activo')
+        .get();
+        
     if (proyectosSnapshot.empty) {
         projectSelect.innerHTML = '<option value="">Este cliente no tiene proyectos activos</option>';
     } else {
@@ -378,22 +387,38 @@ function poblarFiltrosYCategorias() {
     formPaymentMethodSelect.innerHTML = paymentOptionsHTML;
 }
 
-function cargarIngresos() {
-    const user = auth.currentUser;
-    if (!user) return;
-    let query = db.collection('ingresos').where('creadoPor', '==', user.uid);
+// REEMPLAZAR ESTA FUNCIÓN en empleado_ingresos.app.js
 
-    if (categoryFilter.value && categoryFilter.value !== 'todos') {
-        query = query.where('categoria', '==', categoryFilter.value);
+async function cargarIngresos() {
+    const user = auth.currentUser;
+    if (!user || !adminUidGlobal) return; // Usamos el adminUidGlobal
+
+    try {
+        // 1. Llamamos a la Cloud Function
+        const obtenerHistorial = functions.httpsCallable('obtenerHistorialIngresos');
+        // Asumimos que la función del admin también espera un 'rol', aunque no lo usemos para filtrar
+        const resultado = await obtenerHistorial({ adminUid: adminUidGlobal, rol: 'empleado' });
+
+        // 2. Filtramos los resultados para mostrar SOLO los de este empleado
+        const misIngresos = resultado.data.ingresos.filter(ingreso => ingreso.creadorId === user.uid);
+
+        // 3. Aplicamos los filtros de categoría y mes
+        let ingresosFiltrados = [...misIngresos];
+
+        if (categoryFilter.value && categoryFilter.value !== 'todos') {
+            ingresosFiltrados = ingresosFiltrados.filter(i => i.categoria === categoryFilter.value);
+        }
+        if (monthFilter.value && monthFilter.value !== 'todos') {
+            const [year, month] = monthFilter.value.split('-').map(Number);
+            const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
+            const endDate = new Date(year, month, 0, 23, 59, 59).toISOString().split('T')[0];
+            ingresosFiltrados = ingresosFiltrados.filter(i => i.fecha >= startDate && i.fecha <= endDate);
+        }
+
+        mostrarIngresos(ingresosFiltrados);
+
+    } catch (error) {
+        console.error("Error al obtener ingresos desde Cloud Function:", error);
+        incomeListContainer.innerHTML = '<p>Ocurrió un error al cargar el historial.</p>';
     }
-    if (monthFilter.value && monthFilter.value !== 'todos') {
-        const [year, month] = monthFilter.value.split('-').map(Number);
-        const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
-        const endDate = new Date(year, month, 0, 23, 59, 59).toISOString().split('T')[0];
-        query = query.where('fecha', '>=', startDate).where('fecha', '<=', endDate);
-    }
-    query.orderBy('fecha', 'desc').onSnapshot(snapshot => {
-        const ingresos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        mostrarIngresos(ingresos);
-    }, error => console.error("Error al obtener ingresos:", error));
 }
