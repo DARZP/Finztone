@@ -101,7 +101,6 @@ async function cargarDatosPerfil() {
         console.error("Error al actualizar el sueldo:", error);
         alert("Ocurrió un error al guardar el cambio.");
     }
-});
 
 editDeductionsBtn.addEventListener('click', () => {
     window.location.href = `editar_deducciones.html?id=${userId}`;
