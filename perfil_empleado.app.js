@@ -227,7 +227,7 @@ async function descargarRegistrosColaborador() {
         console.error("Error al descargar registros del colaborador:", error);
         alert("Ocurrió un error al generar el reporte.");
     }
-
+}
     activityFeed.addEventListener('click', (e) => {
     // We only react to clicks on the summary part, ignoring links
     const summary = e.target.closest('.item-summary-clickable');
