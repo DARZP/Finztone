@@ -107,24 +107,6 @@ editDeductionsBtn.addEventListener('click', () => {
     window.location.href = `editar_deducciones.html?id=${userId}`;
 });
 
-async function cargarDatosPerfil() {
-    if (!userId) return;
-    try {
-        const userDoc = await db.collection('usuarios').doc(userId).get();
-        if (userDoc.exists) {
-            currentUserData = userDoc.data();
-            profileName.textContent = currentUserData.nombre;
-            profileEmail.textContent = currentUserData.email;
-            profilePosition.textContent = currentUserData.cargo || 'No disponible';
-            // ... (rest of your profile data population)
-        } else {
-            profileName.textContent = "Usuario no encontrado";
-        }
-    } catch (error) {
-        console.error("Error cargando datos del perfil:", error);
-    }
-}
-
 async function cargarActividad() {
     const viewer = auth.currentUser;
     if (!userId || !viewer) return;
