@@ -24,18 +24,20 @@ const clientSelect = document.getElementById('client-select');
 const projectSelect = document.getElementById('project-select');
 const receiptFileInput = document.getElementById('receipt-file');
 
+// --- NUEVOS ELEMENTOS DEL DOM PARA BORRADORES ---
+const draftsSection = document.getElementById('drafts-section');
+const draftsListContainer = document.getElementById('drafts-list');
+
+// --- VARIABLES GLOBALES ---
 let empresasCargadas = [];
 let modoEdicion = false;
 let idIngresoEditando = null;
-let listaDeBorradores = []; // Para guardar los borradores cargados
-const draftsSection = document.getElementById('drafts-section');
-const draftsListContainer = document.getElementById('drafts-list');
 let adminUidGlobal = null;
+let listaDeBorradores = []; // <--- NUEVA
 
 // --- LÓGICA DE LA PÁGINA ---
 auth.onAuthStateChanged(async (user) => {
     if (user) {
-        // Obtenemos el perfil del usuario UNA SOLA VEZ al cargar la página
         try {
             const userProfileQuery = await db.collection('usuarios').where('email', '==', user.email).limit(1).get();
             if (userProfileQuery.empty) throw "Perfil de usuario no encontrado.";
@@ -43,13 +45,12 @@ auth.onAuthStateChanged(async (user) => {
             adminUidGlobal = userProfileQuery.docs[0].data().adminUid;
             if (!adminUidGlobal) throw "El empleado no está vinculado a un administrador.";
 
-            // Ahora que tenemos el adminUid, cargamos el resto
             cargarClientesYProyectos();
             poblarFiltrosYCategorias();
             cargarIngresos();
             cargarImpuestosParaSeleccion();
             recalcularTotales();
-            cargarBorradores();
+            cargarBorradores(); // <--- NUEVA LLAMADA
 
         } catch (error) {
             console.error("Error crítico al cargar datos iniciales:", error);
@@ -60,6 +61,7 @@ auth.onAuthStateChanged(async (user) => {
     }
 });
 
+// --- LISTENERS ---
 addTaxesCheckbox.addEventListener('change', () => {
     taxesDetailsContainer.style.display = addTaxesCheckbox.checked ? 'block' : 'none';
     recalcularTotales();
@@ -75,8 +77,6 @@ sendForApprovalBtn.addEventListener('click', () => guardarIngreso('pendiente'));
 categoryFilter.addEventListener('change', cargarIngresos);
 monthFilter.addEventListener('change', cargarIngresos);
 
-// REEMPLAZAR ESTE LISTENER en empleado_ingresos.app.js
-
 clientSelect.addEventListener('change', async () => {
     if (!adminUidGlobal) return;
     const empresaId = clientSelect.value;
@@ -88,10 +88,9 @@ clientSelect.addEventListener('change', async () => {
         return;
     }
 
-    // --- LA LÍNEA CORREGIDA ---
-    // Añadimos .where('adminUid', '==', adminUidGlobal) a la consulta
+    // (Código ya corregido en el turno anterior)
     const proyectosSnapshot = await db.collection('proyectos')
-        .where('adminUid', '==', adminUidGlobal) // <--- ¡ESTA LÍNEA FALTABA!
+        .where('adminUid', '==', adminUidGlobal)
         .where('empresaId', '==', empresaId)
         .where('status', '==', 'activo')
         .get();
@@ -106,6 +105,8 @@ clientSelect.addEventListener('change', async () => {
         projectSelect.disabled = false;
     }
 });
+
+// --- FUNCIONES ---
 
 async function cargarClientesYProyectos() {
     if (!adminUidGlobal) return;
@@ -127,7 +128,7 @@ function generarFolio(userId) {
 }
 
 async function cargarImpuestosParaSeleccion() {
-    if (!adminUidGlobal) return; // Usamos la variable global
+    if (!adminUidGlobal) return;
     const snapshot = await db.collection('impuestos_definiciones').where('adminUid', '==', adminUidGlobal).get();
     taxesChecklistContainer.innerHTML = '';
     if (snapshot.empty) {
@@ -227,7 +228,6 @@ async function guardarIngreso(status) {
     sendForApprovalBtn.textContent = 'Enviando...';
 
     try {
-        // --- LÓGICA DE SUBIDA DE ARCHIVO ---
         let comprobanteURL = '';
         const file = receiptFileInput.files[0];
 
@@ -250,7 +250,6 @@ async function guardarIngreso(status) {
             comprobanteURL = await fileRef.getDownloadURL();
         }
 
-        // --- Lógica para guardar el registro en Firestore (no cambia) ---
         const userProfileQuery = await db.collection('usuarios').where('email', '==', user.email).limit(1).get();
         if (userProfileQuery.empty) throw new Error("No se pudo encontrar el perfil del usuario.");
         const userProfileDoc = userProfileQuery.docs[0];
@@ -290,7 +289,7 @@ async function guardarIngreso(status) {
             adminUid: adminUid,
             proyectoId: proyectoIdSeleccionado,
             proyectoNombre: proyectoIdSeleccionado ? projectSelect.options[projectSelect.selectedIndex].text : '',
-            comprobanteURL: comprobanteURL, // Guardamos la URL
+            comprobanteURL: comprobanteURL,
         };
 
         if (isInvoiceCheckbox.checked) {
@@ -338,7 +337,9 @@ function mostrarIngresos(ingresos) {
         itemContainer.classList.add('expense-item');
         itemContainer.dataset.id = ingreso.id;
         const fechaFormateada = new Date(ingreso.fecha.replace(/-/g, '/')).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
-        const botonEditarHTML = ingreso.status === 'borrador' ? `<button class="btn-edit" data-id="${ingreso.id}">Editar</button>` : '';
+        
+        // (Botón de editar quitado de aquí)
+        
         itemContainer.innerHTML = `
             <div class="item-summary">
                 <div class="expense-info">
@@ -347,19 +348,9 @@ function mostrarIngresos(ingresos) {
                 </div>
                 <div class="status-display status-${ingreso.status}">${ingreso.status}</div>
                 <span class="expense-amount">$${(ingreso.totalConImpuestos || ingreso.monto).toLocaleString('es-MX')}</span>
-                ${botonEditarHTML}
             </div>
             <div class="item-details" style="display: none;"></div>`;
         incomeListContainer.appendChild(itemContainer);
-    });
-    document.querySelectorAll('.btn-edit').forEach(button => {
-        button.addEventListener('click', (e) => {
-            const ingresoId = e.currentTarget.dataset.id;
-            const ingresoAEditar = ingresos.find(i => i.id === ingresoId);
-            if (ingresoAEditar) {
-                cargarIngresoEnFormulario(ingresoAEditar);
-            }
-        });
     });
 }
 
@@ -391,22 +382,18 @@ function poblarFiltrosYCategorias() {
     formPaymentMethodSelect.innerHTML = paymentOptionsHTML;
 }
 
-// REEMPLAZAR ESTA FUNCIÓN en empleado_ingresos.app.js
-
+// (Función cargarIngresos modificada en el turno anterior para usar Cloud Function)
 async function cargarIngresos() {
     const user = auth.currentUser;
-    if (!user || !adminUidGlobal) return; // Usamos el adminUidGlobal
+    if (!user || !adminUidGlobal) return;
 
     try {
-        // 1. Llamamos a la Cloud Function
         const obtenerHistorial = functions.httpsCallable('obtenerHistorialIngresos');
-        // Asumimos que la función del admin también espera un 'rol', aunque no lo usemos para filtrar
         const resultado = await obtenerHistorial({ adminUid: adminUidGlobal, rol: 'empleado' });
 
-        // 2. Filtramos los resultados para mostrar SOLO los de este empleado
-        const misIngresos = resultado.data.ingresos.filter(ingreso => ingreso.creadorId === user.uid);
+        // Filtramos solo los de este empleado Y que NO sean borradores
+        const misIngresos = resultado.data.ingresos.filter(ingreso => ingreso.creadorId === user.uid && ingreso.status !== 'borrador');
 
-        // 3. Aplicamos los filtros de categoría y mes
         let ingresosFiltrados = [...misIngresos];
 
         if (categoryFilter.value && categoryFilter.value !== 'todos') {
@@ -427,20 +414,24 @@ async function cargarIngresos() {
     }
 }
 
-// =========== FUNCIONES NUEVAS PARA BORRADORES ===========
+// =========== FUNCIONES NUEVAS PARA BORRADORES (EMPLEADO) ===========
 
 function cargarBorradores() {
     const user = auth.currentUser;
-    if (!user) return;
+    // ¡Usamos las variables globales!
+    if (!user || !adminUidGlobal) return;
 
-    // Consultamos solo los gastos creados por este usuario que sean borradores
-    db.collection('ingresos')
+    db.collection('ingresos') // <--- Colección 'ingresos'
+        .where('adminUid', '==', adminUidGlobal) // <--- LA CORRECCIÓN CLAVE
         .where('creadoPor', '==', user.uid)
         .where('status', '==', 'borrador')
         .orderBy('fechaDeCreacion', 'desc')
         .onSnapshot(snapshot => {
             listaDeBorradores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             mostrarBorradores();
+        }, error => {
+            console.error("Error al cargar borradores (revisa tus reglas de Firestore):", error);
+            draftsSection.style.display = 'none';
         });
 }
 
@@ -449,7 +440,7 @@ function mostrarBorradores() {
         draftsSection.style.display = 'none';
         return;
     }
-
+    
     draftsSection.style.display = 'block';
     draftsListContainer.innerHTML = '';
 
@@ -480,8 +471,7 @@ draftsListContainer.addEventListener('click', async (e) => {
     if (e.target.classList.contains('btn-edit')) {
         const draftAEditar = listaDeBorradores.find(d => d.id === draftId);
         if (draftAEditar) {
-            // Usamos la función que ya tenías para cargar datos en el formulario
-            cargarIngresoEnFormulario(draftAEditar);
+            cargarIngresoEnFormulario(draftAEditar); // Usamos la función existente
         }
     }
 
@@ -489,9 +479,12 @@ draftsListContainer.addEventListener('click', async (e) => {
     if (e.target.classList.contains('btn-delete')) {
         if (confirm('¿Estás seguro de que quieres eliminar este borrador?')) {
             try {
-                await db.collection('ingresos').doc(draftId).delete();
+                await db.collection('ingresos').doc(draftId).delete(); // <--- Colección 'ingresos'
                 alert('Borrador eliminado.');
-                // No necesitas recargar, el 'onSnapshot' de cargarBorradores lo hará solo.
+                // Salimos del modo edición si estábamos editando este borrador
+                if (modoEdicion && idIngresoEditando === draftId) {
+                    salirModoEdicion();
+                }
             } catch (error) {
                 console.error("Error al borrar borrador:", error);
                 alert('No se pudo eliminar el borrador.');
