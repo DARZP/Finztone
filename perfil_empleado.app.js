@@ -110,22 +110,24 @@ async function cargarActividad() {
     const adminUid = viewerData.adminUid || viewer.uid;
 
     try {
-        const gastosPromise = db.collection('gastos').where('adminUid', '==', adminUid).where('creadorId', '==', userId).get();
-        const ingresosPromise = db.collection('ingresos').where('adminUid', '==', adminUid).where('creadorId', '==', userId).get();
-        const nominaPromise = db.collection('pagos_nomina').where('adminUid', '==', adminUid).where('userId', '==', userId).get();
-        
-        const [gastosSnapshot, ingresosSnapshot, nominaSnapshot] = await Promise.all([gastosPromise, ingresosPromise, nominaSnapshot]);
+    const gastosPromise = db.collection('gastos').where('adminUid', '==', adminUid).where('creadorId', '==', userId).get();
+    const ingresosPromise = db.collection('ingresos').where('adminUid', '==', adminUid).where('creadorId', '==', userId).get();
+    const nominaPromise = db.collection('pagos_nomina').where('adminUid', '==', adminUid).where('userId', '==', userId).get();
+    
+    // --- LA LÍNEA CORREGIDA ---
+    // Cambiamos 'nominaSnapshot' por 'nominaPromise' dentro del array.
+    const [gastosSnapshot, ingresosSnapshot, nominaSnapshot] = await Promise.all([gastosPromise, ingresosPromise, nominaPromise]);
 
-        // Reset the global array
-        todosLosMovimientos = [];
-        gastosSnapshot.forEach(doc => todosLosMovimientos.push({ id: doc.id, tipo: 'Gasto', ...doc.data() }));
-        ingresosSnapshot.forEach(doc => todosLosMovimientos.push({ id: doc.id, tipo: 'Ingreso', ...doc.data() }));
-        nominaSnapshot.forEach(doc => todosLosMovimientos.push({ id: doc.id, tipo: 'Nómina', ...doc.data() }));
+    // El resto de tu código ya es correcto
+    todosLosMovimientos = [];
+    gastosSnapshot.forEach(doc => todosLosMovimientos.push({ id: doc.id, tipo: 'Gasto', ...doc.data() }));
+    ingresosSnapshot.forEach(doc => todosLosMovimientos.push({ id: doc.id, tipo: 'Ingreso', ...doc.data() }));
+    nominaSnapshot.forEach(doc => todosLosMovimientos.push({ id: doc.id, tipo: 'Nómina', ...doc.data() }));
 
-        if (todosLosMovimientos.length === 0) {
-            activityFeed.innerHTML = '<p>Este empleado no tiene actividad reciente.</p>';
-            return;
-        }
+    if (todosLosMovimientos.length === 0) {
+        activityFeed.innerHTML = '<p>Este empleado no tiene actividad reciente.</p>';
+        return;
+    }
 
         todosLosMovimientos.sort((a, b) => {
             const dateA = a.fechaDePago?.toDate() || a.fechaDeCreacion?.toDate() || new Date(a.fecha?.replace(/-/g, '/')) || 0;
