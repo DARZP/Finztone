@@ -21,6 +21,7 @@ const profileNetSalary = document.getElementById('profile-net-salary');
 const downloadEmployeeRecordsBtn = document.getElementById('download-employee-records-btn');
 
 let currentUserData = null;
+let todosLosMovimientos = [];
 
 // --- LÓGICA PRINCIPAL ---
 auth.onAuthStateChanged(async (user) => {
@@ -97,6 +98,29 @@ async function cargarDatosPerfil() {
             profileName.textContent = "Usuario no encontrado";
         }
     } catch (error) {
+        console.error("Error al actualizar el sueldo:", error);
+        alert("Ocurrió un error al guardar el cambio.");
+    }
+});
+
+editDeductionsBtn.addEventListener('click', () => {
+    window.location.href = `editar_deducciones.html?id=${userId}`;
+});
+
+async function cargarDatosPerfil() {
+    if (!userId) return;
+    try {
+        const userDoc = await db.collection('usuarios').doc(userId).get();
+        if (userDoc.exists) {
+            currentUserData = userDoc.data();
+            profileName.textContent = currentUserData.nombre;
+            profileEmail.textContent = currentUserData.email;
+            profilePosition.textContent = currentUserData.cargo || 'No disponible';
+            // ... (rest of your profile data population)
+        } else {
+            profileName.textContent = "Usuario no encontrado";
+        }
+    } catch (error) {
         console.error("Error cargando datos del perfil:", error);
     }
 }
@@ -118,10 +142,10 @@ async function cargarActividad() {
             gastosPromise, ingresosPromise, nominaPromise
         ]);
 
-        let todosLosMovimientos = [];
-        gastosSnapshot.forEach(doc => todosLosMovimientos.push({ tipo: 'Gasto', ...doc.data() }));
-        ingresosSnapshot.forEach(doc => todosLosMovimientos.push({ tipo: 'Ingreso', ...doc.data() }));
-        nominaSnapshot.forEach(doc => todosLosMovimientos.push({ tipo: 'Nómina', ...doc.data() }));
+        todosLosMovimientos = [];
+        gastosSnapshot.forEach(doc => todosLosMovimientos.push({ id: doc.id, tipo: 'Gasto', ...doc.data() }));
+        ingresosSnapshot.forEach(doc => todosLosMovimientos.push({ id: doc.id, tipo: 'Ingreso', ...doc.data() }));
+        nominaSnapshot.forEach(doc => todosLosMovimientos.push({ id: doc.id, tipo: 'Nómina', ...doc.data() }));
 
         if (todosLosMovimientos.length === 0) {
             activityFeed.innerHTML = '<p>Este empleado no tiene actividad reciente.</p>';
@@ -141,9 +165,22 @@ async function cargarActividad() {
             const descripcion = mov.descripcion || `Pago de nómina (${mov.periodo})`;
             const itemElement = document.createElement('div');
             itemElement.classList.add('activity-feed-item');
+            // **CHANGE 1: Add a data-id attribute to link the HTML to the data**
+            itemElement.dataset.movId = mov.id; 
             const signo = (mov.tipo === 'Gasto' || mov.tipo === 'Nómina') ? '-' : '+';
             const iconoComprobante = mov.comprobanteURL ? `<a href="${mov.comprobanteURL}" target="_blank" title="Ver comprobante" style="text-decoration: none; font-size: 1.1em; margin-left: 8px;">📎</a>` : '';
-            itemElement.innerHTML = `<div class="item-info"><span class="item-description">${descripcion} (${mov.tipo})${iconoComprobante}</span><span class="item-details">${fecha} - Estado: ${mov.status || 'Pagado'}</span></div><span class="item-amount">${signo}$${monto.toLocaleString('es-MX')}</span>`;
+            
+            // **CHANGE 2: Add a container for the details**
+            itemElement.innerHTML = `
+                <div class="item-summary-clickable">
+                    <div class="item-info">
+                        <span class="item-description">${descripcion} (${mov.tipo})${iconoComprobante}</span>
+                        <span class="item-details">${fecha} - Estado: ${mov.status || 'Pagado'}</span>
+                    </div>
+                    <span class="item-amount">${signo}$${monto.toLocaleString('es-MX')}</span>
+                </div>
+                <div class="item-details-view" style="display: none;"></div>
+            `;
             activityFeed.appendChild(itemElement);
         });
     } catch (error) {
@@ -190,4 +227,49 @@ async function descargarRegistrosColaborador() {
         console.error("Error al descargar registros del colaborador:", error);
         alert("Ocurrió un error al generar el reporte.");
     }
-}
+
+    activityFeed.addEventListener('click', (e) => {
+    // We only react to clicks on the summary part, ignoring links
+    const summary = e.target.closest('.item-summary-clickable');
+    if (!summary || e.target.tagName === 'A') return;
+
+    const itemElement = summary.closest('.activity-feed-item');
+    const detailsContainer = itemElement.querySelector('.item-details-view');
+    const movId = itemElement.dataset.movId;
+    
+    // Find the data for the clicked item from our global array
+    const mov = todosLosMovimientos.find(m => m.id === movId);
+
+    if (!detailsContainer || !mov) return;
+
+    const isVisible = detailsContainer.style.display === 'block';
+
+    if (isVisible) {
+        detailsContainer.style.display = 'none';
+    } else {
+        // Build the details HTML
+        let detailsHTML = '';
+
+        if (mov.empresa) {
+            detailsHTML += `<p><strong>Empresa:</strong> ${mov.empresa}</p>`;
+        }
+        if (mov.proyectoNombre) {
+            detailsHTML += `<p><strong>Proyecto:</strong> ${mov.proyectoNombre}</p>`;
+        }
+
+        if (mov.impuestos && mov.impuestos.length > 0) {
+            detailsHTML += '<h4>Impuestos Desglosados</h4>';
+            mov.impuestos.forEach(imp => {
+                const montoImpuesto = imp.tipo === 'porcentaje' ? (mov.monto * imp.valor) / 100 : imp.valor;
+                detailsHTML += `<div class="tax-line"><span>- ${imp.nombre}</span><span>$${montoImpuesto.toLocaleString('es-MX')}</span></div>`;
+            });
+        }
+
+        if (!detailsHTML) {
+            detailsHTML = '<p>No hay detalles adicionales para este registro.</p>';
+        }
+
+        detailsContainer.innerHTML = detailsHTML;
+        detailsContainer.style.display = 'block';
+    }
+});
