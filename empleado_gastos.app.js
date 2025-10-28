@@ -24,13 +24,16 @@ const expensePlaceInput = document.getElementById('expense-place');
 const clientSelect = document.getElementById('client-select');
 const projectSelect = document.getElementById('project-select');
 
+// --- NUEVOS ELEMENTOS DEL DOM PARA BORRADORES ---
+const draftsSection = document.getElementById('drafts-section');
+const draftsListContainer = document.getElementById('drafts-list');
+
+// --- VARIABLES GLOBALES ---
 let empresasCargadas = [];
 let modoEdicion = false;
 let idGastoEditando = null;
-let listaDeBorradores = []; // Para guardar los borradores cargados
-const draftsSection = document.getElementById('drafts-section');
-const draftsListContainer = document.getElementById('drafts-list');
 let adminUidGlobal = null;
+let listaDeBorradores = []; // <--- NUEVA
 
 // --- LÓGICA DE LA PÁGINA ---
 auth.onAuthStateChanged(async (user) => {
@@ -47,7 +50,7 @@ auth.onAuthStateChanged(async (user) => {
             cargarGastos();
             cargarImpuestosParaSeleccion();
             recalcularTotales();
-            cargarBorradores();
+            cargarBorradores(); // <--- NUEVA LLAMADA
 
         } catch (error) {
             console.error("Error crítico al cargar datos iniciales:", error);
@@ -227,7 +230,6 @@ function salirModoEdicion() {
     idGastoEditando = null;
 }
 
-// Esta es la versión final y correcta de guardarGasto
 async function guardarGasto(status) {
     const user = auth.currentUser;
     if (!user || !adminUidGlobal) {
@@ -248,8 +250,6 @@ async function guardarGasto(status) {
 
         if (file) {
             alert('Subiendo archivo...');
-            
-            // 1. Llamamos a la función para obtener la URL de subida y la ruta del archivo
             const generarUrl = functions.httpsCallable('generarUrlDeSubida');
             const urlResult = await generarUrl({ fileName: file.name, contentType: file.type });
             const { uploadUrl, filePath } = urlResult.data;
@@ -258,7 +258,6 @@ async function guardarGasto(status) {
                 throw new Error("La Cloud Function no devolvió la ruta del archivo (filePath).");
             }
 
-            // 2. Subimos el archivo a la URL de subida
             const uploadResponse = await fetch(uploadUrl, {
                 method: 'PUT',
                 headers: { 'Content-Type': file.type },
@@ -269,18 +268,15 @@ async function guardarGasto(status) {
                 throw new Error('La subida del archivo a Cloud Storage falló.');
             }
             
-            // 3. AHORA SÍ: Usamos el filePath devuelto para obtener la URL de descarga final
             const fileRef = firebase.storage().ref(filePath);
             comprobanteURL = await fileRef.getDownloadURL();
         }
 
-        // --- El resto de la función para guardar en Firestore no cambia ---
         const userProfileQuery = await db.collection('usuarios').where('email', '==', user.email).limit(1).get();
         if (userProfileQuery.empty) throw "No se pudo encontrar el perfil del usuario.";
         const userProfileDoc = userProfileQuery.docs[0];
         const userName = userProfileDoc.data().nombre;
 
-        // ... (El resto del código que recopila los datos del formulario no cambia) ...
         let montoNeto = montoBruto;
         const impuestosSeleccionados = [];
         if (addTaxesCheckbox.checked) {
@@ -311,7 +307,7 @@ async function guardarGasto(status) {
             nombreCreador: userName,
             creadorId: userProfileDoc.id,
             adminUid: adminUidGlobal,
-            comprobanteURL: comprobanteURL, 
+            comprobanteURL: comprobanteURL,
         };
         if (isInvoiceCheckbox.checked) {
             expenseData.datosFactura = {
@@ -360,7 +356,10 @@ function mostrarGastos(gastos) {
         itemContainer.classList.add('expense-item');
         itemContainer.dataset.id = gasto.id;
         const fechaFormateada = new Date(gasto.fecha.replace(/-/g, '/')).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
-        const botonEditarHTML = gasto.status === 'borrador' ? `<button class="btn-edit" data-id="${gasto.id}">Editar</button>` : '';
+        
+        // (Quitamos el botón de editar de aquí, ya que ahora estará en la sección de borradores)
+        // const botonEditarHTML = gasto.status === 'borrador' ? `<button class="btn-edit" data-id="${gasto.id}">Editar</button>` : '';
+        
         itemContainer.innerHTML = `
             <div class="item-summary">
                 <div class="expense-info">
@@ -369,21 +368,13 @@ function mostrarGastos(gastos) {
                 </div>
                 <div class="status-display status-${gasto.status}">${gasto.status}</div>
                 <span class="expense-amount">$${(gasto.totalConImpuestos || gasto.monto).toLocaleString('es-MX')}</span>
-                ${botonEditarHTML}
             </div>
-            <div class="item-details" style="display: none;"></div>
-        `;
+            <div class="item-details" style="display: none;"></div>`;
         expenseListContainer.appendChild(itemContainer);
     });
-    document.querySelectorAll('.btn-edit').forEach(button => {
-        button.addEventListener('click', (e) => {
-            const gastoId = e.currentTarget.dataset.id;
-            const gastoAEditar = gastos.find(g => g.id === gastoId);
-            if (gastoAEditar) {
-                cargarGastoEnFormulario(gastoAEditar);
-            }
-        });
-    });
+    
+    // (Este listener ya no es necesario si quitamos el botón de editar de la lista principal)
+    // document.querySelectorAll('.btn-edit').forEach(button => { ... });
 }
 
 function poblarFiltrosYCategorias() {
@@ -406,19 +397,18 @@ function poblarFiltrosYCategorias() {
     formCategorySelect.innerHTML = formOptionsHTML;
 }
 
+// (Función cargarGastos modificada en el turno anterior para usar Cloud Function)
 async function cargarGastos() {
     const user = auth.currentUser;
-    if (!user || !adminUidGlobal) return; // Usamos el adminUidGlobal que ya se cargó
+    if (!user || !adminUidGlobal) return; 
 
     try {
-        // 1. Llamamos a la Cloud Function que ya usan los Admins
         const obtenerHistorial = functions.httpsCallable('obtenerHistorialGastos');
         const resultado = await obtenerHistorial({ adminUid: adminUidGlobal });
 
-        // 2. Filtramos los resultados para mostrar SOLO los de este empleado
-        const misGastos = resultado.data.gastos.filter(gasto => gasto.creadorId === user.uid);
+        // Filtramos solo los de este empleado Y que NO sean borradores
+        const misGastos = resultado.data.gastos.filter(gasto => gasto.creadorId === user.uid && gasto.status !== 'borrador');
 
-        // 3. Aplicamos los filtros de categoría y mes (¡sobre la lista ya filtrada!)
         let gastosFiltrados = [...misGastos];
 
         if (categoryFilter.value && categoryFilter.value !== 'todos') {
@@ -439,20 +429,24 @@ async function cargarGastos() {
     }
 }
 
-// =========== FUNCIONES NUEVAS PARA BORRADORES ===========
+// =========== FUNCIONES NUEVAS PARA BORRADORES (EMPLEADO) ===========
 
 function cargarBorradores() {
     const user = auth.currentUser;
-    if (!user) return;
+    // ¡Usamos las variables globales!
+    if (!user || !adminUidGlobal) return;
 
-    // Consultamos solo los gastos creados por este usuario que sean borradores
     db.collection('gastos')
+        .where('adminUid', '==', adminUidGlobal) // <--- LA CORRECCIÓN CLAVE
         .where('creadoPor', '==', user.uid)
         .where('status', '==', 'borrador')
         .orderBy('fechaDeCreacion', 'desc')
         .onSnapshot(snapshot => {
             listaDeBorradores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             mostrarBorradores();
+        }, error => {
+            console.error("Error al cargar borradores (revisa tus reglas de Firestore):", error);
+            draftsSection.style.display = 'none';
         });
 }
 
@@ -461,7 +455,7 @@ function mostrarBorradores() {
         draftsSection.style.display = 'none';
         return;
     }
-
+    
     draftsSection.style.display = 'block';
     draftsListContainer.innerHTML = '';
 
@@ -492,8 +486,7 @@ draftsListContainer.addEventListener('click', async (e) => {
     if (e.target.classList.contains('btn-edit')) {
         const draftAEditar = listaDeBorradores.find(d => d.id === draftId);
         if (draftAEditar) {
-            // Usamos la función que ya tenías para cargar datos en el formulario
-            cargarGastoEnFormulario(draftAEditar);
+            cargarGastoEnFormulario(draftAEditar); // Usamos la función existente
         }
     }
 
@@ -503,7 +496,10 @@ draftsListContainer.addEventListener('click', async (e) => {
             try {
                 await db.collection('gastos').doc(draftId).delete();
                 alert('Borrador eliminado.');
-                // No necesitas recargar, el 'onSnapshot' de cargarBorradores lo hará solo.
+                // Salimos del modo edición si estábamos editando este borrador
+                if (modoEdicion && idGastoEditando === draftId) {
+                    salirModoEdicion();
+                }
             } catch (error) {
                 console.error("Error al borrar borrador:", error);
                 alert('No se pudo eliminar el borrador.');
@@ -511,14 +507,5 @@ draftsListContainer.addEventListener('click', async (e) => {
         }
     }
 });
-
-
-
-
-
-
-
-
-
 
 
