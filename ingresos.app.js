@@ -1,8 +1,8 @@
 import { auth, db, functions, storage } from './firebase-init.js';
 
 // --- ELEMENTOS DEL DOM ---
-const addExpenseForm = document.getElementById('add-expense-form');
-const expenseListContainer = document.getElementById('expense-list');
+const addIncomeForm = document.getElementById('add-income-form');
+const incomeListContainer = document.getElementById('income-list');
 const accountSelectGroup = document.getElementById('account-select-group');
 const isInvoiceCheckbox = document.getElementById('is-invoice');
 const invoiceDetailsContainer = document.getElementById('invoice-details');
@@ -12,11 +12,14 @@ const accountSelect = document.getElementById('account-select');
 const taxesChecklistContainer = document.getElementById('taxes-checklist');
 const saveDraftBtn = document.getElementById('save-draft-btn');
 const addApprovedBtn = document.getElementById('add-approved-btn');
-const formCategorySelect = document.getElementById('expense-category');
+const formCategorySelect = document.getElementById('income-category');
 const addTaxesCheckbox = document.getElementById('add-taxes-checkbox');
 const taxesDetailsContainer = document.getElementById('taxes-details-container');
-const paymentMethodSelect = document.getElementById('payment-method');
-const expensePlaceInput = document.getElementById('expense-place');
+const montoInput = document.getElementById('income-amount');
+const summaryBruto = document.getElementById('summary-bruto');
+const summaryImpuestos = document.getElementById('summary-impuestos');
+const summaryNeto = document.getElementById('summary-neto');
+const incomePlaceInput = document.getElementById('income-place');
 const clientSelect = document.getElementById('client-select');
 const projectSelect = document.getElementById('project-select');
 const receiptFileInput = document.getElementById('receipt-file');
@@ -28,7 +31,7 @@ const draftsListContainer = document.getElementById('drafts-list');
 
 // --- VARIABLES GLOBALES ---
 let empresasCargadas = [];
-let historialDeGastos = [];
+let historialDeIngresos = [];
 let listaDeBorradores = []; // <--- NUEVA
 let adminUidGlobal = null; // <--- NUEVA VARIABLE GLOBAL
 
@@ -56,15 +59,16 @@ auth.onAuthStateChanged(async (user) => {
 
         // --- CAMBIO CLAVE: Usamos la variable global en todas las llamadas ---
         cargarClientesYProyectos(adminUidGlobal);
-        poblarFiltrosYCategorias(); // Esta no necesita adminUid
-        cargarCuentasEnSelector(adminUidGlobal); 
+        poblarFiltrosYCategorias();
+        cargarCuentasEnSelector(adminUidGlobal);
         cargarImpuestosParaSeleccion(adminUidGlobal);
-        cargarGastosAprobados(adminUidGlobal); 
+        cargarIngresosAprobados(adminUidGlobal, userData.rol);
         cargarBorradores(); // <--- NUEVA LLAMADA
-
-        // Listeners para los filtros del historial
-        categoryFilter.onchange = () => filtrarYMostrarGastos();
-        monthFilter.onchange = () => filtrarYMostrarGastos();
+        
+        // Listeners para los filtros
+        categoryFilter.onchange = () => filtrarYMostrarIngresos();
+        monthFilter.onchange = () => filtrarYMostrarIngresos();
+        recalcularTotales();
         
     } else {
         window.location.href = 'index.html';
@@ -76,23 +80,13 @@ addTaxesCheckbox.addEventListener('change', () => {
     taxesDetailsContainer.style.display = addTaxesCheckbox.checked ? 'block' : 'none';
     recalcularTotales();
 });
-
-isInvoiceCheckbox.addEventListener('change', () => {
-    invoiceDetailsContainer.style.display = isInvoiceCheckbox.checked ? 'block' : 'none';
-});
-
-paymentMethodSelect.addEventListener('change', () => {
-    // (Esta función estaba incompleta, la corregimos para que use la variable global)
-    const metodo = paymentMethodSelect.value;
-    if (metodo === 'Tarjeta de Crédito') {
-        cargarCuentasEnSelector(adminUidGlobal, 'credito');
-    } else {
-        cargarCuentasEnSelector(adminUidGlobal, 'debito');
-    }
-});
+isInvoiceCheckbox.addEventListener('change', () => { invoiceDetailsContainer.style.display = isInvoiceCheckbox.checked ? 'block' : 'none'; });
+montoInput.addEventListener('input', recalcularTotales);
+taxesChecklistContainer.addEventListener('change', recalcularTotales);
+saveDraftBtn.addEventListener('click', () => guardarIngresoAdmin('borrador'));
+addApprovedBtn.addEventListener('click', () => guardarIngresoAdmin('aprobado'));
 
 clientSelect.addEventListener('change', async () => {
-    // (Esta función usa 'user.uid' pero debería usar 'adminUidGlobal' para consistencia)
     if (!adminUidGlobal) return;
     const empresaId = clientSelect.value;
     projectSelect.innerHTML = '<option value="">Cargando...</option>';
@@ -101,27 +95,15 @@ clientSelect.addEventListener('change', async () => {
         projectSelect.innerHTML = '<option value="">Selecciona un cliente primero</option>';
         return;
     }
-    const proyectosSnapshot = await db.collection('proyectos')
-        .where('empresaId', '==', empresaId)
-        .where('adminUid', '==', adminUidGlobal) // <--- Corregido
-        .where('status', '==', 'activo')
-        .get();
+    const proyectosSnapshot = await db.collection('proyectos').where('empresaId', '==', empresaId).where('status', '==', 'activo').where('adminUid', '==', adminUidGlobal).get();
     if (proyectosSnapshot.empty) {
         projectSelect.innerHTML = '<option value="">Este cliente no tiene proyectos activos</option>';
     } else {
         projectSelect.innerHTML = '<option value="">Seleccionar Proyecto</option>';
-        proyectosSnapshot.forEach(doc => {
-            projectSelect.innerHTML += `<option value="${doc.id}">${doc.data().nombre}</option>`;
-        });
+        proyectosSnapshot.forEach(doc => { projectSelect.innerHTML += `<option value="${doc.id}">${doc.data().nombre}</option>`; });
         projectSelect.disabled = false;
     }
 });
-
-saveDraftBtn.addEventListener('click', () => guardarGastoAdmin('borrador'));
-addApprovedBtn.addEventListener('click', () => guardarGastoAdmin('aprobado'));
-document.getElementById('expense-amount').addEventListener('input', recalcularTotales);
-taxesChecklistContainer.addEventListener('change', recalcularTotales);
-// (Los listeners de los filtros ya se asignaron en auth.onAuthStateChanged)
 
 // --- FUNCIONES ---
 
@@ -132,76 +114,81 @@ async function cargarClientesYProyectos(adminUid) {
     empresasCargadas.forEach(empresa => { clientSelect.innerHTML += `<option value="${empresa.id}">${empresa.nombre}</option>`; });
 }
 
-function generarFolio(userId) {
-    // (Tu función original estaba incompleta, usamos la de admin)
-    return `EXP-ADM-${userId.substring(0, 4).toUpperCase()}-${Date.now()}`;
-}
+function generarFolio(userId) { return `INC-ADM-${userId.substring(0, 4).toUpperCase()}-${Date.now()}`; }
 
-function cargarCuentasEnSelector(adminUid, tipo = null) {
-    let query = db.collection('cuentas').where('adminUid', '==', adminUid);
-    if (tipo) {
-        query = query.where('tipo', '==', tipo);
-    }
-    query.orderBy('nombre').onSnapshot(snapshot => {
+function cargarCuentasEnSelector(adminUid) {
+    db.collection('cuentas').where('adminUid', '==', adminUid).where('tipo', '==', 'debito').orderBy('nombre').onSnapshot(snapshot => {
         const selectedValue = accountSelect.value;
         accountSelect.innerHTML = '<option value="" disabled selected>Selecciona una cuenta</option>';
         snapshot.forEach(doc => {
             const cuenta = doc.data();
-            const esCredito = cuenta.tipo === 'credito';
-            const etiqueta = esCredito ? 'Crédito' : 'Débito';
-            accountSelect.appendChild(new Option(`${cuenta.nombre} (${etiqueta})`, doc.id));
+            accountSelect.appendChild(new Option(`${cuenta.nombre} (Saldo: $${(cuenta.saldoActual || 0).toLocaleString('es-MX')})`, doc.id));
         });
         accountSelect.value = selectedValue;
     });
 }
 
 async function cargarImpuestosParaSeleccion(adminUid) {
-    const snapshot = await db.collection('impuestos_definiciones').where('adminUid', '==', adminUid).get();
-    taxesChecklistContainer.innerHTML = '';
-    if (snapshot.empty) {
-        taxesChecklistContainer.innerHTML = '<p style="font-size: 0.9em; color: #aeb9c5;">No hay impuestos definidos.</p>';
+    if (!adminUid) {
+        console.error("No se proporcionó un adminUid para cargar los impuestos.");
         return;
     }
-    snapshot.forEach(doc => {
-        const impuesto = { id: doc.id, ...doc.data() };
-        const valorDisplay = impuesto.tipo === 'porcentaje' ? `${impuesto.valor}%` : `$${impuesto.valor}`;
-        const item = document.createElement('div');
-        item.classList.add('tax-item');
-        item.innerHTML = `<label><input type="checkbox" data-impuesto='${JSON.stringify(impuesto)}'> ${impuesto.nombre} (${valorDisplay})</label><span class="calculated-amount"></span>`;
-        taxesChecklistContainer.appendChild(item);
-    });
+    try {
+        const snapshot = await db.collection('impuestos_definiciones')
+            .where('adminUid', '==', adminUid)
+            .get();
+        taxesChecklistContainer.innerHTML = '';
+        if (snapshot.empty) {
+            taxesChecklistContainer.innerHTML = '<p style="font-size: 0.9em; color: #aeb9c5;">No hay impuestos definidos por el administrador.</p>';
+            return;
+        }
+        snapshot.forEach(doc => {
+            const impuesto = { id: doc.id, ...doc.data() };
+            const valorDisplay = impuesto.tipo === 'porcentaje' ? `${impuesto.valor}%` : `$${impuesto.valor}`;
+            const item = document.createElement('div');
+            item.classList.add('tax-item');
+            item.innerHTML = `
+                <label>
+                    <input type="checkbox" data-impuesto='${JSON.stringify(impuesto)}'> 
+                    ${impuesto.nombre} (${valorDisplay})
+                </label>
+                <span class="calculated-amount"></span>
+            `;
+            taxesChecklistContainer.appendChild(item);
+        });
+    } catch (error) {
+        console.error("Error al obtener los impuestos de Firestore:", error);
+        taxesChecklistContainer.innerHTML = '<p style="color:red;">Error al cargar impuestos. Revisa la consola.</p>';
+    }
 }
 
 function recalcularTotales() {
-    const montoBruto = parseFloat(document.getElementById('expense-amount').value) || 0;
+    const montoBruto = parseFloat(montoInput.value) || 0;
     let totalImpuestos = 0;
     document.querySelectorAll('#taxes-checklist input[type="checkbox"]:checked').forEach(checkbox => {
         const impuesto = JSON.parse(checkbox.dataset.impuesto);
         const montoCalculado = impuesto.tipo === 'porcentaje' ? (montoBruto * impuesto.valor) / 100 : impuesto.valor;
         totalImpuestos += montoCalculado;
-        checkbox.closest('.tax-item').querySelector('.calculated-amount').textContent = `$${montoCalculado.toLocaleString('es-MX')}`;
+        checkbox.closest('.tax-item').querySelector('.calculated-amount').textContent = `-$${montoCalculado.toLocaleString('es-MX')}`;
     });
     document.querySelectorAll('#taxes-checklist input[type="checkbox"]:not(:checked)').forEach(checkbox => {
         checkbox.closest('.tax-item').querySelector('.calculated-amount').textContent = '';
     });
-    const montoNeto = montoBruto + totalImpuestos;
-    document.getElementById('summary-bruto').textContent = `$${montoBruto.toLocaleString('es-MX')}`;
-    document.getElementById('summary-impuestos').textContent = `$${totalImpuestos.toLocaleString('es-MX')}`;
-    document.getElementById('summary-neto').textContent = `$${montoNeto.toLocaleString('es-MX')}`;
+    const montoNeto = montoBruto - totalImpuestos;
+    summaryBruto.textContent = `$${montoBruto.toLocaleString('es-MX')}`;
+    summaryImpuestos.textContent = `-$${totalImpuestos.toLocaleString('es-MX')}`;
+    summaryNeto.textContent = `$${montoNeto.toLocaleString('es-MX')}`;
 }
 
-async function guardarGastoAdmin(status) {
+async function guardarIngresoAdmin(status) {
     // (Esta función es larga, pero no necesita cambios, 
     // ya que obtiene el 'adminUid' de forma interna y correcta al 
     // leer el perfil del 'user'. Dejamos tu código original aquí.)
     const user = auth.currentUser;
     if (!user) return alert("Error de autenticación");
 
-    const cuentaId = accountSelect.value;
-    const montoBruto = parseFloat(document.getElementById('expense-amount').value) || 0;
-    if (montoBruto <= 0 && status !== 'borrador') {
-        return alert('Por favor, introduce un monto válido.');
-    }
+    const montoBruto = parseFloat(montoInput.value) || 0;
+    if (montoBruto <= 0) return alert('Por favor, introduce un monto válido.');
 
     saveDraftBtn.disabled = true;
     addApprovedBtn.disabled = true;
@@ -216,8 +203,9 @@ async function guardarGastoAdmin(status) {
             finalStatus = 'pendiente';
         }
 
+        const cuentaId = accountSelect.value;
         if (finalStatus === 'aprobado' && !cuentaId) {
-            throw new Error('Por favor, selecciona una cuenta de origen para un gasto aprobado.');
+            throw new Error('Por favor, selecciona una cuenta de destino para un ingreso aprobado.');
         }
 
         let comprobanteURL = '';
@@ -240,22 +228,22 @@ async function guardarGastoAdmin(status) {
                 impuestosSeleccionados.push(impuesto);
                 totalImpuestos += impuesto.tipo === 'porcentaje' ? (montoBruto * impuesto.valor) / 100 : impuesto.valor;
             });
-            montoNeto = montoBruto + totalImpuestos;
+            montoNeto = montoBruto - totalImpuestos;
         }
         const clienteSeleccionado = empresasCargadas.find(e => e.id === clientSelect.value);
 
-        const expenseData = {
-            descripcion: addExpenseForm['expense-description'].value,
-            establecimiento: expensePlaceInput.value.trim(),
+        const incomeData = {
+            descripcion: addIncomeForm['income-description'].value,
+            establecimiento: incomePlaceInput.value.trim(),
             monto: montoBruto,
             totalConImpuestos: montoNeto,
             impuestos: impuestosSeleccionados,
             categoria: formCategorySelect.value,
-            fecha: addExpenseForm['expense-date'].value,
+            fecha: addIncomeForm['income-date'].value,
             empresa: clienteSeleccionado ? clienteSeleccionado.nombre : '',
-            metodoPago: addExpenseForm['payment-method'].value,
-            comentarios: addExpenseForm['expense-comments'].value,
-            folio: `EXP-ADM-${user.uid.substring(0, 4).toUpperCase()}-${Date.now()}`,
+            metodoPago: addIncomeForm['payment-method'].value,
+            comentarios: addIncomeForm['income-comments'].value,
+            folio: `INC-ADM-${user.uid.substring(0, 4).toUpperCase()}-${Date.now()}`,
             creadoPor: user.uid,
             emailCreador: user.email,
             nombreCreador: userData.nombre,
@@ -269,47 +257,32 @@ async function guardarGastoAdmin(status) {
             proyectoNombre: projectSelect.value ? projectSelect.options[projectSelect.selectedIndex].text : '',
             comprobanteURL: comprobanteURL
         };
-        
+
         if (isInvoiceCheckbox.checked) {
-            expenseData.datosFactura = { rfc: document.getElementById('invoice-rfc').value, folioFiscal: document.getElementById('invoice-folio').value };
+            incomeData.datosFactura = { rfc: document.getElementById('invoice-rfc').value, folioFiscal: document.getElementById('invoice-folio').value };
         }
 
         if (finalStatus === 'borrador' || finalStatus === 'pendiente') {
-            await db.collection('gastos').add(expenseData);
-            alert(finalStatus === 'borrador' ? '¡Borrador guardado!' : '¡Gasto enviado para aprobación!');
-        } else { // Es un admin guardando un gasto aprobado
+            await db.collection('ingresos').add(incomeData);
+            alert(finalStatus === 'borrador' ? '¡Borrador guardado!' : '¡Ingreso enviado para aprobación!');
+        } else { // Es un admin guardando un ingreso aprobado
             const cuentaRef = db.collection('cuentas').doc(cuentaId);
-            const newExpenseRef = db.collection('gastos').doc();
             await db.runTransaction(async (transaction) => {
                 const cuentaDoc = await transaction.get(cuentaRef);
                 if (!cuentaDoc.exists) throw "La cuenta no existe.";
-                const cuentaData = cuentaDoc.data();
-                if (cuentaData.tipo === 'credito') {
-                    transaction.update(cuentaRef, { deudaActual: (cuentaData.deudaActual || 0) + montoNeto, deudaTotal: (cuentaData.deudaTotal || 0) + montoNeto });
-                } else {
-                    if ((cuentaData.saldoActual || 0) < montoNeto) throw "Saldo insuficiente en la cuenta seleccionada.";
-                    transaction.update(cuentaRef, { saldoActual: cuentaData.saldoActual - montoNeto });
-                }
-                transaction.set(newExpenseRef, expenseData);
-                impuestosSeleccionados.forEach(imp => {
-                    const montoImpuesto = imp.tipo === 'porcentaje' ? (montoBruto * imp.valor) / 100 : imp.valor;
-                    const taxMovRef = db.collection('movimientos_impuestos').doc();
-                    transaction.set(taxMovRef, {
-                        origen: `Gasto - ${expenseData.descripcion}`, tipoImpuesto: imp.nombre, monto: montoImpuesto,
-                        fecha: new Date(), status: 'pagado', adminUid: user.uid
-                    });
-                });
+                const nuevoSaldo = (cuentaDoc.data().saldoActual || 0) + montoNeto;
+                const newIncomeRef = db.collection('ingresos').doc();
+                transaction.set(newIncomeRef, incomeData);
+                transaction.update(cuentaRef, { saldoActual: nuevoSaldo });
             });
-            alert('¡Gasto registrado, saldo actualizado e impuestos generados!');
+            alert('¡Ingreso registrado y saldo de cuenta actualizado!');
         }
-
-        addExpenseForm.reset();
+        
+        addIncomeForm.reset();
         clientSelect.dispatchEvent(new Event('change'));
-        isInvoiceCheckbox.checked = false;
-        taxesDetailsContainer.style.display = 'none';
-
+        
     } catch (error) {
-        console.error("Error al guardar el gasto: ", error);
+        console.error("Error al guardar el ingreso:", error);
         alert("Error: " + error.message);
     } finally {
         saveDraftBtn.disabled = false;
@@ -321,7 +294,7 @@ async function guardarGastoAdmin(status) {
             if(userDoc.exists && userDoc.data().rol === 'coadmin') {
                 addApprovedBtn.textContent = 'Enviar para Aprobación';
             } else {
-                addApprovedBtn.textContent = 'Agregar Gasto Aprobado';
+                addApprovedBtn.textContent = 'Agregar Ingreso Aprobado';
             }
         }
     }
@@ -336,7 +309,7 @@ function poblarFiltrosYCategorias() {
         monthFilter.appendChild(new Option(text, value));
         fecha.setMonth(fecha.getMonth() - 1);
     }
-    const categorias = ["Comida", "Transporte", "Oficina", "Marketing", "Impuestos", "Otro"];
+    const categorias = ["Cobro de Factura", "Venta de Producto", "Servicios Profesionales", "Otro"];
     let filterOptionsHTML = '<option value="todos">Todas</option>';
     let formOptionsHTML = '<option value="" disabled selected>Selecciona una categoría</option>';
     categorias.forEach(cat => {
@@ -347,69 +320,74 @@ function poblarFiltrosYCategorias() {
     formCategorySelect.innerHTML = formOptionsHTML;
 }
 
-async function cargarGastosAprobados(adminUid) {
+async function cargarIngresosAprobados(adminUid, rol) {
     if (!adminUid) return;
-    expenseListContainer.innerHTML = '<p>Cargando historial...</p>';
+    incomeListContainer.innerHTML = '<p>Cargando historial...</p>';
 
     try {
-        const obtenerHistorial = functions.httpsCallable('obtenerHistorialGastos');
-        const resultado = await obtenerHistorial({ adminUid: adminUid });
+        const obtenerHistorial = functions.httpsCallable('obtenerHistorialIngresos');
+        const resultado = await obtenerHistorial({ adminUid: adminUid, rol: rol });
         
-        historialDeGastos = resultado.data.gastos; // Guardamos en la variable global
-        filtrarYMostrarGastos(); // Mostramos los resultados
+        historialDeIngresos = resultado.data.ingresos;
+        filtrarYMostrarIngresos();
 
     } catch (error) {
-        console.error("Error al llamar a la función obtenerHistorialGastos:", error);
-        expenseListContainer.innerHTML = `<p style="color:red;">No se pudo cargar el historial: ${error.message}</p>`;
+        console.error("Error al llamar a la función obtenerHistorialIngresos:", error);
+        alert("Error al cargar el historial: " + error.message);
+        incomeListContainer.innerHTML = `<p class="error-message">No se pudo cargar el historial.</p>`;
     }
 }
 
-function filtrarYMostrarGastos() {
-    let gastosFiltrados = [...historialDeGastos];
+function filtrarYMostrarIngresos() {
+    let ingresosFiltrados = [...historialDeIngresos];
 
     const selectedCategory = categoryFilter.value;
     if (selectedCategory && selectedCategory !== 'todos') {
-        gastosFiltrados = gastosFiltrados.filter(g => g.categoria === selectedCategory);
+        ingresosFiltrados = ingresosFiltrados.filter(ing => ing.categoria === selectedCategory);
     }
 
     const selectedMonth = monthFilter.value;
     if (selectedMonth && selectedMonth !== 'todos') {
-        gastosFiltrados = gastosFiltrados.filter(g => g.fecha.startsWith(selectedMonth));
+        ingresosFiltrados = ingresosFiltrados.filter(ing => ing.fecha.startsWith(selectedMonth));
     }
     
-    mostrarGastosAprobados(gastosFiltrados);
+    mostrarIngresosAprobados(ingresosFiltrados);
 }
 
-function mostrarGastosAprobados(gastos) {
-    expenseListContainer.innerHTML = '';
-    if (gastos.length === 0) {
-        expenseListContainer.innerHTML = '<p>No se encontraron gastos con los filtros seleccionados.</p>';
+function mostrarIngresosAprobados(ingresos) {
+    incomeListContainer.innerHTML = '';
+    if (ingresos.length === 0) {
+        incomeListContainer.innerHTML = '<p>No se encontraron ingresos con los filtros seleccionados.</p>';
         return;
     }
-    gastos.forEach(gasto => {
+    ingresos.forEach(ingreso => {
         const itemContainer = document.createElement('div');
         itemContainer.classList.add('expense-item');
-        const fechaFormateada = new Date(gasto.fecha.replace(/-/g, '/')).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
-        const creadorLink = (gasto.nombreCreador !== "Administrador" && gasto.creadorId) ? `<a href="perfil_empleado.html?id=${gasto.creadorId}">${gasto.nombreCreador}</a>` : (gasto.nombreCreador || "Sistema");
-        
+        itemContainer.dataset.id = ingreso.id;
+        const fechaFormateada = new Date(ingreso.fecha.replace(/-/g, '/')).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+        const creadorLink = (ingreso.nombreCreador !== "Administrador" && ingreso.creadorId) ? `<a href="perfil_empleado.html?id=${ingreso.creadorId}">${ingreso.nombreCreador}</a>` : (ingreso.nombreCreador || "Sistema");
+        const iconoComprobante = ingreso.comprobanteURL ? `<a href="${ingreso.comprobanteURL}" target="_blank" title="Ver comprobante" style="text-decoration: none; font-size: 1.1em; margin-left: 8px;">📎</a>` : '';
+
         itemContainer.innerHTML = `
             <div class="item-summary">
                 <div class="expense-info">
-                    <span class="expense-description">${gasto.descripcion}</span>
-                    <span class="expense-details">Registrado por: ${creadorLink} | ${gasto.categoria} - ${fechaFormateada}</span>
+                    <span class="expense-description">${ingreso.descripcion}${iconoComprobante}</span>
+                    <span class="expense-details">Registrado por: ${creadorLink} | ${ingreso.categoria} - ${fechaFormateada}</span>
                 </div>
-                <span class="expense-amount">$${(gasto.totalConImpuestos || gasto.monto).toLocaleString('es-MX')}</span>
-            </div>`;
-        expenseListContainer.appendChild(itemContainer);
+                <span class="expense-amount">$${(ingreso.totalConImpuestos || ingreso.monto).toLocaleString('es-MX')}</span>
+            </div>
+            <div class="item-details" style="display: none;">
+                </div>`;
+        incomeListContainer.appendChild(itemContainer);
     });
 }
 
-expenseListContainer.addEventListener('click', (e) => {
+incomeListContainer.addEventListener('click', (e) => {
     if (e.target.tagName === 'A') return;
     const item = e.target.closest('.expense-item');
     if (item) {
         const details = item.querySelector('.item-details');
-        details.style.display = details.style.display === 'block' ? 'none' : 'block';
+        if(details) details.style.display = details.style.display === 'block' ? 'none' : 'block';
     }
 });
 
@@ -420,7 +398,7 @@ function cargarBorradores() {
     // ¡Usamos las variables globales!
     if (!user || !adminUidGlobal) return;
 
-    db.collection('gastos')
+    db.collection('ingresos') // <--- Colección 'ingresos'
         .where('adminUid', '==', adminUidGlobal) // <--- LA CORRECCIÓN CLAVE
         .where('creadoPor', '==', user.uid)
         .where('status', '==', 'borrador')
@@ -468,7 +446,7 @@ draftsListContainer.addEventListener('click', async (e) => {
     if (e.target.classList.contains('btn-delete')) {
         if (confirm('¿Estás seguro de que quieres eliminar este borrador?')) {
             try {
-                await db.collection('gastos').doc(draftId).delete();
+                await db.collection('ingresos').doc(draftId).delete(); // <--- Colección 'ingresos'
                 alert('Borrador eliminado.');
             } catch (error) {
                 console.error("Error al borrar borrador:", error);
