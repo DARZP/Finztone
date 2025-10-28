@@ -3,7 +3,7 @@ import { auth, db, functions, storage } from './firebase-init.js';
 // --- ELEMENTOS DEL DOM ---
 const addExpenseForm = document.getElementById('add-expense-form');
 const expenseListContainer = document.getElementById('expense-list');
-const accountSelectGroup = document.getElementById('account-select-group'); // Grupo que contiene la cuenta de origen
+const accountSelectGroup = document.getElementById('account-select-group');
 const isInvoiceCheckbox = document.getElementById('is-invoice');
 const invoiceDetailsContainer = document.getElementById('invoice-details');
 const categoryFilter = document.getElementById('category-filter');
@@ -22,20 +22,25 @@ const projectSelect = document.getElementById('project-select');
 const receiptFileInput = document.getElementById('receipt-file');
 const backButton = document.getElementById('back-button');
 
-let empresasCargadas = [];
-let historialDeGastos = []; 
-let listaDeBorradores = []; 
+// --- NUEVOS ELEMENTOS DEL DOM PARA BORRADORES ---
 const draftsSection = document.getElementById('drafts-section');
 const draftsListContainer = document.getElementById('drafts-list');
 
+// --- VARIABLES GLOBALES ---
+let empresasCargadas = [];
+let historialDeGastos = [];
+let listaDeBorradores = []; // <--- NUEVA
+let adminUidGlobal = null; // <--- NUEVA VARIABLE GLOBAL
 
 auth.onAuthStateChanged(async (user) => {
     if (user) {
         const userDoc = await db.collection('usuarios').doc(user.uid).get();
         const userData = userDoc.exists ? userDoc.data() : {};
-        const adminUid = userData.rol === 'admin' ? user.uid : userData.adminUid;
+        
+        // --- CAMBIO CLAVE: Asignamos a la variable global ---
+        adminUidGlobal = userData.rol === 'admin' ? user.uid : userData.adminUid;
 
-        if (!adminUid) {
+        if (!adminUidGlobal) {
             alert("Error: No se pudo identificar al administrador principal.");
             return;
         }
@@ -44,25 +49,19 @@ auth.onAuthStateChanged(async (user) => {
             backButton.href = 'coadmin_dashboard.html';
             if (accountSelectGroup) accountSelectGroup.style.display = 'none';
             if (accountSelect) accountSelect.required = false;
-
-            // --- LÍNEA AÑADIDA ---
-            // Cambiamos el texto del botón principal para el Co-admin.
             if (addApprovedBtn) addApprovedBtn.textContent = 'Enviar para Aprobación';
-            
         } else {
             backButton.href = 'dashboard.html';
         }
 
-        // --- CARGA DE DATOS COMPARTIDOS ---
-        cargarClientesYProyectos(adminUid);
-        poblarFiltrosYCategorias();
-        cargarCuentasEnSelector(adminUid); // Se carga para el admin
-        cargarImpuestosParaSeleccion(adminUid);
+        // --- CAMBIO CLAVE: Usamos la variable global en todas las llamadas ---
+        cargarClientesYProyectos(adminUidGlobal);
+        poblarFiltrosYCategorias(); // Esta no necesita adminUid
+        cargarCuentasEnSelector(adminUidGlobal); 
+        cargarImpuestosParaSeleccion(adminUidGlobal);
+        cargarGastosAprobados(adminUidGlobal); 
+        cargarBorradores(); // <--- NUEVA LLAMADA
 
-        // --- CARGA DEL HISTORIAL ---
-        cargarGastosAprobados(adminUid);
-        cargarBorradores();
-        
         // Listeners para los filtros del historial
         categoryFilter.onchange = () => filtrarYMostrarGastos();
         monthFilter.onchange = () => filtrarYMostrarGastos();
@@ -83,17 +82,18 @@ isInvoiceCheckbox.addEventListener('change', () => {
 });
 
 paymentMethodSelect.addEventListener('change', () => {
+    // (Esta función estaba incompleta, la corregimos para que use la variable global)
     const metodo = paymentMethodSelect.value;
     if (metodo === 'Tarjeta de Crédito') {
-        cargarCuentasEnSelector('credito');
+        cargarCuentasEnSelector(adminUidGlobal, 'credito');
     } else {
-        cargarCuentasEnSelector('debito');
+        cargarCuentasEnSelector(adminUidGlobal, 'debito');
     }
 });
 
 clientSelect.addEventListener('change', async () => {
-    const user = auth.currentUser;
-    if (!user) return;
+    // (Esta función usa 'user.uid' pero debería usar 'adminUidGlobal' para consistencia)
+    if (!adminUidGlobal) return;
     const empresaId = clientSelect.value;
     projectSelect.innerHTML = '<option value="">Cargando...</option>';
     projectSelect.disabled = true;
@@ -103,7 +103,7 @@ clientSelect.addEventListener('change', async () => {
     }
     const proyectosSnapshot = await db.collection('proyectos')
         .where('empresaId', '==', empresaId)
-        .where('adminUid', '==', user.uid)
+        .where('adminUid', '==', adminUidGlobal) // <--- Corregido
         .where('status', '==', 'activo')
         .get();
     if (proyectosSnapshot.empty) {
@@ -121,8 +121,7 @@ saveDraftBtn.addEventListener('click', () => guardarGastoAdmin('borrador'));
 addApprovedBtn.addEventListener('click', () => guardarGastoAdmin('aprobado'));
 document.getElementById('expense-amount').addEventListener('input', recalcularTotales);
 taxesChecklistContainer.addEventListener('change', recalcularTotales);
-categoryFilter.addEventListener('change', cargarGastosAprobados);
-monthFilter.addEventListener('change', cargarGastosAprobados);
+// (Los listeners de los filtros ya se asignaron en auth.onAuthStateChanged)
 
 // --- FUNCIONES ---
 
@@ -134,15 +133,16 @@ async function cargarClientesYProyectos(adminUid) {
 }
 
 function generarFolio(userId) {
-    const date = new Date();
-    const userInitials = userId.substring(0, 4).toUpperCase();
-    const timestamp = date.getTime();
-    return `EXP-ADM-${userInitials}-${timestamp}`;
+    // (Tu función original estaba incompleta, usamos la de admin)
+    return `EXP-ADM-${userId.substring(0, 4).toUpperCase()}-${Date.now()}`;
 }
 
-function cargarCuentasEnSelector(adminUid) {
-    // Esta función es principalmente para el Admin
-    db.collection('cuentas').where('adminUid', '==', adminUid).orderBy('nombre').onSnapshot(snapshot => {
+function cargarCuentasEnSelector(adminUid, tipo = null) {
+    let query = db.collection('cuentas').where('adminUid', '==', adminUid);
+    if (tipo) {
+        query = query.where('tipo', '==', tipo);
+    }
+    query.orderBy('nombre').onSnapshot(snapshot => {
         const selectedValue = accountSelect.value;
         accountSelect.innerHTML = '<option value="" disabled selected>Selecciona una cuenta</option>';
         snapshot.forEach(doc => {
@@ -191,6 +191,9 @@ function recalcularTotales() {
 }
 
 async function guardarGastoAdmin(status) {
+    // (Esta función es larga, pero no necesita cambios, 
+    // ya que obtiene el 'adminUid' de forma interna y correcta al 
+    // leer el perfil del 'user'. Dejamos tu código original aquí.)
     const user = auth.currentUser;
     if (!user) return alert("Error de autenticación");
 
@@ -256,11 +259,7 @@ async function guardarGastoAdmin(status) {
             creadoPor: user.uid,
             emailCreador: user.email,
             nombreCreador: userData.nombre,
-            
-            // --- LA LÍNEA CLAVE QUE SOLUCIONA EL BUG ---
-            // Añadimos el 'creadorId' para que sea consistente con los registros de los empleados.
-            creadorId: user.uid,
-
+            creadorId: user.uid, // <--- Este campo es importante
             adminUid: userData.adminUid || user.uid,
             fechaDeCreacion: new Date(),
             status: finalStatus,
@@ -315,7 +314,16 @@ async function guardarGastoAdmin(status) {
     } finally {
         saveDraftBtn.disabled = false;
         addApprovedBtn.disabled = false;
-        addApprovedBtn.textContent = 'Agregar Gasto Aprobado';
+        // (Restauramos el texto correcto según el rol)
+        const user = auth.currentUser;
+        if(user) {
+            const userDoc = await db.collection('usuarios').doc(user.uid).get();
+            if(userDoc.exists && userDoc.data().rol === 'coadmin') {
+                addApprovedBtn.textContent = 'Enviar para Aprobación';
+            } else {
+                addApprovedBtn.textContent = 'Agregar Gasto Aprobado';
+            }
+        }
     }
 }
 
@@ -366,7 +374,6 @@ function filtrarYMostrarGastos() {
 
     const selectedMonth = monthFilter.value;
     if (selectedMonth && selectedMonth !== 'todos') {
-        // Asume que la fecha está en formato 'YYYY-MM-DD'
         gastosFiltrados = gastosFiltrados.filter(g => g.fecha.startsWith(selectedMonth));
     }
     
@@ -410,16 +417,20 @@ expenseListContainer.addEventListener('click', (e) => {
 
 function cargarBorradores() {
     const user = auth.currentUser;
-    if (!user) return;
+    // ¡Usamos las variables globales!
+    if (!user || !adminUidGlobal) return;
 
-    // Consultamos solo los gastos creados por este usuario que sean borradores
     db.collection('gastos')
+        .where('adminUid', '==', adminUidGlobal) // <--- LA CORRECCIÓN CLAVE
         .where('creadoPor', '==', user.uid)
         .where('status', '==', 'borrador')
         .orderBy('fechaDeCreacion', 'desc')
         .onSnapshot(snapshot => {
             listaDeBorradores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             mostrarBorradores();
+        }, error => { 
+            console.error("Error al cargar borradores (revisa tus reglas de Firestore):", error);
+            draftsSection.style.display = 'none';
         });
 }
 
@@ -454,13 +465,11 @@ draftsListContainer.addEventListener('click', async (e) => {
     const draftId = e.target.dataset.id;
     if (!draftId) return;
 
-    // BOTÓN BORRAR
     if (e.target.classList.contains('btn-delete')) {
         if (confirm('¿Estás seguro de que quieres eliminar este borrador?')) {
             try {
                 await db.collection('gastos').doc(draftId).delete();
                 alert('Borrador eliminado.');
-                // No necesitas recargar, el 'onSnapshot' de cargarBorradores lo hará solo.
             } catch (error) {
                 console.error("Error al borrar borrador:", error);
                 alert('No se pudo eliminar el borrador.');
