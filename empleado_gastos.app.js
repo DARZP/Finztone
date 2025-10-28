@@ -27,6 +27,9 @@ const projectSelect = document.getElementById('project-select');
 let empresasCargadas = [];
 let modoEdicion = false;
 let idGastoEditando = null;
+let listaDeBorradores = []; // Para guardar los borradores cargados
+const draftsSection = document.getElementById('drafts-section');
+const draftsListContainer = document.getElementById('drafts-list');
 let adminUidGlobal = null;
 
 // --- LÓGICA DE LA PÁGINA ---
@@ -44,6 +47,7 @@ auth.onAuthStateChanged(async (user) => {
             cargarGastos();
             cargarImpuestosParaSeleccion();
             recalcularTotales();
+            cargarBorradores();
 
         } catch (error) {
             console.error("Error crítico al cargar datos iniciales:", error);
@@ -434,6 +438,80 @@ async function cargarGastos() {
         expenseListContainer.innerHTML = '<p>Ocurrió un error al cargar el historial.</p>';
     }
 }
+
+// =========== FUNCIONES NUEVAS PARA BORRADORES ===========
+
+function cargarBorradores() {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    // Consultamos solo los gastos creados por este usuario que sean borradores
+    db.collection('gastos')
+        .where('creadoPor', '==', user.uid)
+        .where('status', '==', 'borrador')
+        .orderBy('fechaDeCreacion', 'desc')
+        .onSnapshot(snapshot => {
+            listaDeBorradores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            mostrarBorradores();
+        });
+}
+
+function mostrarBorradores() {
+    if (listaDeBorradores.length === 0) {
+        draftsSection.style.display = 'none';
+        return;
+    }
+
+    draftsSection.style.display = 'block';
+    draftsListContainer.innerHTML = '';
+
+    listaDeBorradores.forEach(draft => {
+        const fecha = draft.fecha ? new Date(draft.fecha.replace(/-/g, '/')).toLocaleDateString('es-ES') : 'Sin fecha';
+        const draftElement = document.createElement('div');
+        draftElement.classList.add('draft-item');
+        draftElement.innerHTML = `
+            <div class="draft-info">
+                <div class="draft-description">${draft.descripcion || 'Borrador sin descripción'}</div>
+                <div class="draft-date">${fecha} - $${(draft.monto || 0).toLocaleString('es-MX')}</div>
+            </div>
+            <div class="draft-actions">
+                <button class="btn-edit" data-id="${draft.id}">Editar</button>
+                <button class="btn-delete" data-id="${draft.id}">Borrar</button>
+            </div>
+        `;
+        draftsListContainer.appendChild(draftElement);
+    });
+}
+
+// Listener para los botones de Editar y Borrar
+draftsListContainer.addEventListener('click', async (e) => {
+    const draftId = e.target.dataset.id;
+    if (!draftId) return;
+
+    // BOTÓN EDITAR
+    if (e.target.classList.contains('btn-edit')) {
+        const draftAEditar = listaDeBorradores.find(d => d.id === draftId);
+        if (draftAEditar) {
+            // Usamos la función que ya tenías para cargar datos en el formulario
+            cargarGastoEnFormulario(draftAEditar);
+        }
+    }
+
+    // BOTÓN BORRAR
+    if (e.target.classList.contains('btn-delete')) {
+        if (confirm('¿Estás seguro de que quieres eliminar este borrador?')) {
+            try {
+                await db.collection('gastos').doc(draftId).delete();
+                alert('Borrador eliminado.');
+                // No necesitas recargar, el 'onSnapshot' de cargarBorradores lo hará solo.
+            } catch (error) {
+                console.error("Error al borrar borrador:", error);
+                alert('No se pudo eliminar el borrador.');
+            }
+        }
+    }
+});
+
 
 
 
