@@ -575,29 +575,35 @@ auth.onAuthStateChanged(async (user) => {
     }
 
     function mostrarGastosAprobados(gastos) {
-        // ... (sin cambios internos, usa expenseListContainer)
-         expenseListContainer.innerHTML = '';
-        if (gastos.length === 0) {
-            expenseListContainer.innerHTML = '<p>No se encontraron gastos con los filtros seleccionados.</p>';
-            return;
-        }
-        gastos.forEach(gasto => {
-            const itemContainer = document.createElement('div');
-            itemContainer.classList.add('expense-item');
-            const fechaFormateada = new Date(gasto.fecha.replace(/-/g, '/')).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
-            const creadorLink = (gasto.nombreCreador !== "Administrador" && gasto.creadorId) ? `<a href="perfil_empleado.html?id=${gasto.creadorId}">${gasto.nombreCreador}</a>` : (gasto.nombreCreador || "Sistema");
-
-            itemContainer.innerHTML = `
-                <div class="item-summary">
-                    <div class="expense-info">
-                        <span class="expense-description">${gasto.descripcion}</span>
-                        <span class="expense-details">Registrado por: ${creadorLink} | ${gasto.categoria} - ${fechaFormateada} | Estado: ${gasto.status}</span>
-                    </div>
-                    <span class="expense-amount">$${(gasto.totalConImpuestos || gasto.monto).toLocaleString('es-MX')}</span>
-                </div>`;
-            expenseListContainer.appendChild(itemContainer);
-        });
+    expenseListContainer.innerHTML = '';
+    if (gastos.length === 0) {
+        expenseListContainer.innerHTML = '<p>No se encontraron gastos con los filtros seleccionados.</p>';
+        return;
     }
+    gastos.forEach(gasto => {
+        const itemContainer = document.createElement('div');
+        itemContainer.classList.add('expense-item');
+        itemContainer.dataset.id = gasto.id; // <-- AÑADIDO: Data ID for linking
+        const fechaFormateada = new Date(gasto.fecha.replace(/-/g, '/')).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+        const creadorLink = (gasto.nombreCreador !== "Administrador" && gasto.creadorId) ? `<a href="perfil_empleado.html?id=${gasto.creadorId}">${gasto.nombreCreador}</a>` : (gasto.nombreCreador || "Sistema");
+
+        // --- ICONO AÑADIDO ---
+        const iconoComprobante = gasto.comprobanteURL ? `<a href="${gasto.comprobanteURL}" target="_blank" title="Ver comprobante" style="text-decoration: none; font-size: 1.1em; margin-left: 8px;">📎</a>` : '';
+
+        itemContainer.innerHTML = `
+            <div class="item-summary">
+                <div class="expense-info">
+                    <span class="expense-description">${gasto.descripcion}${iconoComprobante}</span> {/* <-- Icono añadido */}
+                    <span class="expense-details">Registrado por: ${creadorLink} | ${gasto.categoria} - ${fechaFormateada} | Estado: ${gasto.status}</span>
+                </div>
+                <span class="expense-amount">$${(gasto.totalConImpuestos || gasto.monto).toLocaleString('es-MX')}</span>
+            </div>
+            {/* --- DIV PARA DETALLES AÑADIDO --- */}
+            <div class="item-details-view" style="display: none;"></div> 
+        `;
+        expenseListContainer.appendChild(itemContainer);
+    });
+}
 
     function cargarBorradores() {
         // ... (sin cambios internos, usa draftsSection, draftsListContainer)
@@ -618,6 +624,59 @@ auth.onAuthStateChanged(async (user) => {
             });
     }
 
+    // --- NUEVO LISTENER PARA EXPANDIR DETALLES DEL HISTORIAL ---
+expenseListContainer.addEventListener('click', (e) => {
+    // Ignorar clics en enlaces (como el del creador o el icono)
+    if (e.target.tagName === 'A' || e.target.closest('a')) return;
+
+    const itemElement = e.target.closest('.expense-item');
+    if (!itemElement) return;
+
+    const detailsContainer = itemElement.querySelector('.item-details-view');
+    const gastoId = itemElement.dataset.id;
+
+    // Buscar los datos del gasto en el array global
+    const gasto = historialDeGastos.find(g => g.id === gastoId);
+
+    if (!detailsContainer || !gasto) return;
+
+    const isVisible = detailsContainer.style.display === 'block';
+
+    if (isVisible) {
+        detailsContainer.style.display = 'none';
+    } else {
+        // Construir el HTML de los detalles
+        let detailsHTML = `<p><strong>Método de Pago:</strong> ${gasto.metodoPago || 'N/A'}</p>`;
+        if (gasto.empresa) {
+            detailsHTML += `<p><strong>Cliente/Empresa:</strong> ${gasto.empresa}</p>`;
+        }
+        if (gasto.proyectoNombre) {
+            detailsHTML += `<p><strong>Proyecto:</strong> ${gasto.proyectoNombre}</p>`;
+        }
+        if (gasto.comentarios) {
+            detailsHTML += `<p><strong>Comentarios:</strong> ${gasto.comentarios}</p>`;
+        }
+
+        if (gasto.impuestos && gasto.impuestos.length > 0) {
+            detailsHTML += '<h4>Impuestos Desglosados</h4><div class="tax-breakdown">';
+            gasto.impuestos.forEach(imp => {
+                const montoImpuesto = imp.tipo === 'porcentaje' ? (gasto.monto * imp.valor) / 100 : imp.valor;
+                detailsHTML += `<div class="tax-line"><span>- ${imp.nombre}</span><span>$${montoImpuesto.toLocaleString('es-MX')}</span></div>`;
+            });
+            detailsHTML += '</div>';
+        }
+
+        // Si no hay detalles extra, mostrar un mensaje
+        if (!gasto.empresa && !gasto.proyectoNombre && !gasto.comentarios && (!gasto.impuestos || gasto.impuestos.length === 0)) {
+             detailsHTML += '<p>No hay detalles adicionales para este registro.</p>';
+        }
+
+
+        detailsContainer.innerHTML = detailsHTML;
+        detailsContainer.style.display = 'block';
+    }
+});
+    
     function mostrarBorradores() {
         // ... (sin cambios internos, usa draftsSection, draftsListContainer)
          if (listaDeBorradores.length === 0) {
