@@ -593,12 +593,11 @@ auth.onAuthStateChanged(async (user) => {
         itemContainer.innerHTML = `
             <div class="item-summary">
                 <div class="expense-info">
-                    <span class="expense-description">${gasto.descripcion}${iconoComprobante}</span> {/* <-- Icono añadido */}
+                    <span class="expense-description">${gasto.descripcion}${iconoComprobante}</span>
                     <span class="expense-details">Registrado por: ${creadorLink} | ${gasto.categoria} - ${fechaFormateada} | Estado: ${gasto.status}</span>
                 </div>
                 <span class="expense-amount">$${(gasto.totalConImpuestos || gasto.monto).toLocaleString('es-MX')}</span>
             </div>
-            {/* --- DIV PARA DETALLES AÑADIDO --- */}
             <div class="item-details-view" style="display: none;"></div> 
         `;
         expenseListContainer.appendChild(itemContainer);
