@@ -376,7 +376,7 @@ function mostrarIngresosAprobados(ingresos) {
                 </div>
                 <span class="expense-amount">$${(ingreso.totalConImpuestos || ingreso.monto).toLocaleString('es-MX')}</span>
             </div>
-            {/* --- DIV PARA DETALLES AÑADIDO --- */}
+    
             <div class="item-details-view" style="display: none;"></div> 
         `;
         incomeListContainer.appendChild(itemContainer);
