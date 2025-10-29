@@ -4,9 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mis Gastos - FINZTONE</title>
-    
+
     <link rel="stylesheet" href="main.style.css">
-    
+    <link rel="stylesheet" href="modern-styles.css">
+
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -29,7 +30,7 @@
                         <label for="expense-place">Establecimiento o Lugar (Opcional)</label>
                         <input type="text" id="expense-place" placeholder="Ej: The Home Depot, Restaurante El Sol...">
                     </div>
-                    
+
                     <div class="input-group">
                         <label for="expense-amount">Monto ($)</label>
                         <input type="number" id="expense-amount" step="0.01" required>
@@ -75,7 +76,7 @@
                             </select>
                         </div>
                     </fieldset>
-                    
+
                     <div class="input-group">
                         <label for="payment-method">Método de Pago</label>
                         <select id="payment-method">
@@ -94,7 +95,7 @@
                         <label for="receipt-file">Adjuntar Comprobante (Opcional)</label>
                         <input type="file" id="receipt-file" accept="image/*,.pdf">
                     </div>
-                    
+
                     <div class="input-group-checkbox">
                         <input type="checkbox" id="is-invoice">
                         <label for="is-invoice">Anexar datos de facturación</label>
@@ -137,17 +138,13 @@
             </div>
         </main>
     </div>
-    
+
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-functions.js"></script>
-    
+
     <script type="module" src="empleado_gastos.app.js"></script>
 </body>
 </html>
-
-
-
-

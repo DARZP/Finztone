@@ -1,0 +1,129 @@
+/* General Body and Variables */
+body {
+    --primary-color: #00A99D;
+    --secondary-color: #0D2A4B;
+    --accent-color-blue: #3E82F8;
+    --accent-color-pink: #F472B6;
+    --text-light: #ffffff;
+    --text-dark: #1E293B;
+    --background-light: #F8FAFC;
+    --card-bg-color: rgba(255, 255, 255, 0.1);
+    --card-border-color: rgba(255, 255, 255, 0.2);
+    --input-bg-color: rgba(255, 255, 255, 0.15);
+
+    background: linear-gradient(45deg, var(--secondary-color), #1a3a5f);
+    color: var(--text-light);
+    font-family: 'Poppins', sans-serif;
+}
+
+/* Login Page Specifics */
+.hero {
+    background: transparent; /* Remove the duplicate background */
+}
+
+.login-box {
+    background: var(--card-bg-color);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--card-border-color);
+    box-shadow: 0 12px 32px 0 rgba(0, 0, 0, 0.15);
+}
+
+.login-box .input-group input {
+    background-color: var(--input-bg-color);
+}
+
+/* Main Application Styles */
+.main-header {
+    background: transparent;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: none;
+}
+
+.card, .form-card, .list-card {
+    background: var(--card-bg-color);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--card-border-color);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+h2 {
+    font-weight: 600;
+    border-bottom: 1px solid var(--card-border-color);
+    padding-bottom: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Form Elements */
+.input-group input,
+.input-group select,
+.input-group textarea {
+    background-color: var(--input-bg-color);
+    border: 1px solid var(--card-border-color);
+    color: var(--text-light);
+    border-radius: 8px;
+    padding: 12px 15px;
+    transition: all 0.3s ease;
+}
+
+.input-group input::placeholder,
+.input-group textarea::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.input-group input:focus,
+.input-group select:focus,
+.input-group textarea:focus {
+    background-color: rgba(255, 255, 255, 0.25);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 169, 157, 0.5);
+}
+
+/* Buttons */
+.btn-primary {
+    background: var(--primary-color);
+    border: none;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 169, 157, 0.2);
+}
+
+.btn-primary:hover {
+    background: #00c2b2;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 169, 157, 0.3);
+}
+
+.btn-secondary {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: var(--text-light);
+    border: 1px solid var(--card-border-color);
+}
+
+.btn-secondary:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Dashboard Tool Cards */
+.tool-card {
+    background: var(--card-bg-color);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--card-border-color);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+}
+
+.tool-card:hover {
+    transform: translateY(-5px) scale(1.03);
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
