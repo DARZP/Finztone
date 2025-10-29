@@ -362,8 +362,8 @@ function mostrarIngresosAprobados(ingresos) {
     }
     ingresos.forEach(ingreso => {
         const itemContainer = document.createElement('div');
-        itemContainer.classList.add('expense-item');
-        itemContainer.dataset.id = ingreso.id;
+        itemContainer.classList.add('expense-item'); // Mantenemos la clase para consistencia de estilos
+        itemContainer.dataset.id = ingreso.id; // <-- AÑADIDO: Data ID
         const fechaFormateada = new Date(ingreso.fecha.replace(/-/g, '/')).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
         const creadorLink = (ingreso.nombreCreador !== "Administrador" && ingreso.creadorId) ? `<a href="perfil_empleado.html?id=${ingreso.creadorId}">${ingreso.nombreCreador}</a>` : (ingreso.nombreCreador || "Sistema");
         const iconoComprobante = ingreso.comprobanteURL ? `<a href="${ingreso.comprobanteURL}" target="_blank" title="Ver comprobante" style="text-decoration: none; font-size: 1.1em; margin-left: 8px;">📎</a>` : '';
@@ -372,12 +372,13 @@ function mostrarIngresosAprobados(ingresos) {
             <div class="item-summary">
                 <div class="expense-info">
                     <span class="expense-description">${ingreso.descripcion}${iconoComprobante}</span>
-                    <span class="expense-details">Registrado por: ${creadorLink} | ${ingreso.categoria} - ${fechaFormateada}</span>
+                    <span class="expense-details">Registrado por: ${creadorLink} | ${ingreso.categoria} - ${fechaFormateada} | Estado: ${ingreso.status}</span>
                 </div>
                 <span class="expense-amount">$${(ingreso.totalConImpuestos || ingreso.monto).toLocaleString('es-MX')}</span>
             </div>
-            <div class="item-details" style="display: none;">
-                </div>`;
+            {/* --- DIV PARA DETALLES AÑADIDO --- */}
+            <div class="item-details-view" style="display: none;"></div> 
+        `;
         incomeListContainer.appendChild(itemContainer);
     });
 }
@@ -437,6 +438,58 @@ function mostrarBorradores() {
         draftsListContainer.appendChild(draftElement);
     });
 }
+
+// --- NUEVO LISTENER PARA EXPANDIR DETALLES DEL HISTORIAL ---
+incomeListContainer.addEventListener('click', (e) => {
+    // Ignorar clics en enlaces
+    if (e.target.tagName === 'A' || e.target.closest('a')) return;
+
+    const itemElement = e.target.closest('.expense-item'); // Buscamos por la clase usada
+    if (!itemElement) return;
+
+    const detailsContainer = itemElement.querySelector('.item-details-view');
+    const ingresoId = itemElement.dataset.id;
+
+    // Buscar los datos del ingreso en el array global
+    const ingreso = historialDeIngresos.find(i => i.id === ingresoId);
+
+    if (!detailsContainer || !ingreso) return;
+
+    const isVisible = detailsContainer.style.display === 'block';
+
+    if (isVisible) {
+        detailsContainer.style.display = 'none';
+    } else {
+        // Construir el HTML de los detalles
+        let detailsHTML = `<p><strong>Método de Cobro:</strong> ${ingreso.metodoPago || 'N/A'}</p>`;
+         if (ingreso.empresa) {
+            detailsHTML += `<p><strong>Cliente/Empresa:</strong> ${ingreso.empresa}</p>`;
+        }
+        if (ingreso.proyectoNombre) {
+            detailsHTML += `<p><strong>Proyecto:</strong> ${ingreso.proyectoNombre}</p>`;
+        }
+         if (ingreso.comentarios) {
+            detailsHTML += `<p><strong>Comentarios:</strong> ${ingreso.comentarios}</p>`;
+        }
+
+        // Para ingresos, los impuestos son retenciones
+        if (ingreso.impuestos && ingreso.impuestos.length > 0) {
+            detailsHTML += '<h4>Retenciones Desglosadas</h4><div class="tax-breakdown">';
+            ingreso.impuestos.forEach(imp => {
+                const montoImpuesto = imp.tipo === 'porcentaje' ? (ingreso.monto * imp.valor) / 100 : imp.valor;
+                detailsHTML += `<div class="tax-line"><span>- ${imp.nombre}</span><span>-$${montoImpuesto.toLocaleString('es-MX')}</span></div>`; // Signo negativo
+            });
+            detailsHTML += '</div>';
+        }
+
+        if (!ingreso.empresa && !ingreso.proyectoNombre && !ingreso.comentarios && (!ingreso.impuestos || ingreso.impuestos.length === 0)) {
+             detailsHTML += '<p>No hay detalles adicionales para este registro.</p>';
+        }
+
+        detailsContainer.innerHTML = detailsHTML;
+        detailsContainer.style.display = 'block';
+    }
+});
 
 // Listener solo para el botón de Borrar
 draftsListContainer.addEventListener('click', async (e) => {
