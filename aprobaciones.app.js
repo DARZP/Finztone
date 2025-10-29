@@ -197,7 +197,7 @@ function mostrarGastosPendientes(gastos) {
         const fecha = new Date(gasto.fecha.replace(/-/g, '/')).toLocaleDateString('es-ES');
         const montoBase = gasto.monto || 0;
         const totalConImpuestos = gasto.totalConImpuestos || montoBase;
-        let desgloseHTML = `<span>Base: -$${montoBase.toLocaleString('es-MX')}</span>`;
+        let desgloseHTML = `<span>Bruto: -$${montoBase.toLocaleString('es-MX')}</span>`;
         let impuestosCalculados = [];
 
         if (gasto.impuestos && gasto.impuestos.length > 0) {
@@ -275,7 +275,7 @@ function mostrarIngresosPendientes(ingresos) {
         const fecha = new Date(ingreso.fecha.replace(/-/g, '/')).toLocaleDateString('es-ES');
         const montoBase = ingreso.monto || 0;
         const totalConImpuestos = ingreso.totalConImpuestos || montoBase;
-        let desgloseHTML = `<span>Base: +$${montoBase.toLocaleString('es-MX')}</span>`;
+        let desgloseHTML = `<span>Bruto: +$${montoBase.toLocaleString('es-MX')}</span>`;
         let impuestosCalculados = []; // Retenciones
 
         if (ingreso.impuestos && ingreso.impuestos.length > 0) {
