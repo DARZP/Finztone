@@ -1,47 +1,81 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crear Cuenta - FINZTONE</title>
-    <link rel="stylesheet" href="landing.style.css">
+import { auth, db } from './firebase-init.js';
+
+// --- ELEMENTOS DEL DOM ---
+const signupForm = document.getElementById('signup-form');
+const userNameInput = document.getElementById('user-name');
+const companyNameInput = document.getElementById('company-name');
+const emailInput = document.getElementById('user-email');
+const passwordInput = document.getElementById('user-password');
+const confirmPasswordInput = document.getElementById('confirm-password');
+
+// --- LISTENER DEL FORMULARIO DE REGISTRO ---
+signupForm.addEventListener('submit', (e) => {
     
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-</head>
-<body>
+    // --- 1. LA CORRECCIÓN CLAVE (Evita el "rebooteo") ---
+    // Prevenimos que el formulario recargue la página.
+    e.preventDefault(); 
 
-    <section class="hero" style="min-height: 100vh;">
-        <div class="login-wrapper">
-            <div class="login-box" style="max-width: 450px;">
-                <h2 style="font-weight: 600; color: white;">Crear tu cuenta de Administrador</h2>
-                <p style="color: #cbd5e1; font-size: 0.9em; margin-top: -15px; margin-bottom: 25px;">Empieza a tomar el control de tus finanzas.</p>
+    const nombre = userNameInput.value.trim();
+    const nombreEmpresa = companyNameInput.value.trim() || nombre; // Si la empresa está vacía, usa el nombre
+    const email = emailInput.value;
+    const password = passwordInput.value;
+    const confirmPassword = confirmPasswordInput.value;
 
-                <form id="signup-form">
-                    <div class="input-group">
-                        <input type="text" id="user-name" placeholder="Tu Nombre Completo" required>
-                    </div>
-                    <div class="input-group">
-                        <input type="text" id="company-name" placeholder="Nombre de tu Empresa (Opcional)">
-                    </div>
-                    <div class="input-group">
-                        <input type="email" id="user-email" placeholder="Correo Electrónico" required>
-                    </div>
-                    <div class="input-group">
-                        <input type="password" id="user-password" placeholder="Contraseña (mínimo 6 caracteres)" required>
-                    </div>
-                    <div class="input-group">
-                        <input type="password" id="confirm-password" placeholder="Confirmar Contraseña" required>
-                    </div>
-                    <button type="submit" class="btn-primary">Crear Cuenta</button>
-                    <a href="index.html" class="signup-link">¿Ya tienes cuenta? Inicia Sesión</a>
-                </form>
-            </div>
-        </div>
-    </section>
+    // 2. Validar las contraseñas
+    if (password.length < 6) {
+        alert("La contraseña debe tener al menos 6 caracteres.");
+        return; // Detiene la ejecución
+    }
+    if (password !== confirmPassword) {
+        alert("Las contraseñas no coinciden. Por favor, inténtalo de nuevo.");
+        return; // Detiene la ejecución
+    }
 
-    <script src="registro.app.js"></script>
+    // 3. Crear el usuario en Firebase Authentication
+    auth.createUserWithEmailAndPassword(email, password)
+        .then((userCredential) => {
+            const user = userCredential.user;
+            console.log("Usuario creado en Auth:", user.uid);
 
-</body>
-</html>
+            // Preparamos las escrituras en la base de datos
+            
+            // 4. Crear el perfil del usuario en Firestore
+            const userDocRef = db.collection('usuarios').doc(user.uid);
+            const profilePromise = userDocRef.set({
+                email: user.email,
+                nombre: nombre,
+                nombreEmpresa: nombreEmpresa,
+                rol: 'admin', // El que se registra es siempre 'admin'
+                status: 'activo',
+                fechaDeCreacion: new Date()
+            });
+
+            // 5. Crear la suscripción gratuita inicial
+            const subDocRef = db.collection('suscripciones').doc(user.uid);
+            const subPromise = subDocRef.set({
+                planNombre: 'Gratuito',
+                limiteColaboradores: 2, // Límite del plan gratuito
+                estado: 'activo',
+                fechaDeInicio: new Date()
+            });
+
+            // 6. Esperar a que ambas escrituras se completen
+            return Promise.all([profilePromise, subPromise]);
+        })
+        .then(() => {
+            // 7. Redirigir al dashboard
+            console.log("Perfil y suscripción creados. Redirigiendo al dashboard...");
+            window.location.href = 'dashboard.html';
+        })
+        .catch((error) => {
+            // 8. Manejar errores comunes de registro
+            console.error("Error al registrar la cuenta:", error);
+            if (error.code === 'auth/email-already-in-use') {
+                alert('Este correo electrónico ya está registrado. Por favor, inicia sesión.');
+            } else if (error.code === 'auth/weak-password') {
+                alert('La contraseña es demasiado débil. Debe tener al menos 6 caracteres.');
+            } else {
+                alert('Ocurrió un error al crear la cuenta: ' + error.message);
+            }
+        });
+});
