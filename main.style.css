@@ -986,10 +986,10 @@ tbody tr:hover {
 
 /* --- MODO CLARO GLOBAL --- */
 body.light-mode {
-    --secondary-color: #f0f4f8; /* Fondo claro azulado/grisáceo para el body */
-    --text-color-light: #1e293b; /* Texto oscuro para contrastar */
-    --input-bg-color: #ffffff; /* Inputs totalmente blancos */
-    --input-border-color: rgba(0, 0, 0, 0.2); /* Bordes de inputs más visibles */
+    --secondary-color: #e2e8f0; /* Fondo principal un poco más oscuro para dar contraste */
+    --text-color-light: #1e293b; 
+    --input-bg-color: #f1f5f9; /* Fondo de inputs gris claro */
+    --input-border-color: rgba(0, 0, 0, 0.15); 
     background: var(--secondary-color);
     color: var(--text-color-light);
 }
@@ -998,54 +998,75 @@ body.light-mode {
 body.light-mode .main-header,
 body.light-mode .form-card,
 body.light-mode .list-card,
-body.light-mode .card,
-body.light-mode .tool-card {
-    background: #ffffff; /* Blanco sólido para resaltar del fondo grisáceo */
-    border: 1px solid rgba(0, 0, 0, 0.12); /* Contorno marcado y elegante */
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04); /* Sombra más sutil */
+body.light-mode .card {
+    background: #ffffff; /* Blanco puro para que resalte sobre el fondo */
+    border: 1px solid rgba(0, 0, 0, 0.1); 
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); 
 }
 
-/* 2. Listados internos (Gastos, Borradores, Usuarios, Impuestos) */
+/* 2. Tarjetas del Dashboard (Tool Cards) */
+body.light-mode .tool-card {
+    background-color: #f8fafc; /* Gris/azul muy clarito en reposo */
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+body.light-mode .tool-card:hover {
+    background-color: #e0e7ff; /* El "azuladito" que mencionaste al pasar el mouse */
+    border-color: rgba(0, 0, 0, 0.15);
+}
+
+/* 3. Inputs y Selects de los formularios */
+body.light-mode .input-group input,
+body.light-mode .input-group select,
+body.light-mode .input-group textarea {
+    color: #1e293b;
+    background-color: #f1f5f9; /* Color de relleno para que se distingan del fondo blanco */
+    border: 1px solid rgba(0, 0, 0, 0.15);
+}
+body.light-mode .input-group input:focus,
+body.light-mode .input-group select:focus,
+body.light-mode .input-group textarea:focus {
+    background-color: #ffffff; /* Se ponen blancos solo cuando estás escribiendo en ellos */
+    border-color: var(--primary-color);
+}
+
+/* 4. Listados internos (Gastos, Borradores, Usuarios, Impuestos) */
 body.light-mode .expense-item,
 body.light-mode .draft-item,
 body.light-mode .compact-tax-item,
 body.light-mode .user-item,
 body.light-mode .deduction-item {
-    background-color: #f8fafc; /* Un gris muuuy clarito */
-    border: 1px solid rgba(0, 0, 0, 0.08); /* Contorno para que no se pierdan */
+    background-color: #f8fafc; 
+    border: 1px solid rgba(0, 0, 0, 0.08); 
     border-radius: 8px; 
 }
 
-/* 3. Encabezados de los días en los historiales colapsables */
+/* 5. Encabezados de los días en los historiales colapsables */
 body.light-mode .day-header {
     background: rgba(0, 0, 0, 0.04) !important;
     border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-/* 4. Corrección de los Botones Secundarios (Descargar, Editar, Borrar) */
+/* 6. Corrección de los Botones Secundarios */
 body.light-mode .btn-secondary,
 body.light-mode .btn-edit,
 body.light-mode .btn-delete {
     background-color: transparent; 
-    color: #475569; /* Letra gris oscuro */
-    border: 1px solid #94a3b8; /* Contorno gris visible */
+    color: #475569; 
+    border: 1px solid #94a3b8; 
     font-weight: 500;
 }
 
 body.light-mode .btn-secondary:hover,
 body.light-mode .btn-edit:hover,
 body.light-mode .btn-delete:hover {
-    background-color: rgba(0, 0, 0, 0.05); /* Efecto al pasar el mouse */
+    background-color: rgba(0, 0, 0, 0.05); 
     color: #1e293b;
     border-color: #64748b;
 }
 
-/* 5. Inputs y Textos de Botones del Dashboard */
-body.light-mode .input-group input,
-body.light-mode .input-group select,
-body.light-mode .input-group textarea {
-    color: #1e293b;
-}
+/* 7. Textos de Botones del Dashboard */
 body.light-mode .tool-card span {
     color: #1e293b;
 }
+
