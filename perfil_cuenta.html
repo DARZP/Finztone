@@ -16,13 +16,11 @@
         </header>
 
         <main>
-            <div class="card">
-                <h2 id="account-name-title">Cargando...</h2>
-                
-                <div id="debit-details" style="display: none;">
-                    <div class="balance-display">
-                        <div class="balance-label">Saldo Actual</div>
-                        <div id="debit-balance" class="balance-amount">$0.00</div>
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 id="account-name-title" style="margin: 0;">Cargando...</h2>
+                    <div class="header-actions" style="display: flex; gap: 10px;">
+                        <button id="edit-account-btn" class="btn-secondary" style="padding: 6px 12px; font-size: 0.9em;">✏️ Editar Nombre</button>
+                        <button id="delete-account-btn" class="btn-reject" style="display: none; padding: 6px 12px; font-size: 0.9em;">🗑️ Eliminar</button>
                     </div>
                 </div>
 
