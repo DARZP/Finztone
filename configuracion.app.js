@@ -1,4 +1,4 @@
-import { auth, db, functions } from './firebase-init.js';
+import { auth, db, functions, aplicarTema } from './firebase-init.js';
 
 // --- Elementos del DOM ---
 const usageBarFillEl = document.getElementById('usage-bar-fill');
@@ -83,3 +83,20 @@ document.querySelector('.plans-container').addEventListener('click', (e) => {
             });
     }
 });
+// --- LÓGICA DE APARIENCIA (TEMA) ---
+const themeSelector = document.getElementById('theme-selector');
+
+if (themeSelector) {
+    // Leer qué preferencia tiene guardada el usuario al abrir la configuración
+    const currentPref = localStorage.getItem('finztone_theme_pref') || 'auto';
+    themeSelector.value = currentPref;
+
+    // Escuchar cuando el usuario seleccione una opción diferente
+    themeSelector.addEventListener('change', (e) => {
+        const nuevaPreferencia = e.target.value;
+        // Guardamos su elección en la memoria de su navegador
+        localStorage.setItem('finztone_theme_pref', nuevaPreferencia);
+        // Aplicamos el cambio inmediatamente
+        aplicarTema(nuevaPreferencia);
+    });
+}
