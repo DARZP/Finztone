@@ -5,6 +5,7 @@ const addCompanyForm = document.getElementById('add-company-form');
 const companyListContainer = document.getElementById('company-list');
 const backButton = document.getElementById('back-button');
 const formCard = document.querySelector('.form-card'); // El contenedor del formulario
+let adminUidGlobal = null;
 
 // --- LÓGICA DE LA PÁGINA ---
 auth.onAuthStateChanged(async (user) => {
@@ -12,8 +13,8 @@ auth.onAuthStateChanged(async (user) => {
         // --- LÓGICA DE ROLES ---
         const userDoc = await db.collection('usuarios').doc(user.uid).get();
         const userData = userDoc.exists ? userDoc.data() : {};
-        const adminUid = userData.adminUid || user.uid; // La lógica clave
-
+        adminUidGlobal = userData.adminUid || user.uid;
+        
         // Configuramos la UI según el rol
         if (userData.rol === 'coadmin') {
             backButton.href = 'coadmin_dashboard.html';
@@ -27,7 +28,7 @@ auth.onAuthStateChanged(async (user) => {
 
         // --- CARGA DE DATOS ---
         // Usamos el 'adminUid' correcto para cargar la lista de empresas
-        db.collection('empresas').where('adminUid', '==', adminUid).orderBy('nombre').onSnapshot(snapshot => {
+        db.collection('empresas').where('adminUidGlobal', '==', adminUidGlobal).orderBy('nombre').onSnapshot(snapshot => {
             const empresas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             mostrarEmpresas(empresas);
         }, error => {
@@ -45,15 +46,16 @@ addCompanyForm.addEventListener('submit', (e) => {
     const user = auth.currentUser;
     if (!user) return;
 
+    // Cambia la parte donde guardas en Firebase:
     db.collection('empresas').add({
         nombre: addCompanyForm['company-name'].value,
         rfc: addCompanyForm['company-rfc'].value,
         contactoNombre: addCompanyForm['contact-name'].value,
         contactoEmail: addCompanyForm['contact-email'].value,
         fechaDeCreacion: new Date(),
-        adminUid: user.uid // El creador siempre es el Admin
+        adminUid: adminUidGlobal // <-- ¡Cambiamos user.uid por adminUidGlobal!
     })
-    .then(() => {
+        .then(() => {
         alert(`¡Empresa registrada exitosamente!`);
         addCompanyForm.reset();
     })
