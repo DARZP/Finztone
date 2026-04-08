@@ -498,7 +498,7 @@ auth.onAuthStateChanged(async (user) => {
                             const taxMovRef = db.collection('movimientos_impuestos').doc();
                             transaction.set(taxMovRef, {
                                 origen: `Gasto - ${expenseData.descripcion}`, tipoImpuesto: imp.nombre, monto: montoImpuesto,
-                                fecha: new Date(), status: 'pagado', adminUid: adminUidGlobal // Corregido
+                                fecha: new Date(), status: 'pendiente', adminUid: adminUidGlobal 
                             });
                         });
                     });
