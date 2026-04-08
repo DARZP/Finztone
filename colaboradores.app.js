@@ -3,7 +3,7 @@ import { auth, db, functions } from './firebase-init.js';
 // --- Elementos del DOM ---
 const addUserForm = document.getElementById('add-user-form');
 const userListContainer = document.getElementById('user-list');
-const backButton = document.getElementById('back-button'); // Asegúrate de tener esta variable
+const backButton = document.getElementById('back-button');
 
 // --- Función para mostrar usuarios en la lista ---
 function mostrarUsuarios(usuarios, currentUserRole, currentUserUid, adminUidGlobal) {
@@ -56,6 +56,7 @@ function mostrarUsuarios(usuarios, currentUserRole, currentUserUid, adminUidGlob
         userListContainer.appendChild(userElement);
     });
 }
+
 auth.onAuthStateChanged(async (user) => {
     if (user) {
         try {
@@ -67,8 +68,6 @@ auth.onAuthStateChanged(async (user) => {
             if (userData.rol === 'coadmin') {
                 backButton.href = 'coadmin_dashboard.html';
                 
-                // --- LA LÍNEA CORREGIDA ---
-                // Ahora buscamos el contenedor con la clase 'form-card' y lo ocultamos por completo.
                 const addUserCard = document.querySelector('.form-card');
                 if (addUserCard) {
                     addUserCard.style.display = 'none';
@@ -82,7 +81,6 @@ auth.onAuthStateChanged(async (user) => {
                 backButton.href = 'dashboard.html';
             }
 
-            // El resto de la lógica para cargar la lista no cambia...
             let query = db.collection('usuarios').where('adminUid', '==', adminUid);
             if (userData.rol === 'coadmin') {
                 query = query.where('status', '==', 'activo');
@@ -92,7 +90,10 @@ auth.onAuthStateChanged(async (user) => {
                 if (userData.rol === 'coadmin') {
                     usuarios = usuarios.filter(u => u.id !== user.uid);
                 }
-                mostrarUsuarios(usuarios, userData.rol);
+                
+                // --- AQUÍ ESTÁ LA LÍNEA ACTUALIZADA CON LOS NUEVOS PARÁMETROS ---
+                mostrarUsuarios(usuarios, userData.rol, user.uid, adminUid);
+                
             }, error => {
                 console.error("Error al obtener usuarios:", error);
                 alert("Ocurrió un error al cargar la lista. Revisa la consola (F12).");
