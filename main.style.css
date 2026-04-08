@@ -1070,3 +1070,56 @@ body.light-mode .tool-card span {
     color: #1e293b;
 }
 
+/* =========================================================
+   MEJORAS ESTÉTICAS MINIMALISTAS
+   ========================================================= */
+
+/* --- 1. SCROLLBAR MINIMALISTA --- */
+::-webkit-scrollbar {
+    width: 6px; 
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent; 
+}
+::-webkit-scrollbar-thumb {
+    background-color: rgba(148, 163, 184, 0.4); 
+    border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(148, 163, 184, 0.8); 
+}
+
+/* --- 2. EFECTOS DE FLOTACIÓN (HOVER ANIMATIONS) --- */
+/* Le damos una transición suave a todo lo que se puede clickear */
+.tool-card, 
+.btn-primary, 
+.expense-item, 
+.draft-item, 
+.compact-tax-item {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
+}
+
+/* Las tarjetas del dashboard flotan sutilmente hacia arriba */
+.tool-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+}
+
+/* Efecto de clic real en el botón principal */
+.btn-primary:active {
+    transform: translateY(2px);
+    box-shadow: 0 2px 5px rgba(0, 169, 157, 0.3);
+}
+
+/* --- 3. MÁS ESPACIO EN BLANCO (PADDINGS) --- */
+/* Sobreescribimos las tarjetas para que tengan más aire por dentro */
+.card, .form-card, .list-card {
+    padding: 30px !important; 
+    border-radius: 16px;
+}
+
+/* Separamos un poco más los campos de los formularios */
+.input-group {
+    margin-bottom: 25px; 
+}
