@@ -415,16 +415,17 @@ auth.onAuthStateChanged(async (user) => {
             }
 
             let montoNeto = montoBruto;
-            const impuestosSeleccionados = [];
-             if (addTaxesCheckbox.checked) {
-                let totalImpuestos = 0;
-                document.querySelectorAll('#taxes-checklist input[type="checkbox"]:checked').forEach(checkbox => {
-                    const impuesto = JSON.parse(checkbox.dataset.impuesto);
-                    impuestosSeleccionados.push(impuesto);
-                    totalImpuestos += impuesto.tipo === 'porcentaje' ? (montoBruto * impuesto.valor) / 100 : impuesto.valor;
-                });
-                montoNeto = montoBruto + totalImpuestos;
-            }
+        const impuestosSeleccionados = [];
+        if (addTaxesCheckbox.checked) {
+            let totalImpuestos = 0;
+            document.querySelectorAll('#taxes-checklist input[type="checkbox"]:checked').forEach(checkbox => {
+                const impuesto = JSON.parse(checkbox.dataset.impuesto);
+                impuestosSeleccionados.push(impuesto);
+                totalImpuestos += impuesto.tipo === 'porcentaje' ? (montoBruto * impuesto.valor) / 100 : impuesto.valor;
+            });
+            // Ya no sumamos ni restamos totalImpuestos a montoNeto.
+            // montoNeto se queda con el mismo valor que montoBruto.
+        }
             const clienteSeleccionado = empresasCargadas.find(e => e.id === clientSelect.value);
 
             const expenseData = {
