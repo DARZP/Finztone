@@ -326,6 +326,7 @@ async function guardarIngresoAdmin(status) {
 function poblarFiltrosYCategorias() {
     monthFilter.innerHTML = '<option value="todos">Todos los meses</option>';
     let fecha = new Date();
+    const currentMonthValue = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
     for (let i = 0; i < 12; i++) {
         const value = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
         const text = fecha.toLocaleString('es-ES', { month: 'long', year: 'numeric' });
