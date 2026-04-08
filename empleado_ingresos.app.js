@@ -152,16 +152,19 @@ function recalcularTotales() {
         const impuesto = JSON.parse(checkbox.dataset.impuesto);
         const montoCalculado = impuesto.tipo === 'porcentaje' ? (montoBruto * impuesto.valor) / 100 : impuesto.valor;
         totalImpuestos += montoCalculado;
-        checkbox.closest('.tax-item').querySelector('.calculated-amount').textContent = `-$${montoCalculado.toLocaleString('es-MX')}`;
+        checkbox.closest('.tax-item').querySelector('.calculated-amount').textContent = `$${montoCalculado.toLocaleString('es-MX')}`; // O -$ para ingresos
     });
-    document.querySelectorAll('#taxes-checklist input[type="checkbox"]:not(:checked)').forEach(checkbox => {
-        checkbox.closest('.tax-item').querySelector('.calculated-amount').textContent = '';
-    });
-    const montoNeto = montoBruto - totalImpuestos;
+    // ...
+
+    // --- EL CAMBIO ESTÁ AQUÍ ---
+    // Antes sumaba o restaba: const montoNeto = montoBruto + totalImpuestos;
+    const montoNeto = montoBruto; // Ahora el neto es IGUAL al bruto
+
     summaryBruto.textContent = `$${montoBruto.toLocaleString('es-MX')}`;
-    summaryImpuestos.textContent = `-$${totalImpuestos.toLocaleString('es-MX')}`;
+    summaryImpuestos.textContent = `$${totalImpuestos.toLocaleString('es-MX')}`;
     summaryNeto.textContent = `$${montoNeto.toLocaleString('es-MX')}`;
 }
+
 
 function cargarIngresoEnFormulario(ingreso) {
     addIncomeForm.reset();
