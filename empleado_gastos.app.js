@@ -288,8 +288,10 @@ async function guardarGasto(status) {
                 impuestosSeleccionados.push(impuesto);
                 totalImpuestos += impuesto.tipo === 'porcentaje' ? (montoBruto * impuesto.valor) / 100 : impuesto.valor;
             });
-            montoNeto = montoBruto + totalImpuestos;
+            // Ya no sumamos ni restamos totalImpuestos a montoNeto.
+            // montoNeto se queda con el mismo valor que montoBruto.
         }
+        
         const clienteIdSeleccionado = clientSelect.value;
         const proyectoIdSeleccionado = projectSelect.value;
         const clienteSeleccionado = empresasCargadas.find(e => e.id === clienteIdSeleccionado);
