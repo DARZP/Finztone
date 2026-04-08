@@ -69,11 +69,16 @@ function cargarImpuestosDefinidos(adminUid) {
         snapshot.forEach(doc => {
             const tax = doc.data();
             const itemElement = document.createElement('div');
-            itemElement.classList.add('account-item');
+            // Cambiamos 'account-item' por nuestra nueva clase
+            itemElement.classList.add('compact-tax-item'); 
+            
+            // Estructura HTML más limpia y pequeña
             itemElement.innerHTML = `
-                <div class="account-info"><div class="account-name">${tax.nombre}</div></div>
-                <div class="header-actions">
-                    <div class="account-balance">${tax.tipo === 'porcentaje' ? `${tax.valor}%` : `$${tax.valor.toLocaleString('es-MX')}`}</div>
+                <div class="tax-name">${tax.nombre}</div>
+                <div class="tax-actions">
+                    <span style="color: #aeb9c5; font-size: 0.9em;">
+                        ${tax.tipo === 'porcentaje' ? `${tax.valor}%` : `$${tax.valor.toLocaleString('es-MX')}`}
+                    </span>
                     <button class="btn-secondary download-tax-btn" data-tax-name="${tax.nombre}">Descargar</button>
                 </div>
             `;
