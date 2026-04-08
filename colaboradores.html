@@ -37,19 +37,39 @@
                         <label for="user-salary">Sueldo Bruto Mensual ($)</label>
                         <input type="number" id="user-salary" required>
                     </div>
+                    
                     <div class="input-group">
-                        <label>Rol del Usuario</label>
-                        <div class="role-selector">
-                            <input type="radio" id="role-empleado" name="user-role" value="empleado" checked>
-                            <label for="role-empleado">Colaborador</label>
-                            <input type="radio" id="role-coadmin" name="user-role" value="coadmin">
-                            <label for="role-coadmin">Co-Administrador</label>
+                        <label>Rol del Usuario y Permisos</label>
+                        <div class="role-selector-cards">
+                            <label class="role-card">
+                                <input type="radio" name="user-role" value="empleado" checked>
+                                <div class="role-info">
+                                    <span class="role-title">Colaborador</span>
+                                    <span class="role-desc">Solo puede registrar sus propios gastos e ingresos y enviarlos para su aprobación. No tiene acceso a configuraciones.</span>
+                                </div>
+                            </label>
+                            
+                            <label class="role-card">
+                                <input type="radio" name="user-role" value="coadmin">
+                                <div class="role-info">
+                                    <span class="role-title">Co-Administrador</span>
+                                    <span class="role-desc">Puede ver registros y generar reportes, pero no puede crear cuentas bancarias ni modificar impuestos.</span>
+                                </div>
+                            </label>
+
+                            <label class="role-card">
+                                <input type="radio" name="user-role" value="admin">
+                                <div class="role-info">
+                                    <span class="role-title">Administrador</span>
+                                    <span class="role-desc">Acceso total. Puede crear cuentas, aprobar transacciones, gestionar impuestos y añadir nuevos usuarios.</span>
+                                </div>
+                            </label>
                         </div>
                     </div>
-                    <button type="submit" class="btn-primary">Agregar Colaborador</button>
+                    
+                    <button type="submit" class="btn-primary" style="margin-top: 15px; width: 100%;">Agregar Colaborador</button>
                 </form>
             </div>
-
             <div class="list-card">
                 <h2>Lista de Colaboradores</h2>
                 <div id="user-list"></div>
