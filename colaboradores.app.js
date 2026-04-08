@@ -6,7 +6,7 @@ const userListContainer = document.getElementById('user-list');
 const backButton = document.getElementById('back-button'); // Asegúrate de tener esta variable
 
 // --- Función para mostrar usuarios en la lista ---
-function mostrarUsuarios(usuarios, currentUserRole) {
+function mostrarUsuarios(usuarios, currentUserRole, currentUserUid, adminUidGlobal) {
     userListContainer.innerHTML = '';
     if (usuarios.length === 0) {
         userListContainer.innerHTML = '<p>No hay colaboradores registrados.</p>';
@@ -24,17 +24,29 @@ function mostrarUsuarios(usuarios, currentUserRole) {
         });
 
         let botonHTML = '';
+        
+        // Solo los admins pueden ver acciones
         if (currentUserRole === 'admin') {
-            const esActivo = usuario.status !== 'inactivo';
-            const botonTexto = esActivo ? 'Desactivar' : 'Activar';
-            const botonClass = esActivo ? 'btn-reject' : 'btn-approve';
-            botonHTML = `<button class="btn ${botonClass} status-btn">${botonTexto}</button>`;
+            // LÓGICA DE JERARQUÍA:
+            if (usuario.id === currentUserUid) {
+                // Es el usuario que está viendo la pantalla (él mismo)
+                botonHTML = `<span style="font-size: 0.85em; color: #94a3b8; font-weight: 500;">Tú</span>`;
+            } else if (usuario.id === adminUidGlobal) {
+                // Es el Súper Administrador (Intocable)
+                botonHTML = `<span style="font-size: 0.85em; color: var(--primary-color); font-weight: 600;">Súper Admin</span>`;
+            } else {
+                // Es cualquier otro empleado, coadmin o admin secundario
+                const esActivo = usuario.status !== 'inactivo';
+                const botonTexto = esActivo ? 'Desactivar' : 'Activar';
+                const botonClass = esActivo ? 'btn-reject' : 'btn-approve';
+                botonHTML = `<button class="btn ${botonClass} status-btn">${botonTexto}</button>`;
+            }
         }
         
         userElement.innerHTML = `
             <a href="perfil_empleado.html?id=${usuario.id}" class="user-info-link">
                 <div class="user-info">
-                    <div class="user-name">${usuario.nombre}</div>
+                    <div class="user-name">${usuario.nombre} <span style="font-size: 0.8em; color: #94a3b8;">(${usuario.rol})</span></div>
                     <div class="user-details">${usuario.cargo || 'Sin cargo'} - ${usuario.email}</div>
                 </div>
                 <div class="user-salary">${sueldoFormateado}</div>
@@ -44,7 +56,6 @@ function mostrarUsuarios(usuarios, currentUserRole) {
         userListContainer.appendChild(userElement);
     });
 }
-
 auth.onAuthStateChanged(async (user) => {
     if (user) {
         try {
