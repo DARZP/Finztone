@@ -222,6 +222,7 @@ async function guardarIngresoAdmin(status) {
             comprobanteURL = await fileRef.getDownloadURL();
         }
 
+
         let montoNeto = montoBruto;
         const impuestosSeleccionados = [];
         if (addTaxesCheckbox.checked) {
@@ -231,8 +232,11 @@ async function guardarIngresoAdmin(status) {
                 impuestosSeleccionados.push(impuesto);
                 totalImpuestos += impuesto.tipo === 'porcentaje' ? (montoBruto * impuesto.valor) / 100 : impuesto.valor;
             });
-            montoNeto = montoBruto - totalImpuestos;
+            // Ya no sumamos ni restamos totalImpuestos a montoNeto.
+            // montoNeto se queda con el mismo valor que montoBruto.
         }
+
+        
         const clienteSeleccionado = empresasCargadas.find(e => e.id === clientSelect.value);
 
         const incomeData = {
