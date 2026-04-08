@@ -160,6 +160,11 @@ function mostrarMovimientos(movimientos) {
         movementsList.innerHTML = '<p>No hay movimientos registrados en este período.</p>';
         return;
     }
+    if (todosLosMovimientos.length === 0) {
+        deleteAccountBtn.style.display = 'block';
+    } else {
+        deleteAccountBtn.style.display = 'none';
+    }
     movimientos.sort((a, b) => {
         const dateA = a.fechaDePago?.toDate() || new Date(a.fecha?.replace(/-/g, '/'));
         const dateB = b.fechaDePago?.toDate() || new Date(b.fecha?.replace(/-/g, '/'));
