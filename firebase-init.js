@@ -26,9 +26,34 @@ if (savedTheme === 'light') {
     document.body.classList.add('light-mode');
 }
 
-// Exportamos esta función por si quieres llamarla desde un botón en el futuro
-export function toggleTheme() {
-    document.body.classList.toggle('light-mode');
-    const currentTheme = document.body.classList.contains('light-mode') ? 'light' : 'dark';
-    localStorage.setItem('finztone_theme', currentTheme);
+// --- SISTEMA GLOBAL DE TEMA CLARO/OSCURO ---
+export function aplicarTema(preferencia) {
+    const body = document.body;
+    
+    if (preferencia === 'light') {
+        body.classList.add('light-mode');
+    } else if (preferencia === 'dark') {
+        body.classList.remove('light-mode');
+    } else {
+        // MODO AUTOMÁTICO
+        const horaActual = new Date().getHours();
+        // Si son las 6:00 AM (6) o más, pero antes de las 7:00 PM (19), es de día (Claro)
+        if (horaActual >= 6 && horaActual < 19) {
+            body.classList.add('light-mode');
+        } else {
+            // De las 7:00 PM en adelante, o antes de las 6:00 AM, es de noche (Oscuro)
+            body.classList.remove('light-mode');
+        }
+    }
 }
+
+// 1. Al cargar cualquier página, leemos la preferencia guardada (o por defecto 'auto')
+const preferenciaGuardada = localStorage.getItem('finztone_theme_pref') || 'auto';
+aplicarTema(preferenciaGuardada);
+
+// 2. Revisamos silenciosamente cada minuto por si la hora cambia mientras usan la app
+setInterval(() => {
+    if ((localStorage.getItem('finztone_theme_pref') || 'auto') === 'auto') {
+        aplicarTema('auto');
+    }
+}, 60000);
