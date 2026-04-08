@@ -51,8 +51,16 @@
                     <div class="filters-container">
                         <div class="filter-group"><label>Tipo</label><select id="tax-type-filter"></select></div>
                         <div class="filter-group"><label>Mes</label><select id="month-filter"></select></div>
-                        <div class="filter-group"><label>Estado</label><select id="status-filter"><option value="todos">Todos</option><option value="pendiente de pago">Pendiente de pago</option><option value="pagado (retenido)">Pagado (retenido)</option></select></div>
+                        <div class="filter-group">
+                            <label>Estado</label>
+                            <select id="status-filter">
+                                <option value="todos">Todos</option>
+                                <option value="pendiente">Pendiente de descontar</option>
+                                <option value="descontado">Descontado</option>
+                            </select>
+                        </div>
                     </div>
+                
                 </div>
                 <div class="table-container">
                     <table>
@@ -70,15 +78,16 @@
                 </div>
 
                 <div id="payment-section" class="payment-section" style="display: none;">
-                    <h3>Realizar Pago de Impuestos Seleccionados</h3>
+                    <h3>Descontar Impuestos Seleccionados del Saldo</h3>
                     <div class="payment-controls">
                         <div class="filter-group">
-                            <label for="payment-account-select">Pagar desde la cuenta:</label>
+                            <label for="payment-account-select">Descontar desde la cuenta:</label>
                             <select id="payment-account-select" required></select>
                         </div>
-                        <button id="pay-selected-btn" class="btn-pay">Pagar Seleccionados (<span id="selected-count">0</span>)</button>
+                        <button id="pay-selected-btn" class="btn-pay">Descontar Seleccionados (<span id="selected-count">0</span>)</button>
                     </div>
                 </div>
+                
             </div>
         </main>
     </div>
