@@ -231,24 +231,25 @@ auth.onAuthStateChanged(async (user) => {
     }
 
     function recalcularTotales() {
-        // ... (sin cambios internos, usa montoInput, summaryBruto, etc.)
-        const montoBruto = parseFloat(montoInput.value) || 0;
-        let totalImpuestos = 0;
-        document.querySelectorAll('#taxes-checklist input[type="checkbox"]:checked').forEach(checkbox => {
-            const impuesto = JSON.parse(checkbox.dataset.impuesto);
-            const montoCalculado = impuesto.tipo === 'porcentaje' ? (montoBruto * impuesto.valor) / 100 : impuesto.valor;
-            totalImpuestos += montoCalculado;
-            checkbox.closest('.tax-item').querySelector('.calculated-amount').textContent = `$${montoCalculado.toLocaleString('es-MX')}`;
-        });
-        document.querySelectorAll('#taxes-checklist input[type="checkbox"]:not(:checked)').forEach(checkbox => {
-            checkbox.closest('.tax-item').querySelector('.calculated-amount').textContent = '';
-        });
-        const montoNeto = montoBruto + totalImpuestos;
-        summaryBruto.textContent = `$${montoBruto.toLocaleString('es-MX')}`;
-        summaryImpuestos.textContent = `$${totalImpuestos.toLocaleString('es-MX')}`;
-        summaryNeto.textContent = `$${montoNeto.toLocaleString('es-MX')}`;
-    }
+    const montoBruto = parseFloat(montoInput.value) || 0;
+    let totalImpuestos = 0;
+    document.querySelectorAll('#taxes-checklist input[type="checkbox"]:checked').forEach(checkbox => {
+        const impuesto = JSON.parse(checkbox.dataset.impuesto);
+        const montoCalculado = impuesto.tipo === 'porcentaje' ? (montoBruto * impuesto.valor) / 100 : impuesto.valor;
+        totalImpuestos += montoCalculado;
+        checkbox.closest('.tax-item').querySelector('.calculated-amount').textContent = `$${montoCalculado.toLocaleString('es-MX')}`; // O -$ para ingresos
+    });
+    // ...
 
+    // --- EL CAMBIO ESTÁ AQUÍ ---
+    // Antes sumaba o restaba: const montoNeto = montoBruto + totalImpuestos;
+    const montoNeto = montoBruto; // Ahora el neto es IGUAL al bruto
+
+    summaryBruto.textContent = `$${montoBruto.toLocaleString('es-MX')}`;
+    summaryImpuestos.textContent = `$${totalImpuestos.toLocaleString('es-MX')}`;
+    summaryNeto.textContent = `$${montoNeto.toLocaleString('es-MX')}`;
+}
+    
     function cargarGastoEnFormulario(gasto) {
         // ... (sin cambios internos, usa addExpenseForm, clientSelect, etc.)
         addExpenseForm.reset();
