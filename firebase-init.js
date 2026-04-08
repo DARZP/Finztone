@@ -19,3 +19,16 @@ export const auth = firebase.auth();
 export const db = firebase.firestore();
 export const storage = firebase.storage();
 export const functions = firebase.app().functions('us-central1');
+
+// --- SISTEMA GLOBAL DE TEMA CLARO/OSCURO ---
+const savedTheme = localStorage.getItem('finztone_theme');
+if (savedTheme === 'light') {
+    document.body.classList.add('light-mode');
+}
+
+// Exportamos esta función por si quieres llamarla desde un botón en el futuro
+export function toggleTheme() {
+    document.body.classList.toggle('light-mode');
+    const currentTheme = document.body.classList.contains('light-mode') ? 'light' : 'dark';
+    localStorage.setItem('finztone_theme', currentTheme);
+}
