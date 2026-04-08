@@ -40,9 +40,10 @@ auth.onAuthStateChanged(async (user) => {
         const userDoc = await db.collection('usuarios').doc(user.uid).get();
         const userData = userDoc.exists ? userDoc.data() : {};
         
-        // --- CAMBIO CLAVE: Asignamos a la variable global ---
-        adminUidGlobal = userData.rol === 'admin' ? user.uid : userData.adminUid;
 
+        adminUidGlobal = userData.adminUid || user.uid;
+
+        
         if (!adminUidGlobal) {
             alert("Error: No se pudo identificar al administrador principal.");
             return;
