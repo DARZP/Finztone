@@ -336,26 +336,65 @@ function mostrarIngresos(ingresos) {
         incomeListContainer.innerHTML = '<p>No se encontraron ingresos.</p>';
         return;
     }
+
+    const gruposPorFecha = {};
+    ingresos.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
     ingresos.forEach(ingreso => {
-        const itemContainer = document.createElement('div');
-        itemContainer.classList.add('expense-item');
-        itemContainer.dataset.id = ingreso.id;
-        const fechaFormateada = new Date(ingreso.fecha.replace(/-/g, '/')).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
-        
-        // (Botón de editar quitado de aquí)
-        
-        itemContainer.innerHTML = `
-            <div class="item-summary">
-                <div class="expense-info">
-                    <span class="expense-description">${ingreso.descripcion}</span>
-                    <span class="expense-details">${ingreso.categoria} - ${fechaFormateada}</span>
-                </div>
-                <div class="status-display status-${ingreso.status}">${ingreso.status}</div>
-                <span class="expense-amount">$${(ingreso.totalConImpuestos || ingreso.monto).toLocaleString('es-MX')}</span>
-            </div>
-            <div class="item-details" style="display: none;"></div>`;
-        incomeListContainer.appendChild(itemContainer);
+        const fechaStr = ingreso.fecha; 
+        if (!gruposPorFecha[fechaStr]) gruposPorFecha[fechaStr] = { total: 0, items: [] };
+        gruposPorFecha[fechaStr].items.push(ingreso);
+        gruposPorFecha[fechaStr].total += (ingreso.totalConImpuestos || ingreso.monto);
     });
+
+    for (const [fecha, grupo] of Object.entries(gruposPorFecha)) {
+        const [year, month, day] = fecha.split('-');
+        const fechaFormateada = new Date(year, month - 1, day).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+
+        const dayGroup = document.createElement('div');
+        dayGroup.style.marginBottom = '15px';
+
+        const dayHeader = document.createElement('div');
+        dayHeader.classList.add('day-header');
+        dayHeader.style.cssText = 'cursor: pointer; background: rgba(255,255,255,0.1); padding: 12px 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; font-weight: 500; transition: background 0.3s;';
+        dayHeader.innerHTML = `
+            <span>📅 ${fechaFormateada}</span>
+            <span>Total: $${grupo.total.toLocaleString('es-MX')} <span class="toggle-icon" style="font-size: 0.8em; margin-left: 10px;">▼</span></span>
+        `;
+
+        const dayItems = document.createElement('div');
+        dayItems.style.display = 'none'; 
+        dayItems.style.padding = '10px 0 0 10px';
+
+        grupo.items.forEach(ingreso => {
+            const itemContainer = document.createElement('div');
+            itemContainer.classList.add('expense-item');
+            itemContainer.dataset.id = ingreso.id;
+
+            itemContainer.innerHTML = `
+                <div class="item-summary">
+                    <div class="expense-info">
+                        <span class="expense-description">${ingreso.descripcion}</span>
+                        <span class="expense-details">${ingreso.categoria}</span>
+                    </div>
+                    <div class="status-display status-${ingreso.status}">${ingreso.status}</div>
+                    <span class="expense-amount">$${(ingreso.totalConImpuestos || ingreso.monto).toLocaleString('es-MX')}</span>
+                </div>
+                <div class="item-details" style="display: none;"></div>`;
+            dayItems.appendChild(itemContainer);
+        });
+
+        dayHeader.addEventListener('click', () => {
+            const isHidden = dayItems.style.display === 'none';
+            dayItems.style.display = isHidden ? 'block' : 'none';
+            dayHeader.querySelector('.toggle-icon').textContent = isHidden ? '▲' : '▼';
+            dayHeader.style.background = isHidden ? 'rgba(0, 169, 157, 0.2)' : 'rgba(255,255,255,0.1)';
+        });
+
+        dayGroup.appendChild(dayHeader);
+        dayGroup.appendChild(dayItems);
+        incomeListContainer.appendChild(dayGroup);
+    }
 }
 
 function poblarFiltrosYCategorias() {
