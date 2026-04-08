@@ -112,7 +112,13 @@ function cargarMovimientosDeImpuestos() {
     if (!adminUidGlobal) return;
     let query = db.collection('movimientos_impuestos').where('adminUid', '==', adminUidGlobal);
 
-    if (statusFilter.value !== 'todos') query = query.where('status', '==', statusFilter.value);
+    // Ajuste para soportar el historial antiguo ('pagado') y el nuevo ('descontado' / 'pendiente')
+    if (statusFilter.value === 'pendiente') {
+        query = query.where('status', 'in', ['pendiente', 'pendiente de pago']);
+    } else if (statusFilter.value === 'descontado') {
+        query = query.where('status', 'in', ['descontado', 'pagado', 'pagado (retenido)']);
+    }
+
     if (monthFilter.value !== 'todos') {
         const [year, month] = monthFilter.value.split('-').map(Number);
         const startDate = new Date(year, month - 1, 1);
@@ -136,13 +142,68 @@ function mostrarMovimientos(movimientos) {
         taxMovementsContainer.innerHTML = '<tr><td colspan="6">No se encontraron movimientos.</td></tr>';
         return;
     }
+
+    // 1. Agrupar los movimientos por Día
+    const gruposPorDia = {};
     movimientos.forEach(mov => {
-        const fecha = mov.fecha.toDate().toLocaleDateString('es-ES');
-        const row = document.createElement('tr');
-        const checkboxHTML = mov.status === 'pendiente de pago' ? `<td><input type="checkbox" class="tax-checkbox" data-id="${mov.id}" data-monto="${mov.monto}"></td>` : '<td></td>';
-        row.innerHTML = `${checkboxHTML}<td>${fecha}</td><td>${mov.origen}</td><td>${mov.tipoImpuesto}</td><td>$${(mov.monto || 0).toLocaleString('es-MX')}</td><td><span class="status status-${(mov.status || '').replace(/ /g, '-')}">${mov.status}</span></td>`;
-        taxMovementsContainer.appendChild(row);
+        const fechaStr = mov.fecha.toDate().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        if (!gruposPorDia[fechaStr]) {
+            gruposPorDia[fechaStr] = { total: 0, movimientos: [] };
+        }
+        gruposPorDia[fechaStr].movimientos.push(mov);
+        gruposPorDia[fechaStr].total += parseFloat(mov.monto) || 0;
     });
+
+    // 2. Renderizar los grupos como filas desplegables
+    for (const [fecha, grupo] of Object.entries(gruposPorDia)) {
+        
+        // Fila Encabezado del Día
+        const headerRow = document.createElement('tr');
+        headerRow.style.cursor = 'pointer';
+        headerRow.style.backgroundColor = 'rgba(255,255,255,0.1)';
+        headerRow.innerHTML = `
+            <td colspan="6" style="padding: 12px; font-weight: bold; border-radius: 8px;">
+                📅 ${fecha} &nbsp;&nbsp;|&nbsp;&nbsp; Total a descontar: $${grupo.total.toLocaleString('es-MX')} 
+                <span class="toggle-icon" style="float:right; font-size: 0.9em; margin-top: 3px;">▼ Ver detalles</span>
+            </td>
+        `;
+        taxMovementsContainer.appendChild(headerRow);
+
+        // Filas hijas (Los movimientos del día)
+        const childrenRows = [];
+        grupo.movimientos.forEach(mov => {
+            const row = document.createElement('tr');
+            row.style.display = 'none'; // Ocultas por defecto
+            
+            // Ajustamos el texto visual dependiendo del estado en la base de datos
+            let statusDisplay = mov.status;
+            const esPendiente = (statusDisplay === 'pendiente de pago' || statusDisplay === 'pendiente');
+            if (esPendiente) statusDisplay = 'Pendiente';
+            if (statusDisplay === 'pagado (retenido)' || statusDisplay === 'pagado' || statusDisplay === 'descontado') statusDisplay = 'Descontado';
+
+            const checkboxHTML = esPendiente ? `<td><input type="checkbox" class="tax-checkbox" data-id="${mov.id}" data-monto="${mov.monto}"></td>` : '<td></td>';
+            const claseStatus = statusDisplay === 'Pendiente' ? 'pendiente' : 'aprobado'; // Reutilizamos colores
+
+            row.innerHTML = `
+                ${checkboxHTML}
+                <td style="padding-left: 30px;">↳ ${fecha}</td>
+                <td>${mov.origen}</td>
+                <td>${mov.tipoImpuesto}</td>
+                <td>$${(mov.monto || 0).toLocaleString('es-MX')}</td>
+                <td><span class="status status-${claseStatus}">${statusDisplay}</span></td>
+            `;
+            taxMovementsContainer.appendChild(row);
+            childrenRows.push(row);
+        });
+
+        // Lógica para expandir/contraer al hacer clic en el encabezado del día
+        headerRow.addEventListener('click', () => {
+            const isHidden = childrenRows[0].style.display === 'none';
+            childrenRows.forEach(r => r.style.display = isHidden ? 'table-row' : 'none');
+            headerRow.querySelector('.toggle-icon').textContent = isHidden ? '▲ Ocultar' : '▼ Ver detalles';
+            headerRow.style.backgroundColor = isHidden ? 'rgba(0, 169, 157, 0.2)' : 'rgba(255,255,255,0.1)';
+        });
+    }
 }
 
 paySelectedBtn.addEventListener('click', async () => {
@@ -151,8 +212,8 @@ paySelectedBtn.addEventListener('click', async () => {
 
     const selectedCheckboxes = document.querySelectorAll('.tax-checkbox:checked');
     const cuentaId = paymentAccountSelect.value;
-    if (selectedCheckboxes.length === 0) return alert('No has seleccionado ningún impuesto para pagar.');
-    if (!cuentaId) return alert('Por favor, selecciona una cuenta de origen para el pago.');
+    if (selectedCheckboxes.length === 0) return alert('No has seleccionado ningún impuesto.');
+    if (!cuentaId) return alert('Por favor, selecciona la cuenta a la cual se le descontará el saldo.');
 
     let totalAPagar = 0;
     const idsAPagar = [];
@@ -161,31 +222,41 @@ paySelectedBtn.addEventListener('click', async () => {
         idsAPagar.push(cb.dataset.id);
     });
 
-    if (!confirm(`El total a pagar es $${totalAPagar.toLocaleString()}. ¿Proceder con el pago?`)) return;
+    if (!confirm(`Se descontará un total de $${totalAPagar.toLocaleString()} de la cuenta seleccionada. ¿Proceder?`)) return;
     const cuentaRef = db.collection('cuentas').doc(cuentaId);
     
+    paySelectedBtn.disabled = true;
+    paySelectedBtn.textContent = 'Procesando...';
+
     try {
         await db.runTransaction(async (transaction) => {
             const cuentaDoc = await transaction.get(cuentaRef);
             if (!cuentaDoc.exists) throw "La cuenta no existe.";
             if ((cuentaDoc.data().saldoActual || 0) < totalAPagar) throw "No hay saldo suficiente en la cuenta.";
             
-            idsAPagar.forEach(id => transaction.update(db.collection('movimientos_impuestos').doc(id), { status: 'pagado' }));
+            // Actualizamos los registros a 'descontado'
+            idsAPagar.forEach(id => transaction.update(db.collection('movimientos_impuestos').doc(id), { status: 'descontado' }));
             
+            // Creamos el movimiento de egreso global
             transaction.set(db.collection('gastos').doc(), {
-                descripcion: `Pago de impuestos consolidados (${idsAPagar.length} items)`,
+                descripcion: `Descuento de impuestos agrupados (${idsAPagar.length} conceptos)`,
                 monto: totalAPagar, totalConImpuestos: totalAPagar, categoria: 'Impuestos', fecha: new Date().toISOString().split('T')[0], status: 'aprobado',
                 cuentaId: cuentaId, cuentaNombre: paymentAccountSelect.options[paymentAccountSelect.selectedIndex].text.split(' (')[0],
                 creadoPor: user.uid, nombreCreador: "Sistema", adminUid: adminUidGlobal, fechaDeCreacion: new Date()
             });
             transaction.update(cuentaRef, { saldoActual: (cuentaDoc.data().saldoActual - totalAPagar) });
         });
-        alert('¡Pago de impuestos registrado exitosamente!');
+        alert('¡Descuento registrado exitosamente!');
+        document.getElementById('payment-section').style.display = 'none'; // Oculta el panel
     } catch (error) {
-        console.error("Error en la transacción de pago de impuestos: ", error);
+        console.error("Error en la transacción de descuento de impuestos: ", error);
         alert("Error: " + error.message);
+    } finally {
+        paySelectedBtn.disabled = false;
+        paySelectedBtn.textContent = `Descontar Seleccionados`;
     }
 });
+
 
 async function descargarRegistrosImpuesto(nombreImpuesto, adminUid) {
     if (!adminUid || !nombreImpuesto) return;
