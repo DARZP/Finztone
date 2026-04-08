@@ -986,36 +986,66 @@ tbody tr:hover {
 
 /* --- MODO CLARO GLOBAL --- */
 body.light-mode {
-    --secondary-color: #f0f4f8; /* Fondo claro azulado/grisáceo */
+    --secondary-color: #f0f4f8; /* Fondo claro azulado/grisáceo para el body */
     --text-color-light: #1e293b; /* Texto oscuro para contrastar */
-    --input-bg-color: rgba(255, 255, 255, 0.7);
-    --input-border-color: rgba(0, 0, 0, 0.15);
+    --input-bg-color: #ffffff; /* Inputs totalmente blancos */
+    --input-border-color: rgba(0, 0, 0, 0.2); /* Bordes de inputs más visibles */
     background: var(--secondary-color);
     color: var(--text-color-light);
 }
+
+/* 1. Recuadros principales (Tarjetas, Formularios, Header) */
 body.light-mode .main-header,
 body.light-mode .form-card,
 body.light-mode .list-card,
 body.light-mode .card,
 body.light-mode .tool-card {
-    background: rgba(255, 255, 255, 0.85); /* Tarjetas blancas semi-transparentes */
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
+    background: #ffffff; /* Blanco sólido para resaltar del fondo grisáceo */
+    border: 1px solid rgba(0, 0, 0, 0.12); /* Contorno marcado y elegante */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04); /* Sombra más sutil */
 }
+
+/* 2. Listados internos (Gastos, Borradores, Usuarios, Impuestos) */
+body.light-mode .expense-item,
+body.light-mode .draft-item,
+body.light-mode .compact-tax-item,
+body.light-mode .user-item,
+body.light-mode .deduction-item {
+    background-color: #f8fafc; /* Un gris muuuy clarito */
+    border: 1px solid rgba(0, 0, 0, 0.08); /* Contorno para que no se pierdan */
+    border-radius: 8px; 
+}
+
+/* 3. Encabezados de los días en los historiales colapsables */
+body.light-mode .day-header {
+    background: rgba(0, 0, 0, 0.04) !important;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* 4. Corrección de los Botones Secundarios (Descargar, Editar, Borrar) */
+body.light-mode .btn-secondary,
+body.light-mode .btn-edit,
+body.light-mode .btn-delete {
+    background-color: transparent; 
+    color: #475569; /* Letra gris oscuro */
+    border: 1px solid #94a3b8; /* Contorno gris visible */
+    font-weight: 500;
+}
+
+body.light-mode .btn-secondary:hover,
+body.light-mode .btn-edit:hover,
+body.light-mode .btn-delete:hover {
+    background-color: rgba(0, 0, 0, 0.05); /* Efecto al pasar el mouse */
+    color: #1e293b;
+    border-color: #64748b;
+}
+
+/* 5. Inputs y Textos de Botones del Dashboard */
 body.light-mode .input-group input,
 body.light-mode .input-group select,
 body.light-mode .input-group textarea {
     color: #1e293b;
-    background-color: rgba(255, 255, 255, 0.9);
-}
-body.light-mode .day-header {
-    background: rgba(0, 0, 0, 0.05) !important;
-}
-body.light-mode .expense-item,
-body.light-mode .draft-item,
-body.light-mode .compact-tax-item {
-    background-color: rgba(0, 0, 0, 0.03);
 }
 body.light-mode .tool-card span {
-    color: #1e293b; /* Letras oscuras en los botones del dashboard */
+    color: #1e293b;
 }
