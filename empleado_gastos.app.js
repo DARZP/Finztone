@@ -390,6 +390,10 @@ function poblarFiltrosYCategorias() {
         monthFilter.appendChild(new Option(text, value));
         fecha.setMonth(fecha.getMonth() - 1);
     }
+
+    monthFilter.value = currentMonthValue;
+
+    
     const categorias = ["Comida", "Transporte", "Oficina", "Marketing", "Otro"];
     let filterOptionsHTML = '<option value="todos">Todas</option>';
     let formOptionsHTML = '<option value="" disabled selected>Selecciona una categoría</option>';
