@@ -355,32 +355,66 @@ function mostrarGastos(gastos) {
         expenseListContainer.innerHTML = '<p>No se encontraron gastos.</p>';
         return;
     }
-    gastos.forEach(gasto => {
-        const itemContainer = document.createElement('div');
-        itemContainer.classList.add('expense-item');
-        itemContainer.dataset.id = gasto.id;
-        const fechaFormateada = new Date(gasto.fecha.replace(/-/g, '/')).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
-        
-        // (Quitamos el botón de editar de aquí, ya que ahora estará en la sección de borradores)
-        // const botonEditarHTML = gasto.status === 'borrador' ? `<button class="btn-edit" data-id="${gasto.id}">Editar</button>` : '';
-        
-        itemContainer.innerHTML = `
-            <div class="item-summary">
-                <div class="expense-info">
-                    <span class="expense-description">${gasto.descripcion}</span>
-                    <span class="expense-details">${gasto.categoria} - ${fechaFormateada}</span>
-                </div>
-                <div class="status-display status-${gasto.status}">${gasto.status}</div>
-                <span class="expense-amount">$${(gasto.totalConImpuestos || gasto.monto).toLocaleString('es-MX')}</span>
-            </div>
-            <div class="item-details" style="display: none;"></div>`;
-        expenseListContainer.appendChild(itemContainer);
-    });
-    
-    // (Este listener ya no es necesario si quitamos el botón de editar de la lista principal)
-    // document.querySelectorAll('.btn-edit').forEach(button => { ... });
-}
 
+    const gruposPorFecha = {};
+    gastos.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+    gastos.forEach(gasto => {
+        const fechaStr = gasto.fecha; 
+        if (!gruposPorFecha[fechaStr]) gruposPorFecha[fechaStr] = { total: 0, items: [] };
+        gruposPorFecha[fechaStr].items.push(gasto);
+        gruposPorFecha[fechaStr].total += (gasto.totalConImpuestos || gasto.monto);
+    });
+
+    for (const [fecha, grupo] of Object.entries(gruposPorFecha)) {
+        const [year, month, day] = fecha.split('-');
+        const fechaFormateada = new Date(year, month - 1, day).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+
+        const dayGroup = document.createElement('div');
+        dayGroup.style.marginBottom = '15px';
+
+        const dayHeader = document.createElement('div');
+        dayHeader.classList.add('day-header');
+        dayHeader.style.cssText = 'cursor: pointer; background: rgba(255,255,255,0.1); padding: 12px 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; font-weight: 500; transition: background 0.3s;';
+        dayHeader.innerHTML = `
+            <span>📅 ${fechaFormateada}</span>
+            <span>Total: $${grupo.total.toLocaleString('es-MX')} <span class="toggle-icon" style="font-size: 0.8em; margin-left: 10px;">▼</span></span>
+        `;
+
+        const dayItems = document.createElement('div');
+        dayItems.style.display = 'none'; 
+        dayItems.style.padding = '10px 0 0 10px';
+
+        grupo.items.forEach(gasto => {
+            const itemContainer = document.createElement('div');
+            itemContainer.classList.add('expense-item');
+            itemContainer.dataset.id = gasto.id;
+
+            itemContainer.innerHTML = `
+                <div class="item-summary">
+                    <div class="expense-info">
+                        <span class="expense-description">${gasto.descripcion}</span>
+                        <span class="expense-details">${gasto.categoria}</span>
+                    </div>
+                    <div class="status-display status-${gasto.status}">${gasto.status}</div>
+                    <span class="expense-amount">$${(gasto.totalConImpuestos || gasto.monto).toLocaleString('es-MX')}</span>
+                </div>
+                <div class="item-details" style="display: none;"></div>`;
+            dayItems.appendChild(itemContainer);
+        });
+
+        dayHeader.addEventListener('click', () => {
+            const isHidden = dayItems.style.display === 'none';
+            dayItems.style.display = isHidden ? 'block' : 'none';
+            dayHeader.querySelector('.toggle-icon').textContent = isHidden ? '▲' : '▼';
+            dayHeader.style.background = isHidden ? 'rgba(0, 169, 157, 0.2)' : 'rgba(255,255,255,0.1)';
+        });
+
+        dayGroup.appendChild(dayHeader);
+        dayGroup.appendChild(dayItems);
+        expenseListContainer.appendChild(dayGroup);
+    }
+}
 function poblarFiltrosYCategorias() {
     monthFilter.innerHTML = '<option value="todos">Todos los meses</option>';
     let fecha = new Date();
