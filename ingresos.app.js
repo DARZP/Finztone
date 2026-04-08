@@ -272,6 +272,7 @@ async function guardarIngresoAdmin(status) {
         if (finalStatus === 'borrador' || finalStatus === 'pendiente') {
             await db.collection('ingresos').add(incomeData);
             alert(finalStatus === 'borrador' ? '¡Borrador guardado!' : '¡Ingreso enviado para aprobación!');
+
         } else { // Es un admin guardando un ingreso aprobado
             const cuentaRef = db.collection('cuentas').doc(cuentaId);
             await db.runTransaction(async (transaction) => {
@@ -279,10 +280,25 @@ async function guardarIngresoAdmin(status) {
                 if (!cuentaDoc.exists) throw "La cuenta no existe.";
                 const nuevoSaldo = (cuentaDoc.data().saldoActual || 0) + montoNeto;
                 const newIncomeRef = db.collection('ingresos').doc();
+                
                 transaction.set(newIncomeRef, incomeData);
                 transaction.update(cuentaRef, { saldoActual: nuevoSaldo });
+
+                // --- NUEVO: GUARDAR LOS IMPUESTOS DEL INGRESO ---
+                impuestosSeleccionados.forEach(imp => {
+                    const montoImpuesto = imp.tipo === 'porcentaje' ? (montoBruto * imp.valor) / 100 : imp.valor;
+                    const taxMovRef = db.collection('movimientos_impuestos').doc();
+                    transaction.set(taxMovRef, {
+                        origen: `Ingreso - ${incomeData.descripcion}`, 
+                        tipoImpuesto: imp.nombre, 
+                        monto: montoImpuesto,
+                        fecha: new Date(), 
+                        status: 'pendiente', // Los dejamos como pendientes para descontarlos después
+                        adminUid: incomeData.adminUid 
+                    });
+                });
             });
-            alert('¡Ingreso registrado y saldo de cuenta actualizado!');
+            alert('¡Ingreso registrado, saldo actualizado y retenciones generadas!');
         }
         
         addIncomeForm.reset();
