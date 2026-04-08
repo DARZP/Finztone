@@ -14,6 +14,8 @@ const payCardBtn = document.getElementById('pay-card-btn');
 const periodSelector = document.getElementById('period-selector');
 const payPeriodBtn = document.getElementById('pay-period-btn');
 const periodControls = document.getElementById('period-controls');
+const editAccountBtn = document.getElementById('edit-account-btn');
+const deleteAccountBtn = document.getElementById('delete-account-btn');
 
 const urlParams = new URLSearchParams(window.location.search);
 const cuentaId = urlParams.get('id');
@@ -259,6 +261,40 @@ async function realizarPago(cuentaCreditoData, tipoPago) {
         alert("Error: " + error.message);
     }
 }
+
+// --- LÓGICA PARA EDITAR Y ELIMINAR CUENTAS ---
+editAccountBtn.addEventListener('click', async () => {
+    const nombreActual = accountNameTitle.textContent;
+    const nuevoNombre = prompt("Ingresa el nuevo nombre para esta cuenta:", nombreActual);
+    
+    if (nuevoNombre && nuevoNombre.trim() !== "" && nuevoNombre !== nombreActual) {
+        try {
+            await db.collection('cuentas').doc(cuentaId).update({ nombre: nuevoNombre.trim() });
+            accountNameTitle.textContent = nuevoNombre.trim();
+            alert("¡Nombre de la cuenta actualizado!");
+        } catch (error) {
+            console.error("Error al actualizar nombre:", error);
+            alert("Hubo un error al actualizar el nombre.");
+        }
+    }
+});
+
+deleteAccountBtn.addEventListener('click', async () => {
+    if (todosLosMovimientos.length > 0) {
+        return alert("Por seguridad, no puedes eliminar una cuenta que ya tiene movimientos registrados.");
+    }
+    
+    if (confirm("¿Estás seguro de que deseas eliminar esta cuenta permanentemente? Esta acción no se puede deshacer.")) {
+        try {
+            await db.collection('cuentas').doc(cuentaId).delete();
+            alert("Cuenta eliminada exitosamente.");
+            window.location.href = 'cuentas.html'; // Regresamos a la lista de cuentas
+        } catch (error) {
+            console.error("Error al eliminar cuenta:", error);
+            alert("Hubo un error al intentar eliminar la cuenta.");
+        }
+    }
+});
 
 // --- EVENT LISTENER ---
 periodSelector.addEventListener('change', () => {
