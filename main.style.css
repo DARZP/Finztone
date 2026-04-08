@@ -193,10 +193,10 @@ h2 {
     box-shadow: 0 8px 25px rgb(0 0 0 / 20%);
 }
 .tool-icon {
-    font-size: 32px; /* Controla el tamaño de los nuevos iconos */
-    margin-bottom: 15px;
-    color: var(--primary-color); /* Esto hará que los iconos tomen tu color verde bonito automáticamente */
+    font-size: 3em;
+    line-height: 1.2;
 }
+
 /* --- LISTAS Y TABLAS --- */
 
 .user-item, .expense-item, .account-item, .pending-item {
@@ -277,10 +277,10 @@ a.user-item, a.expense-item {
 }
 
 .tool-icon {
-    font-size: 32px; /* Controla el tamaño de los nuevos iconos */
-    margin-bottom: 15px;
-    color: var(--primary-color); /* Esto hará que los iconos tomen tu color verde bonito automáticamente */
+    font-size: 3em;
+    line-height: 1.2;
 }
+
 /* --- AJUSTE ADICIONAL EN LA REGLA PARA MÓVILES --- */
 
 /* Modifica la regla @media que ya tienes para que también incluya este cambio */
