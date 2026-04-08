@@ -386,27 +386,68 @@ function mostrarIngresosAprobados(ingresos) {
         incomeListContainer.innerHTML = '<p>No se encontraron ingresos con los filtros seleccionados.</p>';
         return;
     }
-    ingresos.forEach(ingreso => {
-        const itemContainer = document.createElement('div');
-        itemContainer.classList.add('expense-item'); // Mantenemos la clase para consistencia de estilos
-        itemContainer.dataset.id = ingreso.id; // <-- AÑADIDO: Data ID
-        const fechaFormateada = new Date(ingreso.fecha.replace(/-/g, '/')).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
-        const creadorLink = (ingreso.nombreCreador !== "Administrador" && ingreso.creadorId) ? `<a href="perfil_empleado.html?id=${ingreso.creadorId}">${ingreso.nombreCreador}</a>` : (ingreso.nombreCreador || "Sistema");
-        const iconoComprobante = ingreso.comprobanteURL ? `<a href="${ingreso.comprobanteURL}" target="_blank" title="Ver comprobante" style="text-decoration: none; font-size: 1.1em; margin-left: 8px;">📎</a>` : '';
 
-        itemContainer.innerHTML = `
-            <div class="item-summary">
-                <div class="expense-info">
-                    <span class="expense-description">${ingreso.descripcion}${iconoComprobante}</span>
-                    <span class="expense-details">Registrado por: ${creadorLink} | ${ingreso.categoria} - ${fechaFormateada} | Estado: ${ingreso.status}</span>
-                </div>
-                <span class="expense-amount">$${(ingreso.totalConImpuestos || ingreso.monto).toLocaleString('es-MX')}</span>
-            </div>
-    
-            <div class="item-details-view" style="display: none;"></div> 
-        `;
-        incomeListContainer.appendChild(itemContainer);
+    const gruposPorFecha = {};
+    ingresos.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+    ingresos.forEach(ingreso => {
+        const fechaStr = ingreso.fecha; 
+        if (!gruposPorFecha[fechaStr]) gruposPorFecha[fechaStr] = { total: 0, items: [] };
+        gruposPorFecha[fechaStr].items.push(ingreso);
+        gruposPorFecha[fechaStr].total += (ingreso.totalConImpuestos || ingreso.monto);
     });
+
+    for (const [fecha, grupo] of Object.entries(gruposPorFecha)) {
+        const [year, month, day] = fecha.split('-');
+        const fechaFormateada = new Date(year, month - 1, day).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+
+        const dayGroup = document.createElement('div');
+        dayGroup.style.marginBottom = '15px';
+
+        const dayHeader = document.createElement('div');
+        dayHeader.classList.add('day-header');
+        dayHeader.style.cssText = 'cursor: pointer; background: rgba(255,255,255,0.1); padding: 12px 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; font-weight: 500; transition: background 0.3s;';
+        dayHeader.innerHTML = `
+            <span>📅 ${fechaFormateada}</span>
+            <span>Total: $${grupo.total.toLocaleString('es-MX')} <span class="toggle-icon" style="font-size: 0.8em; margin-left: 10px;">▼</span></span>
+        `;
+
+        const dayItems = document.createElement('div');
+        dayItems.style.display = 'none'; 
+        dayItems.style.padding = '10px 0 0 10px';
+
+        grupo.items.forEach(ingreso => {
+            const itemContainer = document.createElement('div');
+            itemContainer.classList.add('expense-item');
+            itemContainer.dataset.id = ingreso.id;
+            
+            const creadorLink = (ingreso.nombreCreador !== "Administrador" && ingreso.creadorId) ? `<a href="perfil_empleado.html?id=${ingreso.creadorId}">${ingreso.nombreCreador}</a>` : (ingreso.nombreCreador || "Sistema");
+            const iconoComprobante = ingreso.comprobanteURL ? `<a href="${ingreso.comprobanteURL}" target="_blank" title="Ver comprobante" style="text-decoration: none; font-size: 1.1em; margin-left: 8px;">📎</a>` : '';
+
+            itemContainer.innerHTML = `
+                <div class="item-summary">
+                    <div class="expense-info">
+                        <span class="expense-description">${ingreso.descripcion}${iconoComprobante}</span>
+                        <span class="expense-details">Por: ${creadorLink} | ${ingreso.categoria} | ${ingreso.status}</span>
+                    </div>
+                    <span class="expense-amount">$${(ingreso.totalConImpuestos || ingreso.monto).toLocaleString('es-MX')}</span>
+                </div>
+                <div class="item-details-view" style="display: none;"></div> 
+            `;
+            dayItems.appendChild(itemContainer);
+        });
+
+        dayHeader.addEventListener('click', () => {
+            const isHidden = dayItems.style.display === 'none';
+            dayItems.style.display = isHidden ? 'block' : 'none';
+            dayHeader.querySelector('.toggle-icon').textContent = isHidden ? '▲' : '▼';
+            dayHeader.style.background = isHidden ? 'rgba(0, 169, 157, 0.2)' : 'rgba(255,255,255,0.1)';
+        });
+
+        dayGroup.appendChild(dayHeader);
+        dayGroup.appendChild(dayItems);
+        incomeListContainer.appendChild(dayGroup);
+    }
 }
 
 incomeListContainer.addEventListener('click', (e) => {
