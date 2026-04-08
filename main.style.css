@@ -983,3 +983,39 @@ tbody tr:hover {
     background-color: var(--reject-color);
     color: white;
 }
+
+/* --- MODO CLARO GLOBAL --- */
+body.light-mode {
+    --secondary-color: #f0f4f8; /* Fondo claro azulado/grisáceo */
+    --text-color-light: #1e293b; /* Texto oscuro para contrastar */
+    --input-bg-color: rgba(255, 255, 255, 0.7);
+    --input-border-color: rgba(0, 0, 0, 0.15);
+    background: var(--secondary-color);
+    color: var(--text-color-light);
+}
+body.light-mode .main-header,
+body.light-mode .form-card,
+body.light-mode .list-card,
+body.light-mode .card,
+body.light-mode .tool-card {
+    background: rgba(255, 255, 255, 0.85); /* Tarjetas blancas semi-transparentes */
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
+}
+body.light-mode .input-group input,
+body.light-mode .input-group select,
+body.light-mode .input-group textarea {
+    color: #1e293b;
+    background-color: rgba(255, 255, 255, 0.9);
+}
+body.light-mode .day-header {
+    background: rgba(0, 0, 0, 0.05) !important;
+}
+body.light-mode .expense-item,
+body.light-mode .draft-item,
+body.light-mode .compact-tax-item {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+body.light-mode .tool-card span {
+    color: #1e293b; /* Letras oscuras en los botones del dashboard */
+}
