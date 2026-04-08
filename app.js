@@ -78,6 +78,7 @@ loginForm.addEventListener('submit', (evento) => {
         });
 });
 
+
 // --- FUNCIÓN AUXILIAR PARA TRADUCIR ERRORES ---
 function traducirErrorDeFirebase(codigoDeError) {
     switch (codigoDeError) {
@@ -92,4 +93,35 @@ function traducirErrorDeFirebase(codigoDeError) {
         default:
             return 'Ocurrió un error inesperado al intentar iniciar sesión.';
     }
+}
+
+// --- RECUPERACIÓN DE CONTRASEÑA ---
+const forgotPasswordLink = document.getElementById('forgot-password-link');
+
+if (forgotPasswordLink) {
+    forgotPasswordLink.addEventListener('click', (evento) => {
+        evento.preventDefault(); // Evitamos que el enlace recargue la página
+        
+        // Obtenemos el correo directamente del formulario de login
+        const emailInput = loginForm['admin-email']; 
+        const email = emailInput ? emailInput.value.trim() : '';
+
+        // Validamos que el campo no esté vacío
+        if (!email) {
+            alert("Por favor, ingresa tu correo electrónico en el campo superior y vuelve a hacer clic en 'Olvidé mi contraseña'.");
+            emailInput.focus(); // Ponemos el cursor en el campo de correo
+            return;
+        }
+
+        // Llamamos a la función de Firebase para enviar el correo
+        auth.sendPasswordResetEmail(email)
+            .then(() => {
+                alert(`Te hemos enviado un enlace para restablecer tu contraseña a: ${email}. \n\nPor favor, revisa tu bandeja de entrada (y tu carpeta de spam).`);
+            })
+            .catch((error) => {
+                console.error("Error al enviar correo de recuperación:", error);
+                // Reutilizamos tu función de traducción de errores
+                alert(traducirErrorDeFirebase(error.code)); 
+            });
+    });
 }
