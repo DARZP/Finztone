@@ -1256,3 +1256,76 @@ body.light-mode .chart-container {
     background: #f8fafc; 
     border-color: rgba(0,0,0,0.08); 
 }
+
+/* =========================================================
+   MEJORAS DE INTERFAZ: TOASTS, EMPTY STATES Y HEADER CLARO
+   ========================================================= */
+
+/* 1. Header de Cristal en Modo Claro */
+body.light-mode .main-header {
+    background: rgba(255, 255, 255, 0.7) !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* 2. Sistema de Notificaciones Flotantes (Toasts) */
+#toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.toast {
+    min-width: 250px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    background: var(--input-bg-color);
+    color: var(--text-color-light);
+    border: 1px solid var(--input-border-color);
+    font-weight: 500;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    transform: translateX(120%);
+    transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.toast.show {
+    transform: translateX(0);
+}
+
+/* Colores según el tipo de alerta */
+.toast.success { border-left: 5px solid #10b981; }
+.toast.error { border-left: 5px solid #ef4444; }
+.toast.info { border-left: 5px solid #3b82f6; }
+
+/* 3. Estados Vacíos (Empty States) para cuando no hay datos */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 50px 20px;
+    color: var(--text-color-light);
+    opacity: 0.5;
+    text-align: center;
+}
+.empty-state i {
+    font-size: 3.5rem;
+    margin-bottom: 15px;
+    color: var(--primary-color);
+}
+.empty-state h4 {
+    margin: 0 0 5px 0;
+    font-size: 1.2em;
+}
+.empty-state p {
+    margin: 0;
+    font-size: 0.9em;
+}
