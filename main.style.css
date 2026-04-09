@@ -1175,3 +1175,48 @@ body.light-mode .role-title {
 body.light-mode .role-desc {
     color: #64748b;
 }
+
+Abre tu archivo **`main.style.css`** y pega este bloque al final. Esto hará que los recuadros de resumen se vean idénticos al estilo de cristal (o tarjetas limpias en modo claro) que ya tenemos:
+
+```css
+/* =========================================================
+   RESUMEN FINANCIERO (DASHBOARD)
+   ========================================================= */
+.summary-cards {
+    display: flex;
+    gap: 20px;
+}
+.summary-card {
+    flex: 1;
+    padding: 20px;
+    border-radius: 12px;
+    background: var(--input-bg-color);
+    border: 1px solid var(--input-border-color);
+    text-align: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.summary-card:hover {
+    transform: translateY(-3px);
+}
+.summary-card h3 {
+    margin: 0 0 10px 0;
+    font-size: 1em;
+    color: var(--text-color-light);
+    opacity: 0.8;
+}
+.summary-card p {
+    margin: 0;
+    font-size: 1.8em;
+    font-weight: 700;
+}
+/* Colores específicos para los montos */
+.income-card p { color: #10b981; } /* Verde */
+.expense-card p { color: #ef4444; } /* Rojo */
+.balance-card p { color: #3b82f6; } /* Azul */
+
+/* Adaptación para móviles */
+@media (max-width: 768px) {
+    .summary-cards {
+        flex-direction: column;
+    }
+}
