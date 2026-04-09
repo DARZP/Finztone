@@ -346,24 +346,29 @@ function poblarFiltrosYCategorias() {
     formCategorySelect.innerHTML = formOptionsHTML;
 }
 
-async function cargarIngresosAprobados(adminUid, rol) {
+function cargarIngresosAprobados(adminUid, rol) {
     if (!adminUid) return;
     incomeListContainer.innerHTML = '<p>Cargando historial...</p>';
 
-    try {
-        const obtenerHistorial = functions.httpsCallable('obtenerHistorialIngresos');
-        const resultado = await obtenerHistorial({ adminUid: adminUid, rol: rol });
-        
-        historialDeIngresos = resultado.data.ingresos;
-        filtrarYMostrarIngresos();
+    // Hacemos la consulta directa a Firestore y escuchamos en tiempo real
+    db.collection('ingresos')
+      .where('adminUid', '==', adminUid)
+      .onSnapshot(snapshot => {
+          // Extraemos los datos de cada documento
+          historialDeIngresos = snapshot.docs.map(doc => ({ 
+              id: doc.id, 
+              ...doc.data() 
+          }));
+          
+          // Llamamos a tu función de filtrado y pintado
+          filtrarYMostrarIngresos();
 
-    } catch (error) {
-        console.error("Error al llamar a la función obtenerHistorialIngresos:", error);
-        alert("Error al cargar el historial: " + error.message);
-        incomeListContainer.innerHTML = `<p class="error-message">No se pudo cargar el historial.</p>`;
-    }
+      }, error => {
+          console.error("Error al obtener historial de ingresos de Firestore:", error);
+          alert("Error al cargar el historial. Revisa la consola para más detalles.");
+          incomeListContainer.innerHTML = `<p class="error-message">No se pudo cargar el historial.</p>`;
+      });
 }
-
 function filtrarYMostrarIngresos() {
     let ingresosFiltrados = [...historialDeIngresos];
 
