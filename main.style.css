@@ -1179,44 +1179,80 @@ body.light-mode .role-desc {
 Abre tu archivo **`main.style.css`** y pega este bloque al final. Esto hará que los recuadros de resumen se vean idénticos al estilo de cristal (o tarjetas limpias en modo claro) que ya tenemos:
 
 ```css
-/* =========================================================
-   RESUMEN FINANCIERO (DASHBOARD)
-   ========================================================= */
+.dashboard-details {
+    background: var(--input-bg-color);
+    border: 1px solid var(--input-border-color);
+    border-radius: 12px;
+    margin-bottom: 30px;
+    transition: all 0.3s ease;
+}
+.dashboard-summary-tab {
+    padding: 15px 20px;
+    cursor: pointer;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    list-style: none; /* Oculta la flecha nativa */
+}
+.dashboard-summary-tab::-webkit-details-marker { display: none; }
+.dashboard-summary-tab:hover { 
+    background: rgba(0, 169, 157, 0.05); 
+    border-radius: 12px;
+}
+
+.dashboard-summary-content {
+    padding: 0 20px 20px 20px;
+    border-top: 1px solid var(--input-border-color);
+    margin-top: 10px;
+    padding-top: 20px;
+}
+
 .summary-cards {
     display: flex;
-    gap: 20px;
+    gap: 15px; /* Menos espacio entre tarjetas */
+    margin-bottom: 20px;
 }
 .summary-card {
     flex: 1;
-    padding: 20px;
-    border-radius: 12px;
-    background: var(--input-bg-color);
+    padding: 12px 15px; /* Tarjetas mucho más pequeñas */
+    border-radius: 10px;
+    background: var(--secondary-color); /* Fondo ligeramente distinto para contrastar */
     border: 1px solid var(--input-border-color);
     text-align: center;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.summary-card:hover {
-    transform: translateY(-3px);
 }
 .summary-card h3 {
-    margin: 0 0 10px 0;
-    font-size: 1em;
+    margin: 0 0 5px 0;
+    font-size: 0.85em; /* Título más pequeño */
     color: var(--text-color-light);
-    opacity: 0.8;
+    opacity: 0.7;
 }
 .summary-card p {
     margin: 0;
-    font-size: 1.8em;
+    font-size: 1.3em; /* Números más pequeños y elegantes */
     font-weight: 700;
 }
-/* Colores específicos para los montos */
-.income-card p { color: #10b981; } /* Verde */
-.expense-card p { color: #ef4444; } /* Rojo */
-.balance-card p { color: #3b82f6; } /* Azul */
+/* Colores de montos */
+.income-card p { color: #10b981; } 
+.expense-card p { color: #ef4444; } 
+.balance-card p { color: #3b82f6; } 
 
-/* Adaptación para móviles */
-@media (max-width: 768px) {
-    .summary-cards {
-        flex-direction: column;
-    }
+.chart-container {
+    background: var(--secondary-color); 
+    border: 1px solid var(--input-border-color); 
+    border-radius: 10px; 
+    padding: 15px;
+}
+
+/* --- MODO CLARO COMPATIBILIDAD --- */
+body.light-mode .dashboard-details { 
+    background: #ffffff; 
+}
+body.light-mode .dashboard-summary-content { 
+    border-top-color: rgba(0,0,0,0.08); 
+}
+body.light-mode .summary-card, 
+body.light-mode .chart-container { 
+    background: #f8fafc; 
+    border-color: rgba(0,0,0,0.08); 
 }
