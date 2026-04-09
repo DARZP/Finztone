@@ -9,10 +9,16 @@ const backButton = document.getElementById('back-button');
 function mostrarUsuarios(usuarios, currentUserRole, currentUserUid, adminUidGlobal) {
     userListContainer.innerHTML = '';
     if (usuarios.length === 0) {
-        userListContainer.innerHTML = '<p>No hay colaboradores registrados.</p>';
+        userListContainer.innerHTML = `
+            <div class="empty-state">
+                <i class="ph ph-users-three"></i>
+                <h4>Sin colaboradores</h4>
+                <p>Aún no has registrado a nadie en tu equipo.</p>
+            </div>
+        `;
         return;
     }
-
+    
     usuarios.forEach(usuario => {
         const userElement = document.createElement('div');
         userElement.classList.add('user-item');
