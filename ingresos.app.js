@@ -388,10 +388,17 @@ function filtrarYMostrarIngresos() {
 function mostrarIngresosAprobados(ingresos) {
     incomeListContainer.innerHTML = '';
     if (ingresos.length === 0) {
-        incomeListContainer.innerHTML = '<p>No se encontraron ingresos con los filtros seleccionados.</p>';
+        incomeListContainer.innerHTML = `
+            <div class="empty-state">
+                <i class="ph ph-hand-coins"></i>
+                <h4>No hay ingresos</h4>
+                <p>No se encontraron ingresos con los filtros seleccionados.</p>
+            </div>
+        `;
         return;
     }
 
+    
     const gruposPorFecha = {};
     ingresos.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
