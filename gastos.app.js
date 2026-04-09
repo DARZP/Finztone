@@ -591,10 +591,15 @@ auth.onAuthStateChanged(async (user) => {
     function mostrarGastosAprobados(gastos) {
     expenseListContainer.innerHTML = '';
     if (gastos.length === 0) {
-        expenseListContainer.innerHTML = '<p>No se encontraron gastos con los filtros seleccionados.</p>';
+        expenseListContainer.innerHTML = `
+            <div class="empty-state">
+                <i class="ph ph-folder-open"></i>
+                <h4>No hay registros</h4>
+                <p>No se encontraron gastos con los filtros seleccionados.</p>
+            </div>
+        `;
         return;
     }
-
     const gruposPorFecha = {};
     gastos.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
