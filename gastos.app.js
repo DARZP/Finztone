@@ -546,24 +546,31 @@ auth.onAuthStateChanged(async (user) => {
         formCategorySelect.innerHTML = formOptionsHTML;
     }
 
-    async function cargarGastosAprobados(adminUid) {
-        // ... (sin cambios internos, usa expenseListContainer)
-        if (!adminUid) return;
-        expenseListContainer.innerHTML = '<p>Cargando historial...</p>';
+    function cargarGastosAprobados(adminUid) {
+    if (!adminUid) return;
+    expenseListContainer.innerHTML = '<p>Cargando historial...</p>';
 
-        try {
-            const obtenerHistorial = functions.httpsCallable('obtenerHistorialGastos');
-            const resultado = await obtenerHistorial({ adminUid: adminUid });
+    // Hacemos la consulta directa a Firestore y escuchamos en tiempo real
+    db.collection('gastos')
+      .where('adminUid', '==', adminUid)
+      .onSnapshot(snapshot => {
+          // Extraemos todos los gastos de la base de datos
+          const todosLosGastos = snapshot.docs.map(doc => ({ 
+              id: doc.id, 
+              ...doc.data() 
+          }));
+          
+          // Filtramos los que son borradores (exactamente como lo hacías antes)
+          historialDeGastos = todosLosGastos.filter(g => g.status !== 'borrador');
+          
+          // Llamamos a tu función de filtrado y pintado
+          filtrarYMostrarGastos();
 
-            historialDeGastos = resultado.data.gastos.filter(g => g.status !== 'borrador');
-            filtrarYMostrarGastos();
-
-        } catch (error) {
-            console.error("Error al llamar a la función obtenerHistorialGastos:", error);
-            expenseListContainer.innerHTML = `<p style="color:red;">No se pudo cargar el historial: ${error.message}</p>`;
-        }
-    }
-
+      }, error => {
+          console.error("Error al obtener historial de gastos de Firestore:", error);
+          expenseListContainer.innerHTML = `<p style="color:red;">No se pudo cargar el historial: ${error.message}</p>`;
+      });
+}
     function filtrarYMostrarGastos() {
         // ... (sin cambios internos, usa categoryFilter, monthFilter)
         let gastosFiltrados = [...historialDeGastos];
