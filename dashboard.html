@@ -25,25 +25,32 @@
     
         <main class="dashboard-container">
             <h2>Herramientas Principales</h2>
-            <div class="dashboard-summary" style="margin-bottom: 30px;">
-                <div class="summary-cards">
-                    <div class="summary-card income-card">
-                        <h3>Ingresos del Mes</h3>
-                        <p id="total-ingresos-mes">$0.00</p>
+            <details class="dashboard-details">
+                <summary class="dashboard-summary-tab">
+                    <span>📈 Resumen Financiero del Mes</span>
+                    <span class="toggle-icon" style="font-size: 0.8em; color: #94a3b8;">▼ Mostrar / Ocultar</span>
+                </summary>
+                
+                <div class="dashboard-summary-content">
+                    <div class="summary-cards">
+                        <div class="summary-card income-card">
+                            <h3>Ingresos</h3>
+                            <p id="total-ingresos-mes">$0.00</p>
+                        </div>
+                        <div class="summary-card expense-card">
+                            <h3>Gastos</h3>
+                            <p id="total-gastos-mes">$0.00</p>
+                        </div>
+                        <div class="summary-card balance-card">
+                            <h3>Balance Neto</h3>
+                            <p id="balance-neto-mes">$0.00</p>
+                        </div>
                     </div>
-                    <div class="summary-card expense-card">
-                        <h3>Gastos del Mes</h3>
-                        <p id="total-gastos-mes">$0.00</p>
-                    </div>
-                    <div class="summary-card balance-card">
-                        <h3>Balance Neto</h3>
-                        <p id="balance-neto-mes">$0.00</p>
+                    <div class="chart-container">
+                        <canvas id="financialChart" height="70"></canvas>
                     </div>
                 </div>
-                <div class="chart-container" style="background: var(--input-bg-color); border: 1px solid var(--input-border-color); border-radius: 12px; padding: 20px; margin-top: 20px;">
-                    <canvas id="financialChart" height="80"></canvas>
-                </div>
-            </div>
+            </details>
             <div class="tools-grid">
     
                 <a href="aprobaciones.html" class="tool-card">
