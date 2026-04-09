@@ -57,3 +57,41 @@ setInterval(() => {
         aplicarTema('auto');
     }
 }, 60000);
+
+// =========================================================
+// SISTEMA GLOBAL DE NOTIFICACIONES (TOASTS)
+// =========================================================
+
+export function mostrarNotificacion(mensaje, tipo = 'success') {
+    // 1. Buscamos o creamos el contenedor de los toasts
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        document.body.appendChild(container);
+    }
+
+    // 2. Creamos la notificación
+    const toast = document.createElement('div');
+    toast.classList.add('toast', tipo);
+    
+    // 3. Asignamos un icono según el tipo (usando Phosphor Icons o Emojis por defecto)
+    let icon = '<i class="ph ph-info" style="font-size: 1.5em; color: #3b82f6;"></i>';
+    if (tipo === 'success') icon = '<i class="ph ph-check-circle" style="font-size: 1.5em; color: #10b981;"></i>';
+    if (tipo === 'error') icon = '<i class="ph ph-warning-circle" style="font-size: 1.5em; color: #ef4444;"></i>';
+
+    toast.innerHTML = `${icon} <span>${mensaje}</span>`;
+    container.appendChild(toast);
+
+    // 4. Animamos la entrada (un pequeño delay para que CSS note el cambio)
+    setTimeout(() => toast.classList.add('show'), 10);
+
+    // 5. Lo removemos automáticamente después de 3.5 segundos
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300); // Espera a que termine la animación para borrarlo del HTML
+    }, 3500);
+}
+
+// Hacemos la función disponible globalmente en la ventana por si alguna vista no la importa
+window.mostrarNotificacion = mostrarNotificacion;
