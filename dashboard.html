@@ -10,6 +10,7 @@
     
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -24,6 +25,25 @@
     
         <main class="dashboard-container">
             <h2>Herramientas Principales</h2>
+            <div class="dashboard-summary" style="margin-bottom: 30px;">
+                <div class="summary-cards">
+                    <div class="summary-card income-card">
+                        <h3>Ingresos del Mes</h3>
+                        <p id="total-ingresos-mes">$0.00</p>
+                    </div>
+                    <div class="summary-card expense-card">
+                        <h3>Gastos del Mes</h3>
+                        <p id="total-gastos-mes">$0.00</p>
+                    </div>
+                    <div class="summary-card balance-card">
+                        <h3>Balance Neto</h3>
+                        <p id="balance-neto-mes">$0.00</p>
+                    </div>
+                </div>
+                <div class="chart-container" style="background: var(--input-bg-color); border: 1px solid var(--input-border-color); border-radius: 12px; padding: 20px; margin-top: 20px;">
+                    <canvas id="financialChart" height="80"></canvas>
+                </div>
+            </div>
             <div class="tools-grid">
     
                 <a href="aprobaciones.html" class="tool-card">
